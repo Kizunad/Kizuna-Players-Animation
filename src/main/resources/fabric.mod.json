@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "id": "kizuna_players_animation",
+  "version": "${version}",
+  "name": "Kizuna Players Animation",
+  "description": "Minecraft 玩家多关节模型与动画运行时",
+  "authors": ["Kizunad"],
+  "license": "MIT",
+  "environment": "client",
+  "entrypoints": {
+    "client": ["dev.kizuna.playeranimation.client.PlayerAnimationClient"]
+  },
+  "mixins": ["kizuna_players_animation.mixins.json"],
+  "depends": {
+    "fabricloader": ">=0.16.10",
+    "minecraft": "~1.20.1",
+    "java": ">=17",
+    "fabric-api": "*"
+  }
+}

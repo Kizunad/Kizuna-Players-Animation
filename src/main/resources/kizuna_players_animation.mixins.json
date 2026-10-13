@@ -1,0 +1,7 @@
+{
+  "required": true,
+  "package": "dev.kizuna.playeranimation.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "client": ["LivingEntityRendererMixin", "HeldItemFeatureRendererMixin", "HeldItemRendererMixin", "PlayerEntityRendererAccessor"],
+  "injectors": {"defaultRequire": 1}
+}
