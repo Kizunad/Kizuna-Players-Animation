@@ -4,7 +4,7 @@
 
 ## 当前状态
 
-运行环境为 **Minecraft 1.20.1 / Fabric / Java 17**。已实现客户端模组接口与运行时，模型和正式动画由动画侧另行交付。
+运行环境为 **Minecraft 1.20.1 / Fabric / Java 17**。已实现客户端模组接口与运行时，包含校准资源和两段基础移动动画草稿。
 
 - 25 个关节与 2 个手持挂点；粗臂、细臂分别读取 Bedrock 几何。
 - 玩家自身 64×64 皮肤、逐面 UV、原版外层开关与 CPU 蒙皮。
@@ -12,7 +12,7 @@
 - 原版姿态、循环姿态、一次性动作分层；按骨掩码、优先级及淡入淡出混合。
 - 左主手镜像、时间线事件、第三人称持物和 `fpv` 手臂入口。
 
-已打包动画侧交付的校准资源：粗臂 / 细臂骨架（`models/player_skeleton_*.bbmodel` 与 `geo/player_skeleton.geo.json`）和五个校准动画，没有正式动画。模型的 UV 与原版逐面一致性已用本仓读取器对照游戏内原版 `ModelPart` 数值验证；弯折外观、第一人称效果与物品位置仍待游戏内验收。
+已打包粗臂 / 细臂骨架（`models/player_skeleton_*.bbmodel` 与 `geo/player_skeleton.geo.json`）、五个校准动画，以及 `walk` / `run` 两段可预览的循环草稿。模型的 UV 与原版逐面一致性已用本仓读取器对照游戏内原版 `ModelPart` 数值验证；完整世界场景、第一人称效果与物品位置仍待游戏内验收。
 
 ## 构建与运行
 
@@ -33,6 +33,10 @@
 | `/kpa play <id>` | 在本地玩家上播放指定动画，支持补全 |
 | `/kpa stop` | 按索引的淡出时间停止本地玩家动画 |
 
+基础行走和奔跑先手动预览：`/kpa play walk`（1.2 秒一周期）、`/kpa play run`（0.7 秒一周期）。它们是原地循环，尚未根据玩家移动状态自动切换。换动作前使用 `/kpa stop`。
+
+在 Blockbench 打开 [`models/player_skeleton_classic.bbmodel`](models/player_skeleton_classic.bbmodel)，进入 Animate 面板即可播放和编辑 `animation.kizuna_players_animation.player.walk` / `run`。该文件内嵌原版 Steve 皮肤；运行时继续使用玩家自己的皮肤。Steve 贴图来自 Minecraft 1.20.1 客户端，版权归 Mojang / Microsoft，不属于本项目 MIT 授权。
+
 客户端主线程可以调用 `dev.kizuna.playeranimation.client.PlayerAnimations`：
 
 ```java
@@ -48,7 +52,7 @@ PlayerAnimations.EVENT.register((player, animation, event) -> {
 
 ## 验证与范围
 
-`./gradlew test` 覆盖解析、未知输入、分层、镜像、插值、跨循环事件、矩阵以及内外层切口连续性。测试用几何是数学回归夹具，不作为动画侧的骨架模板交付。
+`./gradlew test` 覆盖解析、未知输入、分层、镜像、插值、跨循环事件、矩阵以及内外层切口连续性。除数学夹具外，还直接检查已交付的双体型资源：左右手独立弯指后的内外层没有裸露切口，持物矩阵在混合摆臂姿态下与原版一致（含细臂肩部的 0.5 像素修正）。
 
 校准动画 `calib_zero`、`calib_axes`、`calib_item`、`calib_mirror`、`calib_layer` 已交付，仍需在游戏中逐帧对照 Blockbench。手持挂点 pivot 由原版 `HeldItemFeatureRenderer` 的平移推算得到，未经游戏内校准，不能视为已对齐原版持物位置。
 

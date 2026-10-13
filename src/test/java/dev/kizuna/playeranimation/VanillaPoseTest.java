@@ -39,10 +39,11 @@ class VanillaPoseTest {
                 bones.add(new Skeleton.Bone(bone, new Vec3(-2, 12, 1), List.of()));
             }
             Skeleton skeleton = new Skeleton(bones);
-            Pose[] pose = PlayerMeshRenderer.basePose(skeleton, model, false);
+            Pose[] pose = PlayerMeshRenderer.basePose(skeleton, model, false, slim);
             Matrix4f[] actual = Rig.matrices(skeleton, pose);
             for (BoneId bone : BoneId.ALL) {
-                if (bone == BoneId.ROOT) {
+                // 持物挂点有独立的细臂修正，由实际资源的持物矩阵回归覆盖。
+                if (bone == BoneId.ROOT || bone.socket()) {
                     continue;
                 }
                 ModelPart part = PlayerMeshRenderer.part(model, bone, false);

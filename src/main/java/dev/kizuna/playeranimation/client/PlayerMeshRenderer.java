@@ -24,11 +24,11 @@ import net.minecraft.client.render.model.json.ModelTransformationMode;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.Arm;
-import net.minecraft.util.math.RotationAxis;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
 
 public final class PlayerMeshRenderer {
+    private static final float SLIM_ITEM_SHOULDER_OFFSET = 0.5f;
     public record Frame(PlayerAssets.Model model, Matrix4f[] matrices) { }
     private PlayerMeshRenderer() { }
 
@@ -38,13 +38,13 @@ public final class PlayerMeshRenderer {
             return null;
         }
         // 先还原原版姿态，再按实际存在的轨道覆盖，未写的腿仍保持原版走路。
-        Pose[] base = basePose(model.skeleton(), vanilla, firstPerson);
+        Pose[] base = basePose(model.skeleton(), vanilla, firstPerson, "slim".equals(player.getModel()));
         var animation = PlayerAnimationClient.PLAYBACK.player(player.getUuid());
         Pose[] pose = animation == null ? base : animation.sample(base, PlayerPlayback.now(tickDelta), firstPerson);
         return new Frame(model, Rig.matrices(model.skeleton(), pose));
     }
 
-    public static Pose[] basePose(Skeleton skeleton, PlayerEntityModel<?> model, boolean firstPerson) {
+    public static Pose[] basePose(Skeleton skeleton, PlayerEntityModel<?> model, boolean firstPerson, boolean slim) {
         Map<BoneId, Matrix4f> absolute = new EnumMap<>(BoneId.class);
         Pose[] pose = Rig.zeroPose();
         // 原版六部件在绑定空间的变换转换为 25 骨局部姿态；保留蹲伏等枢轴位移。
@@ -54,6 +54,14 @@ public final class PlayerMeshRenderer {
                     ? new Matrix4f() : vanillaTransform(part);
             absolute.put(bone, target);
             Matrix4f local = bone.parent == null ? target : new Matrix4f(absolute.get(bone.parent)).invert().mul(target);
+            if (slim && bone.socket()) {
+                // 原版细臂持物先沿模型 X 内移肩部，再旋转手臂；挂点已包含零姿态内移。
+                // 将差值写入底层局部姿态，让后续 root、胸、前臂和手腕动画共同带动它。
+                float inward = bone == BoneId.R_ITEM ? SLIM_ITEM_SHOULDER_OFFSET : -SLIM_ITEM_SHOULDER_OFFSET;
+                Vector3f correction = new Matrix4f(target).invert()
+                        .transformDirection(inward, 0, 0, new Vector3f()).sub(inward, 0, 0);
+                local.translate(correction);
+            }
             pose[bone.ordinal()] = Rig.localPose(local, skeleton.bone(bone).pivot());
         }
         return pose;
@@ -107,16 +115,11 @@ public final class PlayerMeshRenderer {
             return;
         }
         BoneId socket = arm == Arm.RIGHT ? BoneId.R_ITEM : BoneId.L_ITEM;
-        Vec3 pivot = frame.model.skeleton().bone(socket).pivot();
         stack.push();
         // 挂点先跟随手掌矩阵，再叠原版物品坐标方向与 display 变换。
-        Matrix4f transform = Rig.toVanilla(frame.matrices[socket.ordinal()]);
+        Matrix4f transform = Rig.itemTransform(frame.model.skeleton(), frame.matrices, socket);
         stack.peek().getPositionMatrix().mul(transform);
         stack.peek().getNormalMatrix().mul(new org.joml.Matrix3f(transform));
-        stack.translate(pivot.x() / Rig.PIXELS_PER_BLOCK,
-                (Rig.MODEL_ORIGIN_HEIGHT - pivot.y()) / Rig.PIXELS_PER_BLOCK, pivot.z() / Rig.PIXELS_PER_BLOCK);
-        stack.multiply(RotationAxis.POSITIVE_X.rotationDegrees(-90));
-        stack.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(180));
         renderer.renderItem(player, item, arm == Arm.RIGHT ? ModelTransformationMode.THIRD_PERSON_RIGHT_HAND
                 : ModelTransformationMode.THIRD_PERSON_LEFT_HAND, arm == Arm.LEFT, stack, buffers, light);
         stack.pop();

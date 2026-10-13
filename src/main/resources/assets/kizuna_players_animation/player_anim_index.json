@@ -1,6 +1,26 @@
 {
   "animations": [
     {
+      "id": "walk",
+      "file": "animations/walk.animation.json",
+      "mask": "full",
+      "priority": 1,
+      "blend_in": 0.15,
+      "blend_out": 0.15,
+      "hand": "none",
+      "fpv": false
+    },
+    {
+      "id": "run",
+      "file": "animations/run.animation.json",
+      "mask": "full",
+      "priority": 1,
+      "blend_in": 0.12,
+      "blend_out": 0.15,
+      "hand": "none",
+      "fpv": false
+    },
+    {
       "id": "calib_zero",
       "file": "animations/calib_zero.animation.json",
       "mask": "full",

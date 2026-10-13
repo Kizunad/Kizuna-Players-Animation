@@ -60,4 +60,13 @@ public final class Rig {
                 .scale(1 / PIXELS_PER_BLOCK, -1 / PIXELS_PER_BLOCK, 1 / PIXELS_PER_BLOCK);
         return new Matrix4f(conversion).mul(matrix).mul(new Matrix4f(conversion).invert());
     }
+
+    public static Matrix4f itemTransform(Skeleton skeleton, Matrix4f[] matrices, BoneId socket) {
+        Vec3 pivot = skeleton.bone(socket).pivot();
+        // 挂点继承完整动画层级，只在这里叠加原版第三人称物品的坐标方向。
+        return toVanilla(matrices[socket.ordinal()])
+                .translate(pivot.x() / PIXELS_PER_BLOCK, (MODEL_ORIGIN_HEIGHT - pivot.y()) / PIXELS_PER_BLOCK,
+                        pivot.z() / PIXELS_PER_BLOCK)
+                .rotateX(-(float) Math.PI / 2).rotateY((float) Math.PI);
+    }
 }
