@@ -1,0 +1,46 @@
+syntax = "proto3";
+
+package kizuna.playeranimation.v1;
+
+option java_package = "dev.kizuna.playeranimation.protocol.pb";
+option java_outer_classname = "PlayerAnimationProtocol";
+
+// 本仓是唯一协议源；调用方固定版本并据此生成代码。
+// 字段编号和枚举数值属于 v1 契约，删除时 reserved 编号与名称，禁止复用。
+// 消息只控制客户端播放；路由、传输与主线程调度由接线层负责。
+message PlayRequest {
+  // 非空，在调用方待处理请求中唯一；只关联结果，不提供去重。
+  string request_id = 1;
+  // 被渲染玩家的标准带连字符 UUID，必须已在接收客户端加载。
+  string player_uuid = 2;
+  // 索引中的动作 ID，匹配 [a-z0-9_./-]+，例如 meditate。
+  // 其他播放参数沿用资源；重播同名动作时旧实例淡出，新实例从 0 秒开始。
+  string animation_id = 3;
+}
+
+message StopRequest {
+  string request_id = 1; // 同 PlayRequest，结果原样回传。
+  string player_uuid = 2; // 同 PlayRequest 的 UUID 格式；无播放器时无需操作。
+
+  // 必须显式选择目标；未设置、空 ID 或 all=false 均为 INVALID_REQUEST。
+  // 不存在或已停止的动作仍返回 OK，停止按资源中 blend_out 淡出。
+  oneof target {
+    string animation_id = 3; // 与 PlayRequest 的动作 ID 格式相同。
+    bool all = 4; // 只能为 true，停止该玩家的全部动作。
+  }
+}
+
+// 每个可解码请求处理后返回一次；不用于播放结束、时间线事件或玩法结算。
+message Result {
+  enum Code {
+    CODE_UNSPECIFIED = 0; // 缺失或未知结果码均不能视为成功。
+    OK = 1; // 已开始播放 / 提交停止；不等待淡入淡出完成。
+    INVALID_REQUEST = 2; // 必需值缺失、格式错误或停止目标无效。
+    ANIMATION_NOT_FOUND = 3; // 仅播放：动画未成功加载。
+    PLAYER_NOT_LOADED = 4; // 仅播放：客户端世界未加载该玩家。
+  }
+
+  string request_id = 1; // 原样关联请求；无效请求缺失该值时为空。
+  Code code = 2;
+  string detail = 3; // 可省略的诊断文字，不作为程序分支或稳定错误码。
+}

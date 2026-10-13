@@ -1,9 +1,13 @@
 plugins {
     id 'fabric-loom' version '1.6.12'
+    id 'com.google.protobuf' version '0.9.6'
 }
 
 group = 'dev.kizuna'
 version = '0.1.0-SNAPSHOT'
+
+// 编译器与运行库固定同版，调用方复用本仓唯一的协议源。
+ext.protobufVersion = '4.36.2'
 
 repositories { mavenCentral() }
 
@@ -12,6 +16,8 @@ dependencies {
     mappings 'net.fabricmc:yarn:1.20.1+build.10:v2'
     modImplementation 'net.fabricmc:fabric-loader:0.16.10'
     modImplementation 'net.fabricmc.fabric-api:fabric-api:0.92.3+1.20.1'
+    implementation "com.google.protobuf:protobuf-java:${protobufVersion}"
+    include "com.google.protobuf:protobuf-java:${protobufVersion}"
     testImplementation 'org.junit.jupiter:junit-jupiter:5.11.4'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
@@ -32,9 +38,32 @@ tasks.withType(JavaExec).configureEach {
 
 test { useJUnitPlatform() }
 
+protobuf {
+    protoc { artifact = "com.google.protobuf:protoc:${protobufVersion}" }
+    generateProtoTasks {
+        ofSourceSet('main').configureEach { task ->
+            task.generateDescriptorSet = true
+            task.descriptorSetOptions.path = layout.buildDirectory.file('descriptors/player-animation-v1.desc').get().asFile.path
+            task.descriptorSetOptions.includeSourceInfo = true
+        }
+    }
+}
+
 processResources {
     inputs.property 'version', project.version
     filesMatching('fabric.mod.json') { expand version: project.version }
 }
 
 jar { from('LICENSE') }
+
+// 调用方只需协议源和描述符即可生成类型，不需要依赖 Minecraft 客户端。
+tasks.register('protocolZip', Zip) {
+    dependsOn tasks.named('generateProto')
+    archiveClassifier = 'proto'
+    destinationDirectory = layout.buildDirectory.dir('distributions')
+    from('src/main/proto')
+    from(layout.buildDirectory.file('descriptors/player-animation-v1.desc')) { into 'descriptors' }
+    from('LICENSE')
+}
+
+tasks.named('build') { dependsOn tasks.named('protocolZip') }

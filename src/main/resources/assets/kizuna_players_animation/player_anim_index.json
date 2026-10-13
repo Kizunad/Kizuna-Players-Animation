@@ -21,6 +21,16 @@
       "fpv": false
     },
     {
+      "id": "meditate",
+      "file": "animations/meditate.animation.json",
+      "mask": "full",
+      "priority": 1,
+      "blend_in": 0.6,
+      "blend_out": 0.6,
+      "hand": "none",
+      "fpv": false
+    },
+    {
       "id": "calib_zero",
       "file": "animations/calib_zero.animation.json",
       "mask": "full",
