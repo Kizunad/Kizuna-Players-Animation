@@ -75,4 +75,4 @@
 
 ## 验收状态
 
-正式资源未交付。`calib_zero`、`calib_axes`、`calib_item`、`calib_mirror`、`calib_layer` 的 Blockbench／游戏逐帧对照均待执行。自动化测试仅验证解析、插值、层叠、事件、矩阵和接缝连续性，不替代皮肤、挂点或关节形变的视觉验收。角度门禁与正式动画审图由动画侧负责，运行时不裁剪校准动画的旋转。
+已交付骨架模板（粗臂、细臂）、64×64 调试皮肤 `models/player_debug_skin.png` 与 `calib_zero`、`calib_axes`、`calib_item`、`calib_mirror`、`calib_layer`；正式动画未交付。读取器加载、骨名父子与 UV 数值对照原版已验证；这五个动画的 Blockbench／游戏逐帧对照与挂点校准均待执行。自动化测试仅验证解析、插值、层叠、事件、矩阵和接缝连续性，不替代皮肤、挂点或关节形变的视觉验收。角度门禁与正式动画审图由动画侧负责，运行时不裁剪校准动画的旋转。

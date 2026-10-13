@@ -12,7 +12,7 @@
 - 原版姿态、循环姿态、一次性动作分层；按骨掩码、优先级及淡入淡出混合。
 - 左主手镜像、时间线事件、第三人称持物和 `fpv` 手臂入口。
 
-目前没有打包正式骨架或动画，直接安装会保留原版玩家渲染并提示资源缺失。运行时已完成编译、自动化测试与 Java 17 客户端启动检查；UV 逐像素一致性、弯折外观、第一人称效果与物品位置仍待正式校准资源验收。
+已打包动画侧交付的校准资源：粗臂 / 细臂骨架（`models/player_skeleton_*.bbmodel` 与 `geo/player_skeleton.geo.json`）和五个校准动画，没有正式动画。模型的 UV 与原版逐面一致性已用本仓读取器对照游戏内原版 `ModelPart` 数值验证；弯折外观、第一人称效果与物品位置仍待游戏内验收。
 
 ## 构建与运行
 
@@ -50,7 +50,7 @@ PlayerAnimations.EVENT.register((player, animation, event) -> {
 
 `./gradlew test` 覆盖解析、未知输入、分层、镜像、插值、跨循环事件、矩阵以及内外层切口连续性。测试用几何是数学回归夹具，不作为动画侧的骨架模板交付。
 
-正式验收需要动画侧交付 `calib_zero`、`calib_axes`、`calib_item`、`calib_mirror`、`calib_layer`，再在游戏中逐帧对照 Blockbench。手持挂点位置目前由几何文件提供，未声称已对齐原版持物位置。
+校准动画 `calib_zero`、`calib_axes`、`calib_item`、`calib_mirror`、`calib_layer` 已交付，仍需在游戏中逐帧对照 Blockbench。手持挂点 pivot 由原版 `HeldItemFeatureRenderer` 的平移推算得到，未经游戏内校准，不能视为已对齐原版持物位置。
 
 本轮不做旧动画迁移、Bong 接线、盔甲／披风／鞘翅或其他模组的适配。现有装备层仍按原版方式绘制，不能认为它们已经随新增关节弯曲。`fpv` 动画活动期间由骨架手臂和挂点绘制物品，不接入原版地图、使用物品等专用第一人称动画。
 
