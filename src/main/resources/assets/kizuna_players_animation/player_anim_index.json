@@ -1,0 +1,54 @@
+{
+  "animations": [
+    {
+      "id": "calib_zero",
+      "file": "animations/calib_zero.animation.json",
+      "mask": "full",
+      "priority": 5,
+      "blend_in": 0.1,
+      "blend_out": 0.1,
+      "hand": "none",
+      "fpv": false
+    },
+    {
+      "id": "calib_axes",
+      "file": "animations/calib_axes.animation.json",
+      "mask": "full",
+      "priority": 5,
+      "blend_in": 0.1,
+      "blend_out": 0.1,
+      "hand": "none",
+      "fpv": false
+    },
+    {
+      "id": "calib_item",
+      "file": "animations/calib_item.animation.json",
+      "mask": "upper",
+      "priority": 10,
+      "blend_in": 0.1,
+      "blend_out": 0.1,
+      "hand": "both",
+      "fpv": false
+    },
+    {
+      "id": "calib_mirror",
+      "file": "animations/calib_mirror.animation.json",
+      "mask": "r_arm",
+      "priority": 20,
+      "blend_in": 0.05,
+      "blend_out": 0.15,
+      "hand": "main",
+      "fpv": false
+    },
+    {
+      "id": "calib_layer",
+      "file": "animations/calib_layer.animation.json",
+      "mask": "upper",
+      "priority": 10,
+      "blend_in": 0.15,
+      "blend_out": 0.15,
+      "hand": "none",
+      "fpv": false
+    }
+  ]
+}
