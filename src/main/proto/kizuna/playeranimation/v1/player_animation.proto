@@ -9,17 +9,21 @@ option java_outer_classname = "PlayerAnimationProtocol";
 // 字段编号和枚举数值属于 v1 契约，删除时 reserved 编号与名称，禁止复用。
 // 消息只控制客户端播放；路由、传输与主线程调度由接线层负责。
 message PlayRequest {
-  // 非空，在调用方待处理请求中唯一；只关联结果，不提供去重。
+  // 1-128 个字符，在调用方待处理请求中唯一；用于关联结果。
+  // 携带 start_tick 的同一次服务端播放在补发时沿用此 ID，不重置已存在实例。
   string request_id = 1;
   // 被渲染玩家的标准带连字符 UUID，必须已在接收客户端加载。
   string player_uuid = 2;
   // 索引中的动作 ID，匹配 [a-z0-9_./-]+，例如 meditate。
   // 其他播放参数沿用资源；重播同名动作时旧实例淡出，新实例从 0 秒开始。
   string animation_id = 3;
+  // 可选：玩家所在世界的原始总 tick（20 tick = 1 秒，非昼夜时间）。
+  // 缺失则每次从收包时刻开始；补发按当前进度取样，不补发过去的时间线事件。
+  optional int64 start_tick = 4;
 }
 
 message StopRequest {
-  string request_id = 1; // 同 PlayRequest，结果原样回传。
+  string request_id = 1; // 同 PlayRequest；有效长度的 ID 在结果中原样回传。
   string player_uuid = 2; // 同 PlayRequest 的 UUID 格式；无播放器时无需操作。
 
   // 必须显式选择目标；未设置、空 ID 或 all=false 均为 INVALID_REQUEST。
@@ -40,7 +44,7 @@ message Result {
     PLAYER_NOT_LOADED = 4; // 仅播放：客户端世界未加载该玩家。
   }
 
-  string request_id = 1; // 原样关联请求；无效请求缺失该值时为空。
+  string request_id = 1; // 原样关联请求；缺失或超过 128 字符时为空。
   Code code = 2;
   string detail = 3; // 可省略的诊断文字，不作为程序分支或稳定错误码。
 }

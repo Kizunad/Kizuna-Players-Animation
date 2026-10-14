@@ -6,8 +6,9 @@
   "description": "Minecraft 玩家多关节模型与动画运行时",
   "authors": ["Kizunad"],
   "license": "MIT",
-  "environment": "client",
+  "environment": "*",
   "entrypoints": {
+    "main": ["dev.kizuna.playeranimation.server.ServerPlayerAnimations"],
     "client": ["dev.kizuna.playeranimation.client.PlayerAnimationClient"]
   },
   "mixins": ["kizuna_players_animation.mixins.json"],

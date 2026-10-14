@@ -203,6 +203,75 @@ class AnimationTest {
     }
 
     @Test
+    void synchronizedPlaybackResumesPhaseWithoutHistoricalEvents() {
+        // 晚入范围 100 个循环后，姿态接续原时钟，但不补发过去的脚步声。
+        AnimationClip clip = rotationClip("{\"0\":[0,0,0],\"1\":[-100,0,0]}",
+                ",\"loop\":true,\"timeline\":{\"0\":\"step_l\",\"0.5\":\"step_r\"}");
+        AnimationEntry entry = entry("walk", clip, AnimationEntry.Mask.R_ARM, 0, 0, 0.5f, AnimationEntry.Hand.NONE, false);
+        AnimationPlayer player = new AnimationPlayer();
+        player.synchronize(entry, 110.25, 10, false, "p1");
+        assertEquals(25, player.sample(Rig.zeroPose(), 110.25, false)[BoneId.R_FOREARM.ordinal()].rotation().x(), 0.001);
+        List<String> events = new ArrayList<>();
+        player.advance(110.25, (id, event) -> events.add(event));
+        assertTrue(events.isEmpty());
+        player.advance(110.6, (id, event) -> events.add(event));
+        assertEquals(List.of("step_r"), events);
+        player.synchronize(entry, 110.7, 10, false, "p1");
+        player.advance(111.1, (id, event) -> events.add(event));
+        assertEquals(List.of("step_r", "step_l"), events);
+        player.synchronize(entry, 111.1, 10, false, "p2");
+        player.advance(111.6, (id, event) -> events.add(event));
+        assertEquals(List.of("step_r", "step_l", "step_r"), events);
+        player.stop("walk", 111.6);
+        player.advance(112.1, (id, event) -> fail("停止后不能继续发事件"));
+        assertTrue(player.empty());
+    }
+
+    @Test
+    void duplicateSyncKeepsPriorityButNewRequestInSameTickCanReplay() {
+        // 追踪补发不重新抢占同优先级骨骼；服务端明确重播则应成为最新动作。
+        var first = entry("first", rotationClip("[-30,0,0]", ",\"loop\":true"),
+                AnimationEntry.Mask.R_ARM, 0, 0, 0, AnimationEntry.Hand.NONE, false);
+        var second = entry("second", rotationClip("[-60,0,0]", ",\"loop\":true"),
+                AnimationEntry.Mask.R_ARM, 0, 0, 0, AnimationEntry.Hand.NONE, false);
+        AnimationPlayer player = new AnimationPlayer();
+        player.synchronize(first, 10, 10, false, "first-request");
+        player.synchronize(second, 10, 10, false, "second-request");
+        player.synchronize(first, 10, 10, false, "first-request");
+        assertEquals(60, player.sample(Rig.zeroPose(), 10, false)[BoneId.R_FOREARM.ordinal()].rotation().x());
+        player.synchronize(first, 10, 10, false, "new-request");
+        assertEquals(30, player.sample(Rig.zeroPose(), 10, false)[BoneId.R_FOREARM.ordinal()].rotation().x());
+    }
+
+    @Test
+    void futureServerStartWaitsBeforeFiringZeroTimeEvent() {
+        var clip = rotationClip("[-90,0,0]", ",\"timeline\":{\"0\":\"release\"}");
+        var entry = entry("future", clip, AnimationEntry.Mask.R_ARM, 0, 0, 0, AnimationEntry.Hand.NONE, false);
+        AnimationPlayer player = new AnimationPlayer();
+        player.synchronize(entry, 9.9, 10, false, "future-request");
+        List<String> events = new ArrayList<>();
+        player.advance(9.9, (id, event) -> events.add(event));
+        assertTrue(events.isEmpty());
+        player.advance(10, (id, event) -> events.add(event));
+        assertEquals(List.of("release"), events);
+    }
+
+    @Test
+    void lateOneShotIsSkippedWhileHeldPoseRemainsVisible() {
+        // 已结束的一次性动作不重播；保持末帧的动作仍应展示给新观察者。
+        AnimationPlayer player = new AnimationPlayer();
+        var once = entry("once", rotationClip("[-90,0,0]", ",\"timeline\":{\"1\":\"hit\"}"),
+                AnimationEntry.Mask.R_ARM, 0, 0, 0.2f, AnimationEntry.Hand.NONE, false);
+        player.synchronize(once, 100, 0, false, "once");
+        assertTrue(player.empty());
+        player.advance(100, (id, event) -> fail());
+        var hold = entry("hold", rotationClip("[-90,0,0]", ",\"loop\":\"hold_on_last_frame\""),
+                AnimationEntry.Mask.R_ARM, 0, 0.2f, 0.2f, AnimationEntry.Hand.NONE, false);
+        player.synchronize(hold, 100, 0, false, "hold");
+        assertEquals(90, player.sample(Rig.zeroPose(), 100, false)[BoneId.R_FOREARM.ordinal()].rotation().x());
+    }
+
+    @Test
     void indexRejectsUnknownEnumsAndPreservesFullIntegerPriority() {
         JsonObject raw = JsonParser.parseString("""
                 {"id":"test","file":"animations/test.animation.json","mask":"upper","priority":2147483647,

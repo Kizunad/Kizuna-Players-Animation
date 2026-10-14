@@ -24,6 +24,19 @@ class ProtocolContractTest {
     }
 
     @Test
+    void startTickIsAnOptionalAdditiveField() throws Exception {
+        // 字段 4 使用 varint，旧请求不携带此字段；显式零与缺省必须可区分。
+        PlayRequest missing = PlayRequest.parseFrom(new byte[0]);
+        PlayRequest zero = PlayRequest.parseFrom(HexFormat.of().parseHex("2000"));
+        PlayRequest timed = PlayRequest.parseFrom(HexFormat.of().parseHex("209003"));
+        assertFalse(missing.hasStartTick());
+        assertTrue(zero.hasStartTick());
+        assertEquals(0, zero.getStartTick());
+        assertEquals(400, timed.getStartTick());
+        assertArrayEquals(HexFormat.of().parseHex("209003"), timed.toByteArray());
+    }
+
+    @Test
     void stopDistinguishesOneAnimationFromAll() throws Exception {
         // 两种停止范围保持独立的 wire tag，调用方不以空字符串隐式表示全部。
         byte[] oneWire = HexFormat.of().parseHex(

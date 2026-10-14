@@ -13,9 +13,32 @@ public final class AnimationPlayer {
     private long sequence;
 
     public void play(AnimationEntry entry, double now, boolean leftHanded) {
-        // 重播同名动画时旧实例淡出，新的实例从自己的零秒开始。
+        play(entry, now, now, leftHanded, null);
+    }
+
+    public void synchronize(AnimationEntry entry, double now, double start, boolean leftHanded, String playId) {
+        // 同一播放请求的补发不重置播放器；同 tick 的再次播放仍有不同请求 ID。
+        for (Playback playback : playing) {
+            if (playback.entry.id().equals(entry.id()) && playId.equals(playback.playId) && playback.start == start
+                    && Double.isNaN(playback.stopped)) {
+                return;
+            }
+        }
+        play(entry, now, start, leftHanded, playId);
+    }
+
+    private void play(AnimationEntry entry, double now, double start, boolean leftHanded, String playId) {
+        // 重播同名动画时旧实例从当前时刻淡出，新实例按指定起点取样。
         stop(entry.id(), now);
-        playing.add(new Playback(entry, now, leftHanded && entry.hand() != AnimationEntry.Hand.NONE, sequence++));
+        Playback playback = new Playback(entry, start, leftHanded && entry.hand() != AnimationEntry.Hand.NONE,
+                sequence++, playId);
+        if (playId != null && now > start) {
+            playback.lastEventTime = now - start;
+        }
+        if (playback.finished(now)) {
+            return;
+        }
+        playing.add(playback);
         playing.sort(Comparator.comparingInt((Playback p) -> p.entry.clip().loop() == AnimationClip.Loop.REPEAT ? 0 : 1)
                 .thenComparingInt(p -> p.entry.priority()).thenComparingLong(p -> p.sequence));
     }
@@ -42,6 +65,10 @@ public final class AnimationPlayer {
         // 事件仅随逻辑时钟前进；多次渲染同一帧不会重复触发 hit 或 release。
         List<String[]> pending = new ArrayList<>();
         for (Playback playback : playing) {
+            if (now < playback.start) {
+                // 客户端世界时钟短暂落后于服务端起点时，不能提前发送零秒事件。
+                continue;
+            }
             double elapsed = Math.max(0, Math.min(now, playback.stoppedOr(now)) - playback.start);
             AnimationClip clip = playback.entry.clip();
             double end = clip.loop() == AnimationClip.Loop.REPEAT ? elapsed : Math.min(elapsed, clip.duration());
@@ -110,15 +137,17 @@ public final class AnimationPlayer {
         final double start;
         final boolean mirror;
         final long sequence;
+        final String playId;
         double stopped = Double.NaN;
         double lastEventTime = -1;
 
-        Playback(AnimationEntry entry, double start, boolean mirror, long sequence) {
+        Playback(AnimationEntry entry, double start, boolean mirror, long sequence, String playId) {
             // 每次播放有独立时钟，多个实体和同一动画的重播互不共享状态。
             this.entry = entry;
             this.start = start;
             this.mirror = mirror;
             this.sequence = sequence;
+            this.playId = playId;
         }
 
         double stoppedOr(double now) {
