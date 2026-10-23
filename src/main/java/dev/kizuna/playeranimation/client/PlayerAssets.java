@@ -40,6 +40,7 @@ public final class PlayerAssets implements SimpleSynchronousResourceReloadListen
     public void reload(ResourceManager manager) {
         // 热重载原子替换资源；失败时清空旧播放，避免跨版本骨架数据混用。
         PlayerAnimationClient.PLAYBACK.clear();
+        ArmorMesh.clearCache();
         classic = null;
         slim = null;
         animations = Map.of();

@@ -5,7 +5,8 @@
 Kizuna Players Animation 是 Minecraft 玩家多关节模型与动画模组，目标是让玩家模型的关节和动画更便于在 Blockbench 中制作与调整，改善 `.bbmodel` 制作体验。
 
 - 当前阶段实现模组接口与运行时；模型和动画由动画侧交付，不承担旧动画迁移、其他模组或具体玩法项目适配。
-- 运行环境已确定为 Minecraft 1.20.1、Fabric、Java 17。仅依赖 Fabric API 和游戏已有的数学、JSON 库。
+- 运行环境已确定为 Minecraft 1.20.1、Fabric、Java 17；播放同步使用 protoc 生成的 Protobuf，模型与动画资源仍使用既有格式。
+- Meridian 的 Framework、Human、UI、Items、Vanilla-Damage、Vanilla-Healing、Human-UI、Progression 和 Kizuna-Players-Animation 在各自适用端均为整套必装模块。拆仓仅用于代码管理；不得增加缺包检测、反射调用、降级或对应测试/smoke，缺少必需接线直接报错。按真实 API 关系声明源码依赖，不让底层动画实现反向引用人体内容。
 - 围绕玩家多关节与动画的实际需求实现最小可用方案，不扩展为通用动画引擎、插件平台或无关玩法框架。
 - 本项目采用 MIT License；引入第三方代码或模型资源时保留其原有许可与署名。
 

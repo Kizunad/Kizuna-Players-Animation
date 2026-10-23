@@ -1,0 +1,77 @@
+{
+  "format_version": "1.8.0",
+  "animations": {
+    "animation.kizuna_players_animation.player.calib_item": {
+      "loop": true,
+      "animation_length": 3,
+      "bones": {
+        "r_upper_arm": {
+          "rotation": [
+            -18,
+            0,
+            0
+          ]
+        },
+        "r_forearm": {
+          "rotation": [
+            0,
+            0,
+            0
+          ]
+        },
+        "r_hand": {
+          "rotation": {
+            "0": [
+              45,
+              0,
+              0
+            ],
+            "1.5": [
+              -45,
+              0,
+              0
+            ],
+            "3": [
+              45,
+              0,
+              0
+            ]
+          }
+        },
+        "l_upper_arm": {
+          "rotation": [
+            -18,
+            0,
+            0
+          ]
+        },
+        "l_forearm": {
+          "rotation": [
+            0,
+            0,
+            0
+          ]
+        },
+        "l_hand": {
+          "rotation": {
+            "0": [
+              45,
+              0,
+              0
+            ],
+            "1.5": [
+              -45,
+              0,
+              0
+            ],
+            "3": [
+              45,
+              0,
+              0
+            ]
+          }
+        }
+      }
+    }
+  }
+}

@@ -60,4 +60,22 @@ public final class Rig {
                 .scale(1 / PIXELS_PER_BLOCK, -1 / PIXELS_PER_BLOCK, 1 / PIXELS_PER_BLOCK);
         return new Matrix4f(conversion).mul(matrix).mul(new Matrix4f(conversion).invert());
     }
+
+    public static Matrix4f itemTransform(Skeleton skeleton, Matrix4f[] matrices, BoneId socket) {
+        Vec3 pivot = skeleton.bone(socket).pivot();
+        // 挂点继承完整动画层级，只在这里叠加原版第三人称物品的坐标方向。
+        return toVanilla(matrices[socket.ordinal()])
+                .translate(pivot.x() / PIXELS_PER_BLOCK, (MODEL_ORIGIN_HEIGHT - pivot.y()) / PIXELS_PER_BLOCK,
+                        pivot.z() / PIXELS_PER_BLOCK)
+                .rotateX(-(float) Math.PI / 2).rotateY((float) Math.PI);
+    }
+
+    public static Matrix4f itemTransformMidpoint(Skeleton skeleton, Matrix4f[] matrices) {
+        Matrix4f right = itemTransform(skeleton, matrices, BoneId.R_ITEM);
+        Matrix4f left = itemTransform(skeleton, matrices, BoneId.L_ITEM);
+        // 双手捧物保留主手方向，只把挂点位置放到两个手掌的几何中点。
+        return right.setTranslation((right.m30() + left.m30()) * 0.5f,
+                (right.m31() + left.m31()) * 0.5f,
+                (right.m32() + left.m32()) * 0.5f);
+    }
 }

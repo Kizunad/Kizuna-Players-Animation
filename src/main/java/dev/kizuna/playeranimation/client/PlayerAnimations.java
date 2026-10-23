@@ -1,6 +1,7 @@
 package dev.kizuna.playeranimation.client;
 
 import java.util.UUID;
+import dev.kizuna.playeranimation.animation.PlayerAnimationAction;
 import net.fabricmc.fabric.api.event.Event;
 import net.fabricmc.fabric.api.event.EventFactory;
 
@@ -25,8 +26,24 @@ public final class PlayerAnimations {
         PlayerAnimationClient.PLAYBACK.play(player, animation);
     }
 
+    public static void play(UUID player, PlayerAnimationAction action) {
+        play(player, action.id());
+    }
+
+    public static void scrub(UUID player, String animation, float normalizedProgress) {
+        PlayerAnimationClient.PLAYBACK.scrub(player, animation, normalizedProgress);
+    }
+
+    public static void scrub(UUID player, PlayerAnimationAction action, float normalizedProgress) {
+        scrub(player, action.id(), normalizedProgress);
+    }
+
     public static void stop(UUID player, String animation) {
         PlayerAnimationClient.PLAYBACK.stop(player, animation);
+    }
+
+    public static void stop(UUID player, PlayerAnimationAction action) {
+        stop(player, action.id());
     }
 
     public static void stopAll(UUID player) {

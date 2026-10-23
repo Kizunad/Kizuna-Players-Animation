@@ -1,0 +1,119 @@
+package dev.kizuna.playeranimation;
+
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import dev.kizuna.playeranimation.animation.AnimationClip;
+import dev.kizuna.playeranimation.animation.AnimationEntry;
+import dev.kizuna.playeranimation.animation.AnimationPlayer;
+import dev.kizuna.playeranimation.model.BoneId;
+import dev.kizuna.playeranimation.model.Pose;
+import dev.kizuna.playeranimation.model.Rig;
+import dev.kizuna.playeranimation.model.Vec3;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+class AnimationSetContractTest {
+    private static final Path INDEX = Path.of("src/main/resources/assets/kizuna_players_animation/player_anim_index.json");
+    private static final String KEY_PREFIX = "animation.kizuna_players_animation.player.";
+
+    @Test
+    void everyRequestedActionIsIndexedAndParsesFromThePackagedResource() throws Exception {
+        JsonObject index = JsonParser.parseString(Files.readString(INDEX)).getAsJsonObject();
+        Set<String> ids = new HashSet<>();
+        Map<String, AnimationClip> clips = new HashMap<>();
+        for (var element : index.getAsJsonArray("animations")) {
+            JsonObject entry = element.getAsJsonObject();
+            String id = entry.get("id").getAsString();
+            assertTrue(ids.add(id), "重复动作: " + id);
+            Path file = INDEX.getParent().resolve(entry.get("file").getAsString());
+            JsonObject document = JsonParser.parseString(Files.readString(file)).getAsJsonObject();
+            ArrayList<String> errors = new ArrayList<>();
+            AnimationClip clip = AnimationClip.parse(document, KEY_PREFIX + id, errors::add);
+            assertTrue(clip.duration() > 0, id);
+            assertTrue(errors.isEmpty(), id + ": " + errors);
+            clip.tracks().keySet().forEach(bone -> assertFalse(bone.socket(), id + " 写入挂点"));
+            clips.put(id, clip);
+        }
+        // 动作枚举保留运行时 API 和调度接线，资源重做期间不把未打包动作
+        // 当成占位资源；导出一致性由 scripts/export_bbmodel_animation.py
+        // 在 Gradle check 阶段逐个核对 .bbmodel 与 JSON。
+        assertEquals(Set.of("walk", "run", "meditate", "crouch_work", "calib_zero", "calib_axes",
+                "calib_item", "calib_mirror", "calib_layer", "attack_main", "attack_off", "jump",
+                "equip_chestplate", "equip_chestplate_off", "equip_helmet", "equip_helmet_off",
+                "equip_leggings", "equip_leggings_off", "equip_boots", "equip_boots_off",
+                "mine_main", "mine_off", "place_block", "place_block_off", "spyglass", "spyglass_off",
+                "toot_horn", "toot_horn_off", "crossbow_charge", "crossbow_charge_off",
+                "crossbow_hold", "crossbow_hold_off", "brush", "brush_off", "use_item", "use_item_off"), ids);
+        // 已交付标记必须与打包资源一致：调度只请求已交付动作，未打包的动作不得标为已交付。
+        for (dev.kizuna.playeranimation.animation.PlayerAnimationAction action
+                : dev.kizuna.playeranimation.animation.PlayerAnimationAction.values()) {
+            assertEquals(ids.contains(action.id()), action.delivered(), action.id());
+        }
+    }
+
+    @Test
+    void miningPreservesVanillaCrouchWithoutASeparateSneakResource() throws Exception {
+        Pose[] base = Rig.zeroPose();
+        base[BoneId.PELVIS.ordinal()] = new Pose(new Vec3(0, -2, 1), new Vec3(-8, 0, 0));
+        base[BoneId.R_SHIN.ordinal()] = new Pose(Vec3.ZERO, new Vec3(-65, 0, 0));
+        base[BoneId.L_SHIN.ordinal()] = new Pose(Vec3.ZERO, new Vec3(-45, 0, 0));
+        AnimationPlayer player = new AnimationPlayer();
+        player.scrub(resource("mine_main"), 0, 0.22f, false);
+        Pose[] crouched = player.sample(base, 1, false, true);
+        for (BoneId bone : BoneId.ALL) {
+            if (AnimationEntry.Mask.LOWER.includes(bone)) {
+                assertEquals(base[bone.ordinal()], crouched[bone.ordinal()], bone.key);
+            }
+        }
+        assertNotEquals(base[BoneId.R_FOREARM.ordinal()], crouched[BoneId.R_FOREARM.ordinal()]);
+        assertNotEquals(base[BoneId.R_SHIN.ordinal()], player.sample(base, 1, false)[BoneId.R_SHIN.ordinal()]);
+    }
+
+    @Test
+    void supportStartedAfterToolStillOwnsTheLegsAndSurvivesToolExit() throws Exception {
+        AnimationPlayer combined = new AnimationPlayer();
+        combined.scrub(resource("mine_main"), 0, 0.22f, false);
+        combined.play(resource("crouch_work"), 0.1, false);
+        AnimationPlayer support = new AnimationPlayer();
+        support.play(resource("crouch_work"), 0.1, false);
+        for (double time : new double[]{0.4, 0.8, 1.5}) {
+            Pose[] expected = support.sample(Rig.zeroPose(), time, false);
+            Pose[] actual = combined.sample(Rig.zeroPose(), time, false);
+            for (BoneId bone : BoneId.ALL) {
+                if (AnimationEntry.Mask.LOWER.includes(bone)) {
+                    assertEquals(expected[bone.ordinal()], actual[bone.ordinal()], bone.key);
+                }
+            }
+        }
+        combined.stop("mine_main", 1.5);
+        assertEquals(support.sample(Rig.zeroPose(), 2, false)[BoneId.R_SHIN.ordinal()],
+                combined.sample(Rig.zeroPose(), 2, false)[BoneId.R_SHIN.ordinal()]);
+    }
+
+    private static AnimationEntry resource(String id) throws Exception {
+        // 直接读取打包资源，避免合成夹具掩盖实际 mask、循环和优先级问题。
+        JsonObject index = JsonParser.parseString(Files.readString(INDEX)).getAsJsonObject();
+        for (var element : index.getAsJsonArray("animations")) {
+            JsonObject raw = element.getAsJsonObject();
+            if (id.equals(raw.get("id").getAsString())) {
+                JsonObject document = JsonParser.parseString(Files.readString(
+                        INDEX.getParent().resolve(raw.get("file").getAsString()))).getAsJsonObject();
+                AnimationClip clip = AnimationClip.parse(document, KEY_PREFIX + id,
+                        error -> { throw new AssertionError(error); });
+                return AnimationEntry.parse(raw, clip);
+            }
+        }
+        throw new AssertionError("缺少动作: " + id);
+    }
+}

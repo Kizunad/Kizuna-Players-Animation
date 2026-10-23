@@ -1,0 +1,396 @@
+{
+  "animations": [
+    {
+      "id": "crouch_work",
+      "file": "animations/crouch_work.animation.json",
+      "mask": "full",
+      "priority": 2,
+      "blend_in": 0.18,
+      "blend_out": 0.18,
+      "hand": "main",
+      "fpv": false
+    },
+    {
+      "id": "walk",
+      "file": "animations/walk.animation.json",
+      "mask": "full",
+      "priority": 1,
+      "blend_in": 0.15,
+      "blend_out": 0.15,
+      "hand": "none",
+      "fpv": false
+    },
+    {
+      "id": "run",
+      "file": "animations/run.animation.json",
+      "mask": "full",
+      "priority": 1,
+      "blend_in": 0.12,
+      "blend_out": 0.15,
+      "hand": "none",
+      "fpv": false
+    },
+    {
+      "id": "meditate",
+      "file": "animations/meditate.animation.json",
+      "mask": "full",
+      "priority": 1,
+      "blend_in": 0.6,
+      "blend_out": 0.6,
+      "hand": "none",
+      "fpv": false
+    },
+    {
+      "id": "calib_zero",
+      "file": "animations/calib_zero.animation.json",
+      "mask": "full",
+      "priority": 5,
+      "blend_in": 0.1,
+      "blend_out": 0.1,
+      "hand": "none",
+      "fpv": false
+    },
+    {
+      "id": "calib_axes",
+      "file": "animations/calib_axes.animation.json",
+      "mask": "full",
+      "priority": 5,
+      "blend_in": 0.1,
+      "blend_out": 0.1,
+      "hand": "none",
+      "fpv": false
+    },
+    {
+      "id": "calib_item",
+      "file": "animations/calib_item.animation.json",
+      "mask": "upper",
+      "priority": 10,
+      "blend_in": 0.1,
+      "blend_out": 0.1,
+      "hand": "both",
+      "fpv": false
+    },
+    {
+      "id": "calib_mirror",
+      "file": "animations/calib_mirror.animation.json",
+      "mask": "r_arm",
+      "priority": 20,
+      "blend_in": 0.05,
+      "blend_out": 0.15,
+      "hand": "main",
+      "fpv": false
+    },
+    {
+      "id": "calib_layer",
+      "file": "animations/calib_layer.animation.json",
+      "mask": "upper",
+      "priority": 10,
+      "blend_in": 0.15,
+      "blend_out": 0.15,
+      "hand": "none",
+      "fpv": false
+    },
+    {
+      "id": "attack_main",
+      "file": "animations/attack_main.animation.json",
+      "mask": "full",
+      "priority": 20,
+      "blend_in": 0.04,
+      "blend_out": 0.14,
+      "hand": "main",
+      "fpv": false,
+      "impact_window": [
+        0.0,
+        0.2
+      ]
+    },
+    {
+      "id": "jump",
+      "file": "animations/jump.animation.json",
+      "mask": "full",
+      "priority": 16,
+      "blend_in": 0.05,
+      "blend_out": 0.15,
+      "hand": "none",
+      "fpv": false
+    },
+    {
+      "id": "equip_chestplate",
+      "file": "animations/equip_chestplate.animation.json",
+      "mask": "full",
+      "priority": 18,
+      "blend_in": 0.08,
+      "blend_out": 0.16,
+      "hand": "main",
+      "fpv": false
+    },
+    {
+      "id": "attack_off",
+      "file": "animations/attack_off.animation.json",
+      "mask": "full",
+      "priority": 20,
+      "blend_in": 0.04,
+      "blend_out": 0.14,
+      "hand": "off",
+      "fpv": false,
+      "impact_window": [
+        0.0,
+        0.2
+      ]
+    },
+    {
+      "id": "equip_chestplate_off",
+      "file": "animations/equip_chestplate_off.animation.json",
+      "mask": "full",
+      "priority": 18,
+      "blend_in": 0.08,
+      "blend_out": 0.16,
+      "hand": "off",
+      "fpv": false
+    },
+    {
+      "id": "equip_helmet",
+      "file": "animations/equip_helmet.animation.json",
+      "mask": "full",
+      "priority": 18,
+      "blend_in": 0.08,
+      "blend_out": 0.16,
+      "hand": "main",
+      "fpv": false
+    },
+    {
+      "id": "equip_helmet_off",
+      "file": "animations/equip_helmet_off.animation.json",
+      "mask": "full",
+      "priority": 18,
+      "blend_in": 0.08,
+      "blend_out": 0.16,
+      "hand": "off",
+      "fpv": false
+    },
+    {
+      "id": "equip_leggings",
+      "file": "animations/equip_leggings.animation.json",
+      "mask": "full",
+      "priority": 18,
+      "blend_in": 0.08,
+      "blend_out": 0.16,
+      "hand": "main",
+      "fpv": false
+    },
+    {
+      "id": "equip_leggings_off",
+      "file": "animations/equip_leggings_off.animation.json",
+      "mask": "full",
+      "priority": 18,
+      "blend_in": 0.08,
+      "blend_out": 0.16,
+      "hand": "off",
+      "fpv": false
+    },
+    {
+      "id": "equip_boots",
+      "file": "animations/equip_boots.animation.json",
+      "mask": "full",
+      "priority": 18,
+      "blend_in": 0.08,
+      "blend_out": 0.16,
+      "hand": "main",
+      "fpv": false
+    },
+    {
+      "id": "equip_boots_off",
+      "file": "animations/equip_boots_off.animation.json",
+      "mask": "full",
+      "priority": 18,
+      "blend_in": 0.08,
+      "blend_out": 0.16,
+      "hand": "off",
+      "fpv": false
+    },
+    {
+      "id": "mine_main",
+      "impact_window": [
+        0.0,
+        0.2
+      ],
+      "file": "animations/mine_main.animation.json",
+      "mask": "full",
+      "priority": 20,
+      "blend_in": 0.04,
+      "blend_out": 0.14,
+      "hand": "main",
+      "fpv": false
+    },
+    {
+      "id": "mine_off",
+      "impact_window": [
+        0.0,
+        0.2
+      ],
+      "file": "animations/mine_off.animation.json",
+      "mask": "full",
+      "priority": 20,
+      "blend_in": 0.04,
+      "blend_out": 0.14,
+      "hand": "off",
+      "fpv": false
+    },
+    {
+      "id": "place_block",
+      "file": "animations/place_block.animation.json",
+      "mask": "full",
+      "priority": 20,
+      "blend_in": 0.04,
+      "blend_out": 0.14,
+      "hand": "main",
+      "fpv": false
+    },
+    {
+      "id": "place_block_off",
+      "file": "animations/place_block_off.animation.json",
+      "mask": "full",
+      "priority": 20,
+      "blend_in": 0.04,
+      "blend_out": 0.14,
+      "hand": "off",
+      "fpv": false
+    },
+    {
+      "id": "spyglass",
+      "file": "animations/spyglass.animation.json",
+      "mask": "full",
+      "priority": 15,
+      "blend_in": 0.08,
+      "blend_out": 0.15,
+      "hand": "main",
+      "fpv": false,
+      "loop_region": [
+        0.35,
+        2.35
+      ]
+    },
+    {
+      "id": "spyglass_off",
+      "file": "animations/spyglass_off.animation.json",
+      "mask": "full",
+      "priority": 15,
+      "blend_in": 0.08,
+      "blend_out": 0.15,
+      "hand": "off",
+      "fpv": false,
+      "loop_region": [
+        0.35,
+        2.35
+      ]
+    },
+    {
+      "id": "crossbow_hold",
+      "file": "animations/crossbow_hold.animation.json",
+      "mask": "full",
+      "priority": 15,
+      "blend_in": 0.08,
+      "blend_out": 0.15,
+      "hand": "main",
+      "fpv": false
+    },
+    {
+      "id": "crossbow_hold_off",
+      "file": "animations/crossbow_hold_off.animation.json",
+      "mask": "full",
+      "priority": 15,
+      "blend_in": 0.08,
+      "blend_out": 0.15,
+      "hand": "off",
+      "fpv": false
+    },
+    {
+      "id": "crossbow_charge",
+      "file": "animations/crossbow_charge.animation.json",
+      "mask": "full",
+      "priority": 15,
+      "blend_in": 0.08,
+      "blend_out": 0.15,
+      "hand": "main",
+      "fpv": false
+    },
+    {
+      "id": "crossbow_charge_off",
+      "file": "animations/crossbow_charge_off.animation.json",
+      "mask": "full",
+      "priority": 15,
+      "blend_in": 0.08,
+      "blend_out": 0.15,
+      "hand": "off",
+      "fpv": false
+    },
+    {
+      "id": "toot_horn",
+      "file": "animations/toot_horn.animation.json",
+      "mask": "full",
+      "priority": 15,
+      "blend_in": 0.08,
+      "blend_out": 0.15,
+      "hand": "main",
+      "fpv": false
+    },
+    {
+      "id": "toot_horn_off",
+      "file": "animations/toot_horn_off.animation.json",
+      "mask": "full",
+      "priority": 15,
+      "blend_in": 0.08,
+      "blend_out": 0.15,
+      "hand": "off",
+      "fpv": false
+    },
+    {
+      "id": "use_item",
+      "file": "animations/use_item.animation.json",
+      "mask": "full",
+      "priority": 15,
+      "blend_in": 0.08,
+      "blend_out": 0.15,
+      "hand": "main",
+      "fpv": false
+    },
+    {
+      "id": "use_item_off",
+      "file": "animations/use_item_off.animation.json",
+      "mask": "full",
+      "priority": 15,
+      "blend_in": 0.08,
+      "blend_out": 0.15,
+      "hand": "off",
+      "fpv": false
+    },
+    {
+      "id": "brush",
+      "file": "animations/brush.animation.json",
+      "mask": "full",
+      "priority": 15,
+      "blend_in": 0.1,
+      "blend_out": 0.15,
+      "hand": "main",
+      "fpv": false,
+      "loop_region": [
+        0.3,
+        0.8
+      ]
+    },
+    {
+      "id": "brush_off",
+      "file": "animations/brush_off.animation.json",
+      "mask": "full",
+      "priority": 15,
+      "blend_in": 0.1,
+      "blend_out": 0.15,
+      "hand": "off",
+      "fpv": false,
+      "loop_region": [
+        0.3,
+        0.8
+      ]
+    }
+  ]
+}

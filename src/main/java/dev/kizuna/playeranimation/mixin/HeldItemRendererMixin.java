@@ -1,6 +1,7 @@
 package dev.kizuna.playeranimation.mixin;
 
 import dev.kizuna.playeranimation.client.PlayerMeshRenderer;
+import dev.kizuna.playeranimation.client.FirstPersonBody;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.item.HeldItemRenderer;
@@ -16,7 +17,14 @@ public abstract class HeldItemRendererMixin {
             at = @At("HEAD"), cancellable = true)
     private void kpa$firstPerson(float delta, MatrixStack matrices, VertexConsumerProvider.Immediate buffers,
                                  ClientPlayerEntity player, int light, CallbackInfo callback) {
-        // 只有明确标记 fpv 的活动动画才接管第一人称，结束后自动回到原版。
+        // 全身通道已经绘制了手和物品；地图等专用显示保留原版入口。
+        if (FirstPersonBody.active(player)) {
+            if (!FirstPersonBody.vanillaHands(player)) {
+                callback.cancel();
+            }
+            return;
+        }
+        // 关闭全身通道时仍保留原有 fpv 手臂动画契约。
         if (PlayerMeshRenderer.firstPerson(player, delta, matrices, buffers, light, (HeldItemRenderer) (Object) this)) {
             buffers.draw();
             callback.cancel();

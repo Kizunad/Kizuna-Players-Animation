@@ -1,12 +1,15 @@
 package dev.kizuna.playeranimation.client;
 
 import com.mojang.brigadier.arguments.StringArgumentType;
+import com.mojang.brigadier.arguments.BoolArgumentType;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientEntityEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.resource.ResourceManagerHelper;
+import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents;
 import net.minecraft.command.CommandSource;
 import net.minecraft.resource.ResourceType;
 import net.minecraft.text.Text;
@@ -22,11 +25,24 @@ public final class PlayerAnimationClient implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
         // 资源和时钟使用 Fabric 生命周期，渲染入口只负责取样与提交顶点。
+        ClientAnimationNetworking.register();
+        WorldRenderEvents.AFTER_ENTITIES.register(FirstPersonBody::render);
         ResourceManagerHelper.get(ResourceType.CLIENT_RESOURCES).registerReloadListener(ASSETS);
         ClientTickEvents.END_CLIENT_TICK.register(PLAYBACK::tick);
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> PLAYBACK.clear());
+        ClientEntityEvents.ENTITY_UNLOAD.register((entity, world) -> PLAYBACK.remove(entity.getUuid()));
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, registry) -> dispatcher.register(
                 ClientCommandManager.literal("kpa")
+                        .then(ClientCommandManager.literal("firstperson")
+                                .then(ClientCommandManager.argument("enabled", BoolArgumentType.bool())
+                                        .executes(context -> {
+                                            // 开关只影响当前客户端会话，便于对比身体与原版视角。
+                                            boolean enabled = BoolArgumentType.getBool(context, "enabled");
+                                            FirstPersonBody.setEnabled(enabled);
+                                            context.getSource().sendFeedback(Text.literal(
+                                                    enabled ? "已开启第一人称身体" : "已关闭第一人称身体"));
+                                            return 1;
+                                        })))
                         .then(ClientCommandManager.literal("play")
                                 .then(ClientCommandManager.argument("animation", StringArgumentType.word())
                                         .suggests((context, builder) -> CommandSource.suggestMatching(ASSETS.animations().keySet(), builder))
