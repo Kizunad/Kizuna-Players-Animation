@@ -505,6 +505,46 @@
       "hand": "none",
       "fpv": false,
       "layer": "look"
+    },
+    {
+      "id": "block_shield",
+      "file": "animations/block_shield.animation.json",
+      "mask": "full",
+      "priority": 15,
+      "blend_in": 0.06,
+      "blend_out": 0.15,
+      "hand": "main",
+      "fpv": false,
+      "loop_region": [
+        0.35,
+        1.95
+      ],
+      "phases": [
+        [
+          0,
+          0.35
+        ]
+      ]
+    },
+    {
+      "id": "block_shield_off",
+      "file": "animations/block_shield_off.animation.json",
+      "mask": "full",
+      "priority": 15,
+      "blend_in": 0.06,
+      "blend_out": 0.15,
+      "hand": "off",
+      "fpv": false,
+      "loop_region": [
+        0.35,
+        1.95
+      ],
+      "phases": [
+        [
+          0,
+          0.35
+        ]
+      ]
     }
   ]
 }

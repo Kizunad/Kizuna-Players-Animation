@@ -40,6 +40,9 @@ final class VanillaAnimationScheduler {
     private static final float EAT_LOOP_START_SECONDS = 0.40f;
     // 饮用剪辑 1.60 秒对应 32 tick 药水；更长的蜂蜜瓶停在仰头末姿。
     private static final float DRINK_CLIP_SECONDS = 1.60f;
+    // 持盾剪辑 1.95 秒，0.35 秒稳住后在 [0.35, 1.95] 呼吸回绕。
+    private static final float SHIELD_CLIP_SECONDS = 1.95f;
+    private static final float SHIELD_LOOP_START_SECONDS = 0.35f;
     // 每 tick 位移不超过 0.02 方块视作静止；比较水平位移平方（方块²/tick²）。
     private static final double STATIONARY_SPEED_SQUARED = 0.0004;
 
@@ -249,7 +252,7 @@ final class VanillaAnimationScheduler {
                 || action.startsWith("mine_") || action.startsWith("place_block")
                 || action.startsWith("use_item") || action.startsWith("spyglass")
                 || action.startsWith("toot_horn") || action.startsWith("crossbow_") || action.startsWith("brush")
-                || action.startsWith("eat") || action.startsWith("drink"));
+                || action.startsWith("eat") || action.startsWith("drink") || action.startsWith("block_shield"));
         if (!working || !groundedSneak(player) || !stationary) {
             return;
         }
@@ -405,6 +408,8 @@ final class VanillaAnimationScheduler {
             case "brush" -> loopedSecondsProgress(used * TOOL_PLAYBACK_SPEED, 0.925f, 0.30f, 0.80f);
             case "use_item" -> clipSecondsProgress(used / 20f * TOOL_PLAYBACK_SPEED, 0.40f);
             case "eat" -> loopedSecondsProgress(used, EAT_CLIP_SECONDS, EAT_LOOP_START_SECONDS, EAT_CLIP_SECONDS);
+            case "block_shield" -> loopedSecondsProgress(used, SHIELD_CLIP_SECONDS, SHIELD_LOOP_START_SECONDS,
+                    SHIELD_CLIP_SECONDS);
             case "drink" -> clipSecondsProgress(Math.min(used / 20f, DRINK_CLIP_SECONDS), DRINK_CLIP_SECONDS);
             default -> useProgress(player.getItemUseTimeLeft(), stack.getMaxUseTime());
         };
@@ -420,7 +425,8 @@ final class VanillaAnimationScheduler {
             case BRUSH -> handAction("brush", "brush_off", hand);
             case EAT -> handAction("eat", "eat_off", hand);
             case DRINK -> handAction("drink", "drink_off", hand);
-            case BOW, SPEAR, BLOCK -> null;
+            case BLOCK -> handAction("block_shield", "block_shield_off", hand);
+            case BOW, SPEAR -> null;
             default -> handAction("use_item", "use_item_off", hand);
         };
     }

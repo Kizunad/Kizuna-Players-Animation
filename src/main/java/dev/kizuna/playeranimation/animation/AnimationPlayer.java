@@ -233,7 +233,7 @@ public final class AnimationPlayer {
     private static boolean upperOverlay(String id) {
         return id.startsWith("attack") || id.startsWith("mine")
                 || id.startsWith("use_item") || id.startsWith("place_block")
-                || id.startsWith("eat") || id.startsWith("drink")
+                || id.startsWith("eat") || id.startsWith("drink") || id.startsWith("block_shield")
                 || id.startsWith("equip_")
                 || id.startsWith("spyglass") || id.startsWith("toot_horn")
                 || id.startsWith("crossbow_") || id.startsWith("brush");

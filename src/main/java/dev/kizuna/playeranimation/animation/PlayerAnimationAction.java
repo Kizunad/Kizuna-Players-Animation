@@ -31,6 +31,9 @@ public enum PlayerAnimationAction {
     EAT_OFF("eat_off"),
     DRINK("drink"),
     DRINK_OFF("drink_off"),
+    /** 持盾格挡按已使用 tick 取样，0.25 秒（5 tick）举盾到位，松手时由调度停止。 */
+    BLOCK_SHIELD("block_shield"),
+    BLOCK_SHIELD_OFF("block_shield_off"),
     USE_ITEM("use_item", 8),
     USE_ITEM_OFF("use_item_off", 8),
     PLACE_BLOCK("place_block", 10),

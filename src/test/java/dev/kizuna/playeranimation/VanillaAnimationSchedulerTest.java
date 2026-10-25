@@ -59,6 +59,14 @@ class VanillaAnimationSchedulerTest {
     }
 
     @Test
+    void shieldIsRaisedExactlyWhenVanillaBlockingStarts() {
+        // 原版已使用 5 tick 才格挡；剪辑 0.25 秒到位，之后在 0.35–1.95 秒回绕而不回到举盾过程。
+        assertEquals(0.25f, VanillaAnimationScheduler.loopedSecondsProgress(5, 1.95f, 0.35f, 1.95f) * 1.95f, 0.0001f);
+        float later = VanillaAnimationScheduler.loopedSecondsProgress(45, 1.95f, 0.35f, 1.95f) * 1.95f;
+        assertEquals(0.65f, later, 0.0001f);
+    }
+
+    @Test
     void jumpOnlyStartsAndStopsAtGroundEdges() {
         var state = new VanillaAnimationScheduler.JumpState();
         assertNull(state.progress(true, true, 0, 0));

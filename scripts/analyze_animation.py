@@ -65,6 +65,7 @@ GRIP_IDS = {
     "use_item_main", "use_item_off", "place_block", "place_block_off", "spyglass", "spyglass_off",
     "toot_horn", "toot_horn_off", "crossbow_charge", "crossbow_charge_off", "crossbow_hold",
     "crossbow_hold_off", "brush", "brush_off", "eat", "eat_off", "drink", "drink_off",
+    "block_shield", "block_shield_off", "bow_draw", "bow_draw_off", "trident_charge", "trident_charge_off",
 }
 
 NON_STANDING_IDS = {"meditate", "jump"}

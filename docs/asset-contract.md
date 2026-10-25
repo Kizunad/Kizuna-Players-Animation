@@ -18,7 +18,7 @@
 
 `meditate` 是一段打坐吐纳循环草稿，仍使用上述 classic 模板与内嵌 Steve 皮肤，导出到 `animations/meditate.animation.json`。时长 6 秒，约 2.4 秒吸气、3.6 秒呼气；双腿盘坐、双手搭膝，root 与腿部轨道恒定，腰胸、头部和手指有轻微呼吸变化。前臂仅屈肘 8°，不做轴向扭转。索引为 `full`、`hand: none`、`fpv: false`，淡入淡出各 0.6 秒。Human 正式吐纳会话启动时播放，真实位移先执行权威结束与资源结算，再切换运动动画；转头不结束。动作资源本身不含入座、起身、事件帧或缩放。
 
-旧 `animations/player_actions.animation.json` 已从打包资源和索引移除。动作设计文件位于 [`docs/animation-specs/`](animation-specs/)，classic `.bbmodel` 是关键帧源文件，运行时 JSON 均从该文件导出。索引中当前交付跳跃、攻击、挖掘、普通使用物品、放置方块、穿戴、望远镜、号角、弩装填/持弩、刷子，以及潜行操作支撑 `crouch_work`、通用潜行 `sneak` / `sneak_walk`、进食 `eat(_off)`、饮用 `drink(_off)`；另含行走、奔跑、吐纳和校准资源。拉弓、三叉戟、游泳、攀爬、骑乘、睡觉、鞘翅、闪避、单手格挡、双手格挡及通用手持单手/双手格挡动作均未制作，继续使用原版姿态。主副手剪辑标记 `hand: main/off`。自动门禁通过不代表游戏内视觉验收完成，当前视觉验收状态见文末。
+旧 `animations/player_actions.animation.json` 已从打包资源和索引移除。动作设计文件位于 [`docs/animation-specs/`](animation-specs/)，classic `.bbmodel` 是关键帧源文件，运行时 JSON 均从该文件导出。索引中当前交付跳跃、攻击、挖掘、普通使用物品、放置方块、穿戴、望远镜、号角、弩装填/持弩、刷子，以及潜行操作支撑 `crouch_work`、通用潜行 `sneak` / `sneak_walk`、进食 `eat(_off)`、饮用 `drink(_off)`、持盾格挡 `block_shield(_off)`；另含行走、奔跑、吐纳和校准资源。拉弓、三叉戟、游泳、攀爬、骑乘、睡觉、鞘翅、闪避、单手格挡、双手格挡及通用手持单手/双手格挡动作均未制作，继续使用原版姿态。主副手剪辑标记 `hand: main/off`。自动门禁通过不代表游戏内视觉验收完成，当前视觉验收状态见文末。
 
 盘腿使用大腿三轴组合旋转，其中 X 约 130°–133°、Z 约 −77° / +91°，超出原方案的初稿逐轴范围。因此本动作仍是坐姿预览草稿，不能标记为已通过原方案角度门禁；正式验收前需校准盘腿姿态的关节范围。
 
@@ -63,7 +63,7 @@
 
 `loop` 可省略或为 `false`（一次性）、`true`（循环）、`"hold_on_last_frame"`（保持）；`animation_length` 必须为正数。缩放省略或恒为 1。未知骨名报错并忽略该骨轨道；禁止给挂点写轨道。未知事件和无效字段值报错，不猜测替代含义。
 
-原版动作核对：攻击、挖掘、普通使用物品、放置方块、望远镜、号角、弩装填/持弩、刷子和跳跃由 `VanillaAnimationScheduler` 从原版实体字段产出动作 ID 与归一化进度，客户端按 scrub 取样对应资源。拉弓、三叉戟、游泳、攀爬、骑乘、睡觉、鞘翅、闪避和各类格挡不请求自定义动作，继续使用原版姿态或渲染。攻击与放置剪辑前 `0.60` 的归一化进度跟随挥手进度，结束后按原版挥手时长推进 `0.60→1.00` 的收势尾段；挖掘采用完整循环与连续收势的独立游标。ArmPose 对应 `spyglass`、`toot_horn`、`crossbow_charge`、`crossbow_hold`、`brush`，`UseAction.EAT` / `DRINK` 对应 `eat` / `drink`（剪辑时间 = 已使用 tick / 20；`eat` 在 `loop_region [0.40, 0.80]` 回绕，`drink` 1.60 秒后保持末帧），普通使用物品使用 `use_item`。scrub 目标跨过 `loop_region` 接缝或 `loop: true` 资源的首尾时，客户端把目标暂放在接缝另一侧沿最短方向插值，不倒放整段。跳跃使用单段 `jump`：离地保存 `vy0`，空中以 `clamp(0.30 × (1 − vy / vy0), 0, 0.60) / 0.90` scrub，落地从 `0.60` 播到 `0.90` 的缓冲段后才停止。
+原版动作核对：攻击、挖掘、普通使用物品、放置方块、望远镜、号角、弩装填/持弩、刷子和跳跃由 `VanillaAnimationScheduler` 从原版实体字段产出动作 ID 与归一化进度，客户端按 scrub 取样对应资源。拉弓、三叉戟、游泳、攀爬、骑乘、睡觉、鞘翅、闪避和盾牌以外的格挡不请求自定义动作，继续使用原版姿态或渲染。攻击与放置剪辑前 `0.60` 的归一化进度跟随挥手进度，结束后按原版挥手时长推进 `0.60→1.00` 的收势尾段；挖掘采用完整循环与连续收势的独立游标。ArmPose 对应 `spyglass`、`toot_horn`、`crossbow_charge`、`crossbow_hold`、`brush`，`UseAction.BLOCK` 对应 `block_shield`（已使用 tick / 20，`loop_region [0.35, 1.95]`），`UseAction.EAT` / `DRINK` 对应 `eat` / `drink`（剪辑时间 = 已使用 tick / 20；`eat` 在 `loop_region [0.40, 0.80]` 回绕，`drink` 1.60 秒后保持末帧），普通使用物品使用 `use_item`。scrub 目标跨过 `loop_region` 接缝或 `loop: true` 资源的首尾时，客户端把目标暂放在接缝另一侧沿最短方向插值，不倒放整段。跳跃使用单段 `jump`：离地保存 `vy0`，空中以 `clamp(0.30 × (1 − vy / vy0), 0, 0.60) / 0.90` scrub，落地从 `0.60` 播到 `0.90` 的缓冲段后才停止。
 
 导出与门禁命令：`python3 scripts/export_bbmodel_animation.py --check` 检查 `.bbmodel` 与全部打包 JSON；`python3 scripts/analyze_animation.py walk run meditate` 按 60 Hz 采样基线的正向运动学门禁；`python3 scripts/render_animation_gif.py walk run meditate --fps 12` 从 `.bbmodel` 直接输出粗臂/细臂三视角 GIF 和接触表。当前环境没有 Blockbench 可执行文件，因此使用仓库内 Pillow 工具完成离线 GIF；有图形界面时仍可用 Blockbench 自带导出复核。
 
