@@ -10,6 +10,7 @@ import java.util.Set;
 import java.util.UUID;
 import net.minecraft.item.ArmorItem;
 import net.minecraft.item.BlockItem;
+import net.minecraft.item.BowItem;
 import net.minecraft.item.CrossbowItem;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.MiningToolItem;
@@ -31,6 +32,7 @@ final class VanillaAnimationScheduler {
     private final Map<UUID, AttackState> attacks = new HashMap<>();
     private final Map<UUID, HoldState> crossbowHolds = new HashMap<>();
     private final Map<UUID, Vec3d> previousPositions = new HashMap<>();
+    private final Map<UUID, ReleaseTail> releases = new HashMap<>();
 
     private static final int LANDING_BUFFER_TICKS = 6;
     private static final float TOOL_PLAYBACK_SPEED = 0.8f;
@@ -43,6 +45,13 @@ final class VanillaAnimationScheduler {
     // 持盾剪辑 1.95 秒，0.35 秒稳住后在 [0.35, 1.95] 呼吸回绕。
     private static final float SHIELD_CLIP_SECONDS = 1.95f;
     private static final float SHIELD_LOOP_START_SECONDS = 0.35f;
+    // 拉弓剪辑：0–1.0 秒按原版拉弓进度（20 tick 满弓），满弓后 1.0–1.6 秒回绕，1.6–1.9 秒撒放尾段。
+    private static final float BOW_CLIP_SECONDS = 1.9f;
+    private static final float BOW_FULL_SECONDS = 1.0f;
+    private static final float BOW_HOLD_END_SECONDS = 1.6f;
+    // 原版拉弓进度低于 0.1 松手不发射，此时不播撒放尾段。
+    private static final float BOW_MIN_RELEASE_PULL = 0.1f;
+    private static final float TAIL_END_EPSILON_SECONDS = 0.001f;
     // 每 tick 位移不超过 0.02 方块视作静止；比较水平位移平方（方块²/tick²）。
     private static final double STATIONARY_SPEED_SQUARED = 0.0004;
 
@@ -119,6 +128,46 @@ final class VanillaAnimationScheduler {
         }
     }
 
+    /** 拉弓/投掷松手后的尾段：停止使用且原版确实发射时，按真实时间从起点推进到终点后结束。 */
+    static final class ReleaseTail {
+        private String action;
+        private boolean armed;
+        private long startTick = -1;
+        private float fromSeconds;
+        private float endSeconds;
+        private float clipSeconds;
+
+        void using(String action, boolean qualifies, float fromSeconds, float endSeconds, float clipSeconds) {
+            // 每个使用 tick 刷新，松手那一刻的条件决定是否播放尾段。
+            this.action = action;
+            this.armed = qualifies;
+            this.startTick = -1;
+            this.fromSeconds = fromSeconds;
+            this.endSeconds = endSeconds;
+            this.clipSeconds = clipSeconds;
+        }
+
+        String action() {
+            return action;
+        }
+
+        Float released(long tick) {
+            if (!armed) {
+                return null;
+            }
+            if (startTick < 0) {
+                startTick = tick;
+            }
+            float seconds = fromSeconds + Math.max(0, tick - startTick) / 20f;
+            // 尾段播完即解除，下一 tick 由统一停止逻辑淡出；容差吸收 tick 换算的浮点误差。
+            if (seconds > endSeconds + TAIL_END_EPSILON_SECONDS) {
+                armed = false;
+                return null;
+            }
+            return clampProgress(seconds / clipSeconds);
+        }
+    }
+
     private static final class HoldState {
         String action;
         long startTick;
@@ -150,6 +199,7 @@ final class VanillaAnimationScheduler {
         armor.keySet().removeIf(id -> server.getPlayerManager().getPlayer(id) == null);
         scrubbed.keySet().removeIf(id -> server.getPlayerManager().getPlayer(id) == null);
         previousPositions.keySet().removeIf(id -> server.getPlayerManager().getPlayer(id) == null);
+        releases.keySet().removeIf(id -> server.getPlayerManager().getPlayer(id) == null);
     }
 
     void clear(UUID player) {
@@ -159,6 +209,7 @@ final class VanillaAnimationScheduler {
         armor.remove(player);
         scrubbed.remove(player);
         previousPositions.remove(player);
+        releases.remove(player);
     }
 
     void clear() {
@@ -168,6 +219,7 @@ final class VanillaAnimationScheduler {
         armor.clear();
         scrubbed.clear();
         previousPositions.clear();
+        releases.clear();
     }
 
     static float clampProgress(float value) {
@@ -252,7 +304,8 @@ final class VanillaAnimationScheduler {
                 || action.startsWith("mine_") || action.startsWith("place_block")
                 || action.startsWith("use_item") || action.startsWith("spyglass")
                 || action.startsWith("toot_horn") || action.startsWith("crossbow_") || action.startsWith("brush")
-                || action.startsWith("eat") || action.startsWith("drink") || action.startsWith("block_shield"));
+                || action.startsWith("eat") || action.startsWith("drink") || action.startsWith("block_shield")
+                || action.startsWith("bow_draw"));
         if (!working || !groundedSneak(player) || !stationary) {
             return;
         }
@@ -294,10 +347,13 @@ final class VanillaAnimationScheduler {
                 float progress = armPoseProgress(player, stack, action);
                 syncScrub(player, action, progress, desired);
             }
+            armReleaseTail(player, stack, action);
         } else if (player.handSwinging) {
             crossbowHolds.remove(id);
+            scheduleReleaseTail(player, desired);
             scheduleHandSwing(player, desired);
         } else {
+            scheduleReleaseTail(player, desired);
             AttackState state = attacks.get(id);
             if (state != null) {
                 state.swinging = false;
@@ -305,6 +361,39 @@ final class VanillaAnimationScheduler {
             scheduleHandSwingTail(player, desired);
             scheduleCrossbowHold(player, desired);
         }
+    }
+
+    private void armReleaseTail(ServerPlayerEntity player, ItemStack stack, String action) {
+        // 只有拉弓与投掷有松手尾段；其他使用动作清掉旧状态，避免换物品后误播。
+        String base = action == null ? "" : action.replace("_off", "");
+        if (!base.equals("bow_draw")) {
+            releases.remove(player.getUuid());
+            return;
+        }
+        boolean fires = BowItem.getPullProgress(usedTicks(player, stack)) >= BOW_MIN_RELEASE_PULL;
+        releases.computeIfAbsent(player.getUuid(), ignored -> new ReleaseTail())
+                .using(action, fires, BOW_HOLD_END_SECONDS, BOW_CLIP_SECONDS, BOW_CLIP_SECONDS);
+    }
+
+    private void scheduleReleaseTail(ServerPlayerEntity player, Set<String> desired) {
+        ReleaseTail tail = releases.get(player.getUuid());
+        if (tail == null) {
+            return;
+        }
+        Float progress = tail.released(player.getWorld().getTime());
+        if (progress == null) {
+            releases.remove(player.getUuid());
+            return;
+        }
+        syncScrub(player, tail.action(), progress, desired);
+    }
+
+    static float bowProgress(float pull, int usedTicks) {
+        // 拉弦段直接用原版拉弓进度作剪辑秒数；满弓（20 tick）后已使用秒数恰好从 1.0 起，在保持段回绕。
+        if (pull < 1) {
+            return clipSecondsProgress(BOW_FULL_SECONDS * pull, BOW_CLIP_SECONDS);
+        }
+        return loopedSecondsProgress(usedTicks, BOW_CLIP_SECONDS, BOW_FULL_SECONDS, BOW_HOLD_END_SECONDS);
     }
 
     private void scheduleHandSwing(ServerPlayerEntity player, Set<String> desired) {
@@ -382,7 +471,7 @@ final class VanillaAnimationScheduler {
         return Math.max(0, stack.getMaxUseTime() - player.getItemUseTimeLeft());
     }
 
-    private static float clipSecondsProgress(float seconds, float duration) {
+    static float clipSecondsProgress(float seconds, float duration) {
         return clampProgress(seconds / duration);
     }
 
@@ -408,6 +497,7 @@ final class VanillaAnimationScheduler {
             case "brush" -> loopedSecondsProgress(used * TOOL_PLAYBACK_SPEED, 0.925f, 0.30f, 0.80f);
             case "use_item" -> clipSecondsProgress(used / 20f * TOOL_PLAYBACK_SPEED, 0.40f);
             case "eat" -> loopedSecondsProgress(used, EAT_CLIP_SECONDS, EAT_LOOP_START_SECONDS, EAT_CLIP_SECONDS);
+            case "bow_draw" -> bowProgress(BowItem.getPullProgress(used), used);
             case "block_shield" -> loopedSecondsProgress(used, SHIELD_CLIP_SECONDS, SHIELD_LOOP_START_SECONDS,
                     SHIELD_CLIP_SECONDS);
             case "drink" -> clipSecondsProgress(Math.min(used / 20f, DRINK_CLIP_SECONDS), DRINK_CLIP_SECONDS);
@@ -426,7 +516,8 @@ final class VanillaAnimationScheduler {
             case EAT -> handAction("eat", "eat_off", hand);
             case DRINK -> handAction("drink", "drink_off", hand);
             case BLOCK -> handAction("block_shield", "block_shield_off", hand);
-            case BOW, SPEAR -> null;
+            case BOW -> handAction("bow_draw", "bow_draw_off", hand);
+            case SPEAR -> null;
             default -> handAction("use_item", "use_item_off", hand);
         };
     }

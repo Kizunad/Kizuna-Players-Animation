@@ -545,6 +545,62 @@
           0.35
         ]
       ]
+    },
+    {
+      "id": "bow_draw",
+      "file": "animations/bow_draw.animation.json",
+      "mask": "full",
+      "priority": 15,
+      "blend_in": 0.08,
+      "blend_out": 0.15,
+      "hand": "main",
+      "fpv": false,
+      "loop_region": [
+        1.0,
+        1.6
+      ],
+      "phases": [
+        [
+          0.06,
+          0.36
+        ],
+        [
+          0.36,
+          1.0
+        ],
+        [
+          1.6,
+          1.9
+        ]
+      ]
+    },
+    {
+      "id": "bow_draw_off",
+      "file": "animations/bow_draw_off.animation.json",
+      "mask": "full",
+      "priority": 15,
+      "blend_in": 0.08,
+      "blend_out": 0.15,
+      "hand": "off",
+      "fpv": false,
+      "loop_region": [
+        1.0,
+        1.6
+      ],
+      "phases": [
+        [
+          0.06,
+          0.36
+        ],
+        [
+          0.36,
+          1.0
+        ],
+        [
+          1.6,
+          1.9
+        ]
+      ]
     }
   ]
 }

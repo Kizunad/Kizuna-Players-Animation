@@ -67,6 +67,29 @@ class VanillaAnimationSchedulerTest {
     }
 
     @Test
+    void bowFollowsVanillaPullAndLoopsOnlyAfterFullDraw() {
+        // 原版 20 tick 满弓：拉弦段剪辑秒数 = 拉弓进度，满弓后在 1.0–1.6 秒回绕，与拉弦段首尾连续。
+        // 拉弓进度按原版 BowItem.getPullProgress：f = t/20，(f² + 2f)/3，封顶 1。
+        float pull5 = (0.25f * 0.25f + 0.5f) / 3f;
+        assertEquals(0, VanillaAnimationScheduler.bowProgress(0, 0) * 1.9f, 0.0001f);
+        assertEquals(pull5, VanillaAnimationScheduler.bowProgress(pull5, 5) * 1.9f, 0.0001f);
+        assertEquals(1.0f, VanillaAnimationScheduler.bowProgress(1, 20) * 1.9f, 0.0001f);
+        assertEquals(1.3f, VanillaAnimationScheduler.bowProgress(1, 26) * 1.9f, 0.0001f);
+        assertEquals(1.0f, VanillaAnimationScheduler.bowProgress(1, 32) * 1.9f, 0.0001f);
+    }
+
+    @Test
+    void releaseTailPlaysOnceOnlyWhenTheShotFires() {
+        var tail = new VanillaAnimationScheduler.ReleaseTail();
+        tail.using("bow_draw", true, 1.6f, 1.9f, 1.9f);
+        assertEquals(1.6f / 1.9f, tail.released(100), 0.0001f);
+        assertEquals(1.9f / 1.9f, tail.released(106), 0.0001f);
+        assertNull(tail.released(107));
+        tail.using("bow_draw", false, 1.6f, 1.9f, 1.9f);
+        assertNull(tail.released(120));
+    }
+
+    @Test
     void jumpOnlyStartsAndStopsAtGroundEdges() {
         var state = new VanillaAnimationScheduler.JumpState();
         assertNull(state.progress(true, true, 0, 0));

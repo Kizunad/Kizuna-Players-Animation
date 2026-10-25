@@ -33,7 +33,7 @@ public final class PlayerMeshRenderer {
     private static final float LOOK_PITCH_FULL = 1;
     private static final float LOOK_PITCH_DRINK = 0.5f;
     private static final String[] PITCH_COMPENSATED = {"spyglass", "spyglass_off", "toot_horn", "toot_horn_off",
-            "crossbow_hold", "crossbow_hold_off"};
+            "crossbow_hold", "crossbow_hold_off", "bow_draw", "bow_draw_off"};
     public record Frame(PlayerAssets.Model model, Matrix4f[] matrices) { }
     private PlayerMeshRenderer() { }
 
@@ -92,7 +92,7 @@ public final class PlayerMeshRenderer {
         // 保持镜筒/吹口/弩托沿视线而不是固定在世界水平面。
         String active = null;
         for (String candidate : new String[]{"spyglass", "spyglass_off", "toot_horn", "toot_horn_off",
-                "crossbow_hold", "crossbow_hold_off"}) {
+                "crossbow_hold", "crossbow_hold_off", "bow_draw", "bow_draw_off"}) {
             if (animation.hasActive(candidate, now)) {
                 active = candidate;
                 break;
@@ -104,8 +104,8 @@ public final class PlayerMeshRenderer {
         // Minecraft 正俯仰表示低头；模型空间 Y 向上，X 旋转需随 Y 反射取反。
         float modelPitch = -pitch;
         pose[BoneId.HEAD.ordinal()] = withPitch(pose[BoneId.HEAD.ordinal()], modelPitch);
-        if (active.startsWith("spyglass")) {
-            // 两臂绕同一肩线做刚性旋转；分别增加局部 X 欧拉角会因 Y/Z 不同而拉开托臂接触点。
+        if (active.startsWith("spyglass") || active.startsWith("bow_draw")) {
+            // 望远镜托臂与拉弓弦手都必须保持双手相对位置：两臂绕同一肩线做刚性旋转；分别增加局部 X 欧拉角会因 Y/Z 不同而拉开托臂接触点。
             Vec3 right = skeleton.bone(BoneId.R_UPPER_ARM).pivot();
             Vec3 left = skeleton.bone(BoneId.L_UPPER_ARM).pivot();
             Vec3 center = right.lerp(left, 0.5f);

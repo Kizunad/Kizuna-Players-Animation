@@ -782,7 +782,8 @@ def anti_forgery_peak_order_gates(sampler: AnimationSampler, times: list[float],
     animation_id = sampler.key.rsplit(".", 1)[-1]
     if animation_id == "jump":
         chain = ["r_thigh", "r_shin", "r_foot"]
-    elif animation_id.startswith("crossbow_charge"):
+    elif animation_id.startswith("crossbow_charge") or animation_id.startswith("bow_draw"):
+        # 弩装填与拉弓的主动作在拉弦臂：主手持弓/弩时是左臂。
         side = "r" if animation_id.endswith("_off") else "l"
         chain = ["waist", "chest", f"{side}_upper_arm", f"{side}_forearm", f"{side}_hand"]
     else:
