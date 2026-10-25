@@ -1,6 +1,6 @@
 # eat：进食（送到嘴边，按进食音效节拍咀嚼）
 
-> 审阅状态：**设计稿，待审阅**（2026-10-26）。尚未录入 `.bbmodel`。轴向与坐标见 [共用约定](conventions.md)，
+> 状态：设计稿已审阅通过；2026-10-26 已录入 classic `.bbmodel`，主副手导出并接入 `VanillaAnimationScheduler`。双体型门禁通过（握持门禁已加入 `GRIP_IDS` 实测通过）；离线 GIF 在 `build/anim-review/2026-10-26/`，游戏内视觉验收尚未执行。
 > 数值来自设计期原型轨道并经仓库门禁同算法核对（`scripts/analyze_animation.py`，粗臂/细臂）。
 
 ## 1. 动作目的与触发

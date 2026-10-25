@@ -77,7 +77,7 @@ tasks.register('checkAnimationGates', Exec) {
     commandLine 'python3', 'scripts/analyze_animation.py', 'walk', 'run', 'meditate',
             'jump', 'mine_main', 'mine_off', 'spyglass', 'spyglass_off',
             'crossbow_charge', 'crossbow_charge_off', 'crouch_work',
-            'sneak', 'sneak_walk'
+            'sneak', 'sneak_walk', 'eat', 'eat_off', 'drink', 'drink_off'
 }
 
 tasks.register('checkAnimationAntiForgery', Exec) {

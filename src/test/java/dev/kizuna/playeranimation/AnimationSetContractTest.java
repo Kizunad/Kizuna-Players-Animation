@@ -55,7 +55,7 @@ class AnimationSetContractTest {
                 "mine_main", "mine_off", "place_block", "place_block_off", "spyglass", "spyglass_off",
                 "toot_horn", "toot_horn_off", "crossbow_charge", "crossbow_charge_off",
                 "crossbow_hold", "crossbow_hold_off", "brush", "brush_off", "use_item", "use_item_off",
-                "sneak", "sneak_walk"), ids);
+                "sneak", "sneak_walk", "eat", "eat_off", "drink", "drink_off"), ids);
         // 已交付标记必须与打包资源一致：调度只请求已交付动作，未打包的动作不得标为已交付。
         for (dev.kizuna.playeranimation.animation.PlayerAnimationAction action
                 : dev.kizuna.playeranimation.animation.PlayerAnimationAction.values()) {
@@ -122,6 +122,23 @@ class AnimationSetContractTest {
                 assertNotEquals(expected[BoneId.R_FOREARM.ordinal()], actual[BoneId.R_FOREARM.ordinal()], base);
             }
         }
+    }
+
+    @Test
+    void eatingLoopCrossesItsSeamForwardInsteadOfReplayingTheChew() throws Exception {
+        // 已使用 15 → 16 tick 时进度从 0.75 秒回绕到 0.40 秒；插值中点必须落在 0.775 秒（接缝前），
+        // 而不是倒放经过 0.60 秒的咬下姿势。
+        AnimationPlayer wrapped = new AnimationPlayer();
+        // 先等淡入完成，只比较回绕插值本身。
+        wrapped.scrub(resource("eat"), 0, 0.75f / 0.80f, false);
+        wrapped.scrub(resource("eat"), 0.95, 0.75f / 0.80f, false);
+        wrapped.scrub(resource("eat"), 1.0, 0.40f / 0.80f, false);
+        AnimationPlayer expected = new AnimationPlayer();
+        expected.scrub(resource("eat"), 0, 0.775f / 0.80f, false);
+        Pose actualHead = wrapped.sample(Rig.zeroPose(), 1.025, false)[BoneId.HEAD.ordinal()];
+        Pose expectedHead = expected.sample(Rig.zeroPose(), 1, false)[BoneId.HEAD.ordinal()];
+        assertEquals(expectedHead.rotation().x(), actualHead.rotation().x(), 0.05f);
+        assertEquals(0.5f, wrapped.normalizedProgress("eat", 1.025), 0.0001f);
     }
 
     private static AnimationEntry resource(String id) throws Exception {

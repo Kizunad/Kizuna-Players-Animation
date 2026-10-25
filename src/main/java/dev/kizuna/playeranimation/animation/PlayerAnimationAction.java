@@ -26,6 +26,11 @@ public enum PlayerAnimationAction {
     CROSSBOW_HOLD_OFF("crossbow_hold_off", 8),
     BRUSH("brush", 19),
     BRUSH_OFF("brush_off", 19),
+    /** 进食与饮用按已使用 tick 取样，使用结束时由调度停止。 */
+    EAT("eat"),
+    EAT_OFF("eat_off"),
+    DRINK("drink"),
+    DRINK_OFF("drink_off"),
     USE_ITEM("use_item", 8),
     USE_ITEM_OFF("use_item_off", 8),
     PLACE_BLOCK("place_block", 10),

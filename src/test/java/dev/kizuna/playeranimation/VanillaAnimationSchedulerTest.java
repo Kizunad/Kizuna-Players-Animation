@@ -49,6 +49,16 @@ class VanillaAnimationSchedulerTest {
     }
 
     @Test
+    void eatingBitesStayOnTheVanillaConsumptionBeat() {
+        // 原版 32 tick 食物在已使用 8、12…28 tick 播放进食音效；剪辑 0.40 / 0.60 秒是两次咬下。
+        for (int used = 8; used <= 28; used += 4) {
+            float seconds = VanillaAnimationScheduler.loopedSecondsProgress(used, 0.80f, 0.40f, 0.80f) * 0.80f;
+            float bite = used % 8 == 0 ? 0.40f : 0.60f;
+            assertEquals(bite, seconds, 0.0001f, "used=" + used);
+        }
+    }
+
+    @Test
     void jumpOnlyStartsAndStopsAtGroundEdges() {
         var state = new VanillaAnimationScheduler.JumpState();
         assertNull(state.progress(true, true, 0, 0));

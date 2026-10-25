@@ -35,6 +35,11 @@ final class VanillaAnimationScheduler {
     private static final int LANDING_BUFFER_TICKS = 6;
     private static final float TOOL_PLAYBACK_SPEED = 0.8f;
     private static final double MINING_LOOP_PROGRESS = 0.40;
+    // 进食剪辑 0.80 秒，0.40–0.80 秒的两次咬下对应已使用 8、12 tick 的原版进食音效并循环。
+    private static final float EAT_CLIP_SECONDS = 0.80f;
+    private static final float EAT_LOOP_START_SECONDS = 0.40f;
+    // 饮用剪辑 1.60 秒对应 32 tick 药水；更长的蜂蜜瓶停在仰头末姿。
+    private static final float DRINK_CLIP_SECONDS = 1.60f;
     // 每 tick 位移不超过 0.02 方块视作静止；比较水平位移平方（方块²/tick²）。
     private static final double STATIONARY_SPEED_SQUARED = 0.0004;
 
@@ -243,7 +248,8 @@ final class VanillaAnimationScheduler {
         boolean working = desired.stream().anyMatch(action -> action.startsWith("attack_")
                 || action.startsWith("mine_") || action.startsWith("place_block")
                 || action.startsWith("use_item") || action.startsWith("spyglass")
-                || action.startsWith("toot_horn") || action.startsWith("crossbow_") || action.startsWith("brush"));
+                || action.startsWith("toot_horn") || action.startsWith("crossbow_") || action.startsWith("brush")
+                || action.startsWith("eat") || action.startsWith("drink"));
         if (!working || !groundedSneak(player) || !stationary) {
             return;
         }
@@ -377,7 +383,7 @@ final class VanillaAnimationScheduler {
         return clampProgress(seconds / duration);
     }
 
-    private static float loopedSecondsProgress(float usedTicks, float duration, float loopStart, float loopEnd) {
+    static float loopedSecondsProgress(float usedTicks, float duration, float loopStart, float loopEnd) {
         float seconds = usedTicks / 20f;
         if (seconds >= loopStart) {
             float length = loopEnd - loopStart;
@@ -398,6 +404,8 @@ final class VanillaAnimationScheduler {
             }
             case "brush" -> loopedSecondsProgress(used * TOOL_PLAYBACK_SPEED, 0.925f, 0.30f, 0.80f);
             case "use_item" -> clipSecondsProgress(used / 20f * TOOL_PLAYBACK_SPEED, 0.40f);
+            case "eat" -> loopedSecondsProgress(used, EAT_CLIP_SECONDS, EAT_LOOP_START_SECONDS, EAT_CLIP_SECONDS);
+            case "drink" -> clipSecondsProgress(Math.min(used / 20f, DRINK_CLIP_SECONDS), DRINK_CLIP_SECONDS);
             default -> useProgress(player.getItemUseTimeLeft(), stack.getMaxUseTime());
         };
     }
@@ -410,7 +418,9 @@ final class VanillaAnimationScheduler {
             case SPYGLASS -> handAction("spyglass", "spyglass_off", hand);
             case TOOT_HORN -> handAction("toot_horn", "toot_horn_off", hand);
             case BRUSH -> handAction("brush", "brush_off", hand);
-            case EAT, DRINK, BOW, SPEAR, BLOCK -> null;
+            case EAT -> handAction("eat", "eat_off", hand);
+            case DRINK -> handAction("drink", "drink_off", hand);
+            case BOW, SPEAR, BLOCK -> null;
             default -> handAction("use_item", "use_item_off", hand);
         };
     }

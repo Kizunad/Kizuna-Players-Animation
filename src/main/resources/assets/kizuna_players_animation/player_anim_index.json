@@ -411,6 +411,78 @@
       "blend_out": 0.2,
       "hand": "none",
       "fpv": false
+    },
+    {
+      "id": "eat",
+      "file": "animations/eat.animation.json",
+      "mask": "full",
+      "priority": 15,
+      "blend_in": 0.1,
+      "blend_out": 0.2,
+      "hand": "main",
+      "fpv": false,
+      "loop_region": [
+        0.4,
+        0.8
+      ],
+      "phases": [
+        [
+          0,
+          0.4
+        ]
+      ]
+    },
+    {
+      "id": "eat_off",
+      "file": "animations/eat_off.animation.json",
+      "mask": "full",
+      "priority": 15,
+      "blend_in": 0.1,
+      "blend_out": 0.2,
+      "hand": "off",
+      "fpv": false,
+      "loop_region": [
+        0.4,
+        0.8
+      ],
+      "phases": [
+        [
+          0,
+          0.4
+        ]
+      ]
+    },
+    {
+      "id": "drink",
+      "file": "animations/drink.animation.json",
+      "mask": "full",
+      "priority": 15,
+      "blend_in": 0.1,
+      "blend_out": 0.2,
+      "hand": "main",
+      "fpv": false,
+      "phases": [
+        [
+          0,
+          0.4
+        ]
+      ]
+    },
+    {
+      "id": "drink_off",
+      "file": "animations/drink_off.animation.json",
+      "mask": "full",
+      "priority": 15,
+      "blend_in": 0.1,
+      "blend_out": 0.2,
+      "hand": "off",
+      "fpv": false,
+      "phases": [
+        [
+          0,
+          0.4
+        ]
+      ]
     }
   ]
 }

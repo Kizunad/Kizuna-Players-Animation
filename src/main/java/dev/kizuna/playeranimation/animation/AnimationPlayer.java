@@ -12,6 +12,8 @@ public final class AnimationPlayer {
     private static final double SCRUB_RESTART_BLEND_SECONDS = 0.05;
     private static final double SCRUB_INTERPOLATION_SECONDS = 0.05;
     private static final float MINING_LOOP_SECONDS = 0.20f;
+    // 循环段边界判断的归一化容差，吸收 tick 取样与浮点误差。
+    private static final float LOOP_REGION_EPSILON = 0.001f;
     private final List<Playback> playing = new ArrayList<>();
     private long sequence;
 
@@ -29,7 +31,7 @@ public final class AnimationPlayer {
         }
         for (Playback playback : playing) {
             if (playback.scrub && playback.entry.id().equals(entry.id()) && Double.isNaN(playback.stopped)) {
-                float previous = playback.scrubTarget;
+                float previous = playback.foldedTarget();
                 boolean rewound = normalizedProgress + 0.25f < previous;
                 playback.scrubFrom = normalizedProgress;
                 playback.scrubTarget = normalizedProgress;
@@ -38,6 +40,11 @@ public final class AnimationPlayer {
                 if (mining(entry.id()) && normalizedProgress < previous && previous <= miningLoopEnd) {
                     // 从循环尾向首帧正向插值，避免 0.8 倍及急迫下的非整 tick 回绕倒放。
                     playback.scrubFrom = previous - miningLoopEnd;
+                    playback.scrubRestartAt = Double.NaN;
+                } else if (playback.wrapOffset(previous, normalizedProgress) != 0) {
+                    // 循环段或循环资源跨接缝：目标沿最短方向越过接缝，插值不倒放整段。
+                    playback.scrubFrom = previous;
+                    playback.scrubTarget = normalizedProgress + playback.wrapOffset(previous, normalizedProgress);
                     playback.scrubRestartAt = Double.NaN;
                 } else if (rewound && directLoopRestart(entry.id())) {
                     // 挖掘/放置的 0.20 秒子循环首尾同姿态，回绕直接接回零点，
@@ -119,7 +126,7 @@ public final class AnimationPlayer {
         for (Playback playback : playing) {
             if (playback.entry.id().equals(id) && !playback.finished(now)) {
                 if (playback.scrub) {
-                    return playback.scrubTarget;
+                    return playback.foldedTarget();
                 }
                 return (float) Math.min(1, playback.time(now) / playback.entry.clip().duration());
             }
@@ -226,6 +233,7 @@ public final class AnimationPlayer {
     private static boolean upperOverlay(String id) {
         return id.startsWith("attack") || id.startsWith("mine")
                 || id.startsWith("use_item") || id.startsWith("place_block")
+                || id.startsWith("eat") || id.startsWith("drink")
                 || id.startsWith("equip_")
                 || id.startsWith("spyglass") || id.startsWith("toot_horn")
                 || id.startsWith("crossbow_") || id.startsWith("brush");
@@ -316,7 +324,48 @@ public final class AnimationPlayer {
                 double length = entry.loopRegionEnd() - start;
                 time = start + ((time - start) % length + length) % length;
             }
+            if (entry.clip().loop() == AnimationClip.Loop.REPEAT) {
+                // 循环资源的回绕目标可能落在 [0,1] 之外，按剪辑长度取模回到同一周期。
+                double duration = entry.clip().duration();
+                time = (time % duration + duration) % duration;
+            }
             return time;
+        }
+
+        float foldedTarget() {
+            // 回绕插值会把目标暂存在接缝另一侧；对外和下次比较时折回权威区间。
+            if (entry.clip().loop() == AnimationClip.Loop.REPEAT) {
+                return scrubTarget - (float) Math.floor(scrubTarget);
+            }
+            if (entry.loopRegionStart() != null && scrubTarget * entry.clip().duration() >= entry.loopRegionEnd()) {
+                return scrubTarget - loopRegionLength();
+            }
+            return scrubTarget;
+        }
+
+        float wrapOffset(float previous, float target) {
+            // 只有确实跨越循环接缝才返回偏移：循环资源取最短方向，循环段只会正向回绕。
+            if (entry.clip().loop() == AnimationClip.Loop.REPEAT) {
+                if (previous - target > 0.5f) {
+                    return 1;
+                }
+                if (target - previous > 0.5f) {
+                    return -1;
+                }
+                return 0;
+            }
+            if (entry.loopRegionStart() == null || target >= previous) {
+                return 0;
+            }
+            float duration = entry.clip().duration();
+            float start = entry.loopRegionStart() / duration - LOOP_REGION_EPSILON;
+            float end = entry.loopRegionEnd() / duration + LOOP_REGION_EPSILON;
+            boolean inside = previous >= start && previous <= end && target >= start && target <= end;
+            return inside ? loopRegionLength() : 0;
+        }
+
+        private float loopRegionLength() {
+            return (entry.loopRegionEnd() - entry.loopRegionStart()) / entry.clip().duration();
         }
 
         double scrubEventTime() {

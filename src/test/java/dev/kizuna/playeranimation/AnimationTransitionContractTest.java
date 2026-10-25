@@ -147,7 +147,7 @@ class AnimationTransitionContractTest {
     @Test
     void everyExpandedTransitionUsesAnimationPlayerWithoutFrameJump() throws IOException {
         List<Edge> edges = readEdges();
-        assertEquals(125, edges.size(), "切换表展开后的有向边数量发生变化");
+        assertEquals(141, edges.size(), "切换表展开后的有向边数量发生变化");
         Pose[] base = Rig.zeroPose();
         for (Edge edge : edges) {
             AnimationPlayer player = new AnimationPlayer();
