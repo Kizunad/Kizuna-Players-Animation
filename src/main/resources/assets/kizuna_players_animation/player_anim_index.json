@@ -391,6 +391,314 @@
         0.3,
         0.8
       ]
+    },
+    {
+      "id": "sneak",
+      "file": "animations/sneak.animation.json",
+      "mask": "full",
+      "priority": 2,
+      "blend_in": 0.2,
+      "blend_out": 0.2,
+      "hand": "none",
+      "fpv": false
+    },
+    {
+      "id": "sneak_walk",
+      "file": "animations/sneak_walk.animation.json",
+      "mask": "full",
+      "priority": 2,
+      "blend_in": 0.2,
+      "blend_out": 0.2,
+      "hand": "none",
+      "fpv": false
+    },
+    {
+      "id": "eat",
+      "file": "animations/eat.animation.json",
+      "mask": "full",
+      "priority": 15,
+      "blend_in": 0.1,
+      "blend_out": 0.2,
+      "hand": "main",
+      "fpv": false,
+      "loop_region": [
+        0.4,
+        0.8
+      ],
+      "phases": [
+        [
+          0,
+          0.4
+        ]
+      ]
+    },
+    {
+      "id": "eat_off",
+      "file": "animations/eat_off.animation.json",
+      "mask": "full",
+      "priority": 15,
+      "blend_in": 0.1,
+      "blend_out": 0.2,
+      "hand": "off",
+      "fpv": false,
+      "loop_region": [
+        0.4,
+        0.8
+      ],
+      "phases": [
+        [
+          0,
+          0.4
+        ]
+      ]
+    },
+    {
+      "id": "drink",
+      "file": "animations/drink.animation.json",
+      "mask": "full",
+      "priority": 15,
+      "blend_in": 0.1,
+      "blend_out": 0.2,
+      "hand": "main",
+      "fpv": false,
+      "phases": [
+        [
+          0,
+          0.4
+        ]
+      ]
+    },
+    {
+      "id": "drink_off",
+      "file": "animations/drink_off.animation.json",
+      "mask": "full",
+      "priority": 15,
+      "blend_in": 0.1,
+      "blend_out": 0.2,
+      "hand": "off",
+      "fpv": false,
+      "phases": [
+        [
+          0,
+          0.4
+        ]
+      ]
+    },
+    {
+      "id": "head_follow",
+      "file": "animations/head_follow.animation.json",
+      "mask": "upper",
+      "priority": 0,
+      "blend_in": 0,
+      "blend_out": 0,
+      "hand": "none",
+      "fpv": false,
+      "layer": "look"
+    },
+    {
+      "id": "head_follow_pitch",
+      "file": "animations/head_follow_pitch.animation.json",
+      "mask": "upper",
+      "priority": 0,
+      "blend_in": 0,
+      "blend_out": 0,
+      "hand": "none",
+      "fpv": false,
+      "layer": "look"
+    },
+    {
+      "id": "block_shield",
+      "file": "animations/block_shield.animation.json",
+      "mask": "full",
+      "priority": 15,
+      "blend_in": 0.06,
+      "blend_out": 0.15,
+      "hand": "main",
+      "fpv": false,
+      "loop_region": [
+        0.35,
+        1.95
+      ],
+      "phases": [
+        [
+          0,
+          0.35
+        ]
+      ]
+    },
+    {
+      "id": "block_shield_off",
+      "file": "animations/block_shield_off.animation.json",
+      "mask": "full",
+      "priority": 15,
+      "blend_in": 0.06,
+      "blend_out": 0.15,
+      "hand": "off",
+      "fpv": false,
+      "loop_region": [
+        0.35,
+        1.95
+      ],
+      "phases": [
+        [
+          0,
+          0.35
+        ]
+      ]
+    },
+    {
+      "id": "bow_draw",
+      "file": "animations/bow_draw.animation.json",
+      "mask": "full",
+      "priority": 15,
+      "blend_in": 0.08,
+      "blend_out": 0.15,
+      "hand": "main",
+      "fpv": false,
+      "loop_region": [
+        1.0,
+        1.6
+      ],
+      "phases": [
+        [
+          0.06,
+          0.36
+        ],
+        [
+          0.36,
+          1.0
+        ],
+        [
+          1.6,
+          1.9
+        ]
+      ]
+    },
+    {
+      "id": "bow_draw_off",
+      "file": "animations/bow_draw_off.animation.json",
+      "mask": "full",
+      "priority": 15,
+      "blend_in": 0.08,
+      "blend_out": 0.15,
+      "hand": "off",
+      "fpv": false,
+      "loop_region": [
+        1.0,
+        1.6
+      ],
+      "phases": [
+        [
+          0.06,
+          0.36
+        ],
+        [
+          0.36,
+          1.0
+        ],
+        [
+          1.6,
+          1.9
+        ]
+      ]
+    },
+    {
+      "id": "trident_charge",
+      "file": "animations/trident_charge.animation.json",
+      "mask": "full",
+      "priority": 15,
+      "blend_in": 0.08,
+      "blend_out": 0.15,
+      "hand": "main",
+      "fpv": false,
+      "loop_region": [
+        0.5,
+        1.7
+      ],
+      "phases": [
+        [
+          0,
+          0.5
+        ],
+        [
+          1.7,
+          2.15
+        ]
+      ]
+    },
+    {
+      "id": "trident_charge_off",
+      "file": "animations/trident_charge_off.animation.json",
+      "mask": "full",
+      "priority": 15,
+      "blend_in": 0.08,
+      "blend_out": 0.15,
+      "hand": "off",
+      "fpv": false,
+      "loop_region": [
+        0.5,
+        1.7
+      ],
+      "phases": [
+        [
+          0,
+          0.5
+        ],
+        [
+          1.7,
+          2.15
+        ]
+      ]
+    },
+    {
+      "id": "ride",
+      "file": "animations/ride.animation.json",
+      "mask": "full",
+      "priority": 3,
+      "blend_in": 0.25,
+      "blend_out": 0.25,
+      "hand": "none",
+      "fpv": false
+    },
+    {
+      "id": "sleep",
+      "file": "animations/sleep.animation.json",
+      "mask": "full",
+      "priority": 5,
+      "blend_in": 0.3,
+      "blend_out": 0.3,
+      "hand": "none",
+      "fpv": false
+    },
+    {
+      "id": "elytra",
+      "file": "animations/elytra.animation.json",
+      "mask": "full",
+      "priority": 4,
+      "blend_in": 0.25,
+      "blend_out": 0.25,
+      "hand": "none",
+      "fpv": false
+    },
+    {
+      "id": "climb",
+      "file": "animations/climb.animation.json",
+      "mask": "full",
+      "priority": 4,
+      "blend_in": 0.15,
+      "blend_out": 0.15,
+      "hand": "none",
+      "fpv": false
+    },
+    {
+      "id": "swim",
+      "file": "animations/swim.animation.json",
+      "mask": "full",
+      "priority": 4,
+      "blend_in": 0.3,
+      "blend_out": 0.3,
+      "hand": "none",
+      "fpv": false
     }
   ]
 }

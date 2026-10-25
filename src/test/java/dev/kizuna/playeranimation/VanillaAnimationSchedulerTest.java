@@ -3,6 +3,7 @@ package dev.kizuna.playeranimation.server;
 import org.junit.jupiter.api.Test;
 import dev.kizuna.playeranimation.animation.PlayerAnimationAction;
 import net.minecraft.util.Hand;
+import net.minecraft.util.math.Vec3d;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -46,6 +47,75 @@ class VanillaAnimationSchedulerTest {
             assertEquals(tick * 0.08f, state.progress(true, tick / 6f, tick, 6), 0.00001f);
         }
         assertEquals(0.48f, state.progress(false, 0, 6, 6), 0.00001f);
+    }
+
+    @Test
+    void eatingBitesStayOnTheVanillaConsumptionBeat() {
+        // 原版 32 tick 食物在已使用 8、12…28 tick 播放进食音效；剪辑 0.40 / 0.60 秒是两次咬下。
+        for (int used = 8; used <= 28; used += 4) {
+            float seconds = VanillaAnimationScheduler.loopedSecondsProgress(used, 0.80f, 0.40f, 0.80f) * 0.80f;
+            float bite = used % 8 == 0 ? 0.40f : 0.60f;
+            assertEquals(bite, seconds, 0.0001f, "used=" + used);
+        }
+    }
+
+    @Test
+    void shieldIsRaisedExactlyWhenVanillaBlockingStarts() {
+        // 原版已使用 5 tick 才格挡；剪辑 0.25 秒到位，之后在 0.35–1.95 秒回绕而不回到举盾过程。
+        assertEquals(0.25f, VanillaAnimationScheduler.loopedSecondsProgress(5, 1.95f, 0.35f, 1.95f) * 1.95f, 0.0001f);
+        float later = VanillaAnimationScheduler.loopedSecondsProgress(45, 1.95f, 0.35f, 1.95f) * 1.95f;
+        assertEquals(0.65f, later, 0.0001f);
+    }
+
+    @Test
+    void bowFollowsVanillaPullAndLoopsOnlyAfterFullDraw() {
+        // 原版 20 tick 满弓：拉弦段剪辑秒数 = 拉弓进度，满弓后在 1.0–1.6 秒回绕，与拉弦段首尾连续。
+        // 拉弓进度按原版 BowItem.getPullProgress：f = t/20，(f² + 2f)/3，封顶 1。
+        float pull5 = (0.25f * 0.25f + 0.5f) / 3f;
+        assertEquals(0, VanillaAnimationScheduler.bowProgress(0, 0) * 1.9f, 0.0001f);
+        assertEquals(pull5, VanillaAnimationScheduler.bowProgress(pull5, 5) * 1.9f, 0.0001f);
+        assertEquals(1.0f, VanillaAnimationScheduler.bowProgress(1, 20) * 1.9f, 0.0001f);
+        assertEquals(1.3f, VanillaAnimationScheduler.bowProgress(1, 26) * 1.9f, 0.0001f);
+        assertEquals(1.0f, VanillaAnimationScheduler.bowProgress(1, 32) * 1.9f, 0.0001f);
+    }
+
+    @Test
+    void tridentIsReadyExactlyAtTheVanillaThrowThreshold() {
+        // 原版已使用 10 tick 才能投掷：剪辑 0.50 秒后引到位，之后在 0.50–1.70 秒回绕，不进入投掷跟随段。
+        assertEquals(0.50f, VanillaAnimationScheduler.loopedSecondsProgress(10, 2.15f, 0.50f, 1.70f) * 2.15f, 0.0001f);
+        assertEquals(0.60f, VanillaAnimationScheduler.loopedSecondsProgress(36, 2.15f, 0.50f, 1.70f) * 2.15f, 0.0001f);
+    }
+
+    @Test
+    void releaseTailPlaysOnceOnlyWhenTheShotFires() {
+        var tail = new VanillaAnimationScheduler.ReleaseTail();
+        tail.using("bow_draw", true, 1.6f, 1.9f, 1.9f);
+        assertEquals(1.6f / 1.9f, tail.released(100), 0.0001f);
+        assertEquals(1.9f / 1.9f, tail.released(106), 0.0001f);
+        assertNull(tail.released(107));
+        tail.using("bow_draw", false, 1.6f, 1.9f, 1.9f);
+        assertNull(tail.released(120));
+    }
+
+    @Test
+    void climbPhaseFollowsVerticalDistanceBothWays() {
+        // 一个循环 = 爬升 1 格；下滑时相位倒退，挂住不动时相位不变。
+        var state = new VanillaAnimationScheduler.ClimbState();
+        assertEquals(0, state.progress(64.0), 0.0001f);
+        assertEquals(0.25f, state.progress(64.25), 0.0001f);
+        assertEquals(0.25f, state.progress(64.25), 0.0001f);
+        assertEquals(0.10f, state.progress(65.10), 0.0001f);
+        assertEquals(0.85f, state.progress(64.85), 0.0001f);
+    }
+
+    @Test
+    void swimStrokeFollowsTheVanillaLimbClock() {
+        // 全速（每 tick 位移 ≥ 0.25 格）时 26 tick 一个划臂周期；慢游按 位移 × 4 变慢，停下不前进。
+        var state = new VanillaAnimationScheduler.SwimState();
+        assertEquals(0, state.progress(new Vec3d(0, 0, 0)), 0.0001f);
+        assertEquals(1 / 26f, state.progress(new Vec3d(0.3, 0, 0)), 0.0001f);
+        assertEquals(1.5f / 26f, state.progress(new Vec3d(0.3, 0, 0.125)), 0.0001f);
+        assertEquals(1.5f / 26f, state.progress(new Vec3d(0.3, 0, 0.125)), 0.0001f);
     }
 
     @Test

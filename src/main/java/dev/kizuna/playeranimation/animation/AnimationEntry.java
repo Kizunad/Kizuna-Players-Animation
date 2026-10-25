@@ -7,18 +7,18 @@ import java.util.Set;
 public record AnimationEntry(String id, String file, Mask mask, int priority, float blendIn,
                              float blendOut, Hand hand, boolean firstPerson, AnimationClip clip,
                              Float impactWindowStart, Float impactWindowEnd,
-                             Float loopRegionStart, Float loopRegionEnd) {
+                             Float loopRegionStart, Float loopRegionEnd, boolean lookLayer) {
     public AnimationEntry(String id, String file, Mask mask, int priority, float blendIn,
                           float blendOut, Hand hand, boolean firstPerson, AnimationClip clip) {
         this(id, file, mask, priority, blendIn, blendOut, hand, firstPerson, clip,
-                null, null, null, null);
+                null, null, null, null, false);
     }
 
     public AnimationEntry(String id, String file, Mask mask, int priority, float blendIn,
                           float blendOut, Hand hand, boolean firstPerson, AnimationClip clip,
                           Float impactWindowStart, Float impactWindowEnd) {
         this(id, file, mask, priority, blendIn, blendOut, hand, firstPerson, clip,
-                impactWindowStart, impactWindowEnd, null, null);
+                impactWindowStart, impactWindowEnd, null, null, false);
     }
 
     public enum Hand { MAIN, OFF, BOTH, NONE }
@@ -89,8 +89,17 @@ public record AnimationEntry(String id, String file, Mask mask, int priority, fl
                 throw new IllegalArgumentException("loop_region 超出动画时长");
             }
         }
+        // layer 只接受 look：视线叠加层由渲染器按视线角度取样并加到姿态上，不经过播放与同步。
+        boolean lookLayer = false;
+        if (raw.has("layer")) {
+            String layer = JsonInput.string(raw, "layer");
+            if (!layer.equals("look")) {
+                throw new IllegalArgumentException("未知 layer: " + layer);
+            }
+            lookLayer = true;
+        }
         return new AnimationEntry(id, file, mask, priority,
                 JsonInput.nonnegative(raw, "blend_in"), JsonInput.nonnegative(raw, "blend_out"),
-                hand, JsonInput.bool(raw, "fpv"), clip, impactStart, impactEnd, loopStart, loopEnd);
+                hand, JsonInput.bool(raw, "fpv"), clip, impactStart, impactEnd, loopStart, loopEnd, lookLayer);
     }
 }

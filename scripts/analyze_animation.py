@@ -58,16 +58,31 @@ FULL_BODY_IDS = {
     "equip_helmet", "equip_helmet_off", "equip_chestplate", "equip_chestplate_off",
     "equip_leggings", "equip_leggings_off", "equip_boots", "equip_boots_off",
     "attack", "attack_main", "attack_off", "mine", "mine_main", "mine_off",
+    "climb", "swim", "ride", "sleep", "elytra",
 }
 
 GRIP_IDS = {
     "attack", "attack_main", "attack_off", "mine", "mine_main", "mine_off", "use_item",
     "use_item_main", "use_item_off", "place_block", "place_block_off", "spyglass", "spyglass_off",
     "toot_horn", "toot_horn_off", "crossbow_charge", "crossbow_charge_off", "crossbow_hold",
-    "crossbow_hold_off", "brush", "brush_off",
+    "crossbow_hold_off", "brush", "brush_off", "eat", "eat_off", "drink", "drink_off",
+    "block_shield", "block_shield_off", "bow_draw", "bow_draw_off", "trident_charge", "trident_charge_off",
 }
 
-NON_STANDING_IDS = {"meditate", "jump"}
+NON_STANDING_IDS = {"meditate", "jump", "climb", "swim", "ride", "sleep", "elytra"}
+# 站立循环：静止潜行双脚全程锁定，循环动作也要检查脚底、滑动与重心。
+STANDING_LOOP_IDS = {"sneak"}
+# 原地循环步态：支撑脚相对 root 匀速后移，使用 walk/run 的循环支撑检查。
+GAIT_IDS = {"walk", "run", "sneak_walk"}
+# 视线叠加层（索引 layer: look）：时间轴表示视线角度而不是时间，只对这两个 ID 使用姿势层判据。
+LOOK_LAYER_IDS = {"head_follow": ("y", 50.0), "head_follow_pitch": ("x", -90.0)}
+MIN_LOOK_LAYER_BONES = 5
+# 睡眠是静止姿势上的轻微全身呼吸：只对 sleep 把“有效运动”阈值降到 1°，仍要求至少 10 根骨、
+# 双臂双腿与躯干头都参与；多轴门禁（要求 3° 双轴）对呼吸不适用。其他动作不受影响。
+SLEEP_POSE_IDS = {"sleep"}
+SLEEP_EFFECTIVE_ROTATION_DEG = 1.0
+LOOK_LAYER_SUM_TOLERANCE_DEG = 1.0
+LOOK_LAYER_SYMMETRY_TOLERANCE_DEG = 0.05
 IMPACT_WINDOW_IDS = {"attack_main", "attack_off", "mine_main", "mine_off"}
 ARM_INTERSECTION_TOLERANCE_PX = 0.25
 MIN_PREPARATION_FOLLOW_RATIO = 0.60
@@ -95,7 +110,8 @@ def pivot_ranges(sampler: AnimationSampler, times: list[float]) -> dict[str, flo
     return {bone: max(vec_range(values)) for bone, values in positions.items()}
 
 
-def effective_bones(sampler: AnimationSampler, times: list[float]) -> tuple[set[str], dict[str, dict[str, float]]]:
+def effective_bones(sampler: AnimationSampler, times: list[float],
+                    rotation_threshold: float = EFFECTIVE_ROTATION_DEG) -> tuple[set[str], dict[str, dict[str, float]]]:
     pivot = pivot_ranges(sampler, times)
     ranges: dict[str, dict[str, float]] = {}
     active: set[str] = set()
@@ -105,7 +121,7 @@ def effective_bones(sampler: AnimationSampler, times: list[float]) -> tuple[set[
         r = max(vec_range(rotations))
         p = max(vec_range(positions))
         ranges[bone] = {"rotation_range_deg": r, "position_range_px": p, "world_pivot_range_px": pivot[bone]}
-        if max(r, p, pivot[bone]) >= EFFECTIVE_ROTATION_DEG:
+        if max(r, p, pivot[bone]) >= rotation_threshold:
             active.add(bone)
         elif max(p, pivot[bone]) >= EFFECTIVE_POSITION_PX:
             active.add(bone)
@@ -390,7 +406,7 @@ def ground_and_center_gates(sampler: AnimationSampler, times: list[float]) -> di
         contacts.append({side: min((point[1] for point in values), default=math.inf) for side, values in foot_points.items()})
     slips = {bone: max(vec_range(values)[:2]) for bone, values in foot_positions.items()}
     animation_id = sampler.key.rsplit(".", 1)[-1]
-    standing = not sampler.loop and animation_id not in NON_STANDING_IDS
+    standing = (not sampler.loop and animation_id not in NON_STANDING_IDS) or animation_id in STANDING_LOOP_IDS
     contact_frames = [index for index, value in enumerate(soles) if value >= -GROUND_TOLERANCE_PX]
     support_slip = {side: 0.0 for side in ("r", "l")}
     for side in support_slip:
@@ -411,9 +427,9 @@ def ground_and_center_gates(sampler: AnimationSampler, times: list[float]) -> di
     gait_support: dict[str, Any] = {
         "pass": True,
         "applicable": False,
-        "reason": "仅对 walk/run 原地循环步态检查支撑脚相对 root 的后移速度",
+        "reason": "仅对 walk/run/sneak_walk 原地循环步态检查支撑脚相对 root 的后移速度",
     }
-    if animation_id in {"walk", "run"} and sampler.loop:
+    if animation_id in GAIT_IDS and sampler.loop:
         # 走/跑的脚在接触地面时允许沿资源 +Z 后移；把每段连续接触分组，
         # 用相邻采样的相对 root 速度衡量是否匀速，避免把抬脚阶段混入统计。
         segments: list[dict[str, Any]] = []
@@ -666,13 +682,14 @@ def arm_intersection_gates(sampler: AnimationSampler, times: list[float]) -> dic
     }
 
 
-def _motion_series(sampler: AnimationSampler, bone: str, times: list[float]) -> tuple[list[float], str, int] | None:
+def _motion_series(sampler: AnimationSampler, bone: str, times: list[float],
+                   rotation_threshold: float = EFFECTIVE_ROTATION_DEG) -> tuple[list[float], str, int] | None:
     """选择骨骼最主要的局部运动通道，返回归一化前曲线和峰值帧。"""
     rotations = bone_local_values(sampler, bone, "rotation", times)
     positions = bone_local_values(sampler, bone, "position", times)
     rotation_ranges = vec_range(rotations)
     position_ranges = vec_range(positions)
-    if max(rotation_ranges, default=0.0) >= EFFECTIVE_ROTATION_DEG:
+    if max(rotation_ranges, default=0.0) >= rotation_threshold:
         axis = max(range(3), key=lambda index: rotation_ranges[index])
         values = [frame[axis] for frame in rotations]
         channel = f"rotation_{'xyz'[axis]}"
@@ -691,8 +708,11 @@ def anti_forgery_correlation_gates(sampler: AnimationSampler, times: list[float]
     normalized: dict[str, list[float]] = {}
     peaks: dict[str, int] = {}
     channels: dict[str, str] = {}
+    # 睡眠的有效运动阈值是 1°，相关性也按同一阈值取曲线，防伪造检查不因幅度小而失效。
+    animation_id = sampler.key.rsplit(".", 1)[-1]
+    threshold = SLEEP_EFFECTIVE_ROTATION_DEG if animation_id in SLEEP_POSE_IDS else EFFECTIVE_ROTATION_DEG
     for bone in sorted(active):
-        selected = _motion_series(sampler, bone, times)
+        selected = _motion_series(sampler, bone, times, threshold)
         if selected is None:
             continue
         values, channel, peak = selected
@@ -772,7 +792,8 @@ def anti_forgery_peak_order_gates(sampler: AnimationSampler, times: list[float],
     animation_id = sampler.key.rsplit(".", 1)[-1]
     if animation_id == "jump":
         chain = ["r_thigh", "r_shin", "r_foot"]
-    elif animation_id.startswith("crossbow_charge"):
+    elif animation_id.startswith("crossbow_charge") or animation_id.startswith("bow_draw"):
+        # 弩装填与拉弓的主动作在拉弦臂：主手持弓/弩时是左臂。
         side = "r" if animation_id.endswith("_off") else "l"
         chain = ["waist", "chest", f"{side}_upper_arm", f"{side}_forearm", f"{side}_hand"]
     else:
@@ -881,10 +902,50 @@ def grip_gates(sampler: AnimationSampler, times: list[float], active: set[str]) 
             "max_abs_deg": measurements, "failures": failures}
 
 
+def look_layer_gates(sampler: AnimationSampler, times: list[float]) -> dict[str, Any]:
+    """视线层：头/胸/腰主轴随角度单调，两端合计等于原版视线角度；偏航层左右镜像对称。"""
+    animation_id = sampler.key.rsplit(".", 1)[-1]
+    axis_name, end_angle = LOOK_LAYER_IDS[animation_id]
+    axis = "xyz".index(axis_name)
+    chain = ("head", "chest", "waist")
+    failures: list[str] = []
+    # 主轴方向：时间从 0 到 1 时，偏航层角度增大、俯仰层（Minecraft 正值低头）面板 X 减小。
+    direction = 1.0 if end_angle > 0 else -1.0
+    for bone in chain:
+        values = [sampler.value(bone, "rotation", time, wrap=False)[axis] for time in times]
+        drops = [direction * (right - left) for left, right in zip(values, values[1:])]
+        if min(drops) < -1e-6:
+            failures.append(f"{bone} 主轴不单调")
+    end_sum = sum(sampler.value(bone, "rotation", sampler.duration, wrap=False)[axis] for bone in chain)
+    start_sum = sum(sampler.value(bone, "rotation", 0.0, wrap=False)[axis] for bone in chain)
+    if abs(end_sum - end_angle) > LOOK_LAYER_SUM_TOLERANCE_DEG or abs(start_sum + end_angle) > LOOK_LAYER_SUM_TOLERANCE_DEG:
+        failures.append(f"头胸腰合计 {start_sum:.2f}/{end_sum:.2f}° 不等于原版 ±{abs(end_angle)}°")
+    symmetry = 0.0
+    if axis_name == "y":
+        # 偏航层：pose(t) 必须等于 pose(1-t) 的左右镜像（交换 r_/l_，Y、Z 取反）。
+        for time in times:
+            for bone in sampler.model.bones:
+                mirrored = ("l_" + bone[2:]) if bone.startswith("r_") else ("r_" + bone[2:]) if bone.startswith("l_") else bone
+                a = sampler.value(bone, "rotation", time, wrap=False)
+                b = sampler.value(mirrored, "rotation", sampler.duration - time, wrap=False)
+                symmetry = max(symmetry, abs(a[0] - b[0]), abs(a[1] + b[1]), abs(a[2] + b[2]))
+        if symmetry > LOOK_LAYER_SYMMETRY_TOLERANCE_DEG:
+            failures.append(f"左右镜像误差 {symmetry:.3f}°")
+    neutral = max(abs(component) for bone in sampler.model.bones
+                  for component in sampler.value(bone, "rotation", sampler.duration / 2, wrap=False))
+    if neutral > LOOK_LAYER_SYMMETRY_TOLERANCE_DEG:
+        failures.append(f"零视线姿态不为零（{neutral:.3f}°）")
+    return {"pass": not failures, "applicable": True,
+            "reason": "视线层：主轴单调、两端合计等于原版视线角度、零点为零；偏航层左右镜像",
+            "start_sum_deg": start_sum, "end_sum_deg": end_sum, "symmetry_error_deg": symmetry,
+            "failures": failures}
+
+
 def report(sampler: AnimationSampler, impact_window: tuple[float, float] | None = None) -> dict[str, Any]:
     times = sample_times(sampler)
-    active, ranges = effective_bones(sampler, times)
     animation_id = sampler.key.rsplit(".", 1)[-1]
+    threshold = SLEEP_EFFECTIVE_ROTATION_DEG if animation_id in SLEEP_POSE_IDS else EFFECTIVE_ROTATION_DEG
+    active, ranges = effective_bones(sampler, times, threshold)
     torso = {bone: bone in active for bone in ("pelvis", "waist", "chest", "head")}
     arms = {side: any(bone in active for bone in (f"{side}_upper_arm", f"{side}_forearm", f"{side}_hand"))
             for side in ("r", "l")}
@@ -902,13 +963,24 @@ def report(sampler: AnimationSampler, impact_window: tuple[float, float] | None 
     arm_intersection = arm_intersection_gates(sampler, times)
     correlation = anti_forgery_correlation_gates(sampler, times, active)
     peak_order = anti_forgery_peak_order_gates(sampler, times, active)
-    multi_axis = anti_forgery_multi_axis_gates(sampler, times, active, full_body)
+    multi_axis = anti_forgery_multi_axis_gates(sampler, times, active, full_body and animation_id not in SLEEP_POSE_IDS)
+    if animation_id in SLEEP_POSE_IDS:
+        multi_axis["reason"] = "睡眠姿势判据：静止睡姿上的轻微呼吸，不要求 3° 双轴运动"
     cycle = cycle_gates(sampler)
     velocity = velocity_gates(sampler, times, impact_window)
+    look_layer: dict[str, Any] = {"pass": True, "applicable": False, "reason": "仅 layer: look 的视线层资源适用"}
+    if animation_id in LOOK_LAYER_IDS:
+        # 视线层没有时间意义：时间型门禁写明不适用，改由姿势层判据；其他动作不受影响。
+        reason = "视线层是姿势空间剪辑（时间轴表示视线角度），改由视线层判据检查"
+        for item in (preparation, overlap, correlation, peak_order, velocity, ground):
+            item.update({"pass": True, "applicable": False, "reason": reason})
+        look_layer = look_layer_gates(sampler, times)
+        effective_pass = len(active) >= MIN_LOOK_LAYER_BONES
+        torso_pass = all(torso[bone] for bone in ("waist", "chest", "head"))
     # 总结果必须包含角速度/抽搐检查，不能只在明细中报告失败却返回成功。
     gate_pass = all((item.get("pass", True) or not item.get("applicable", True))
                     for item in (angle, preparation, overlap, arm_intersection, grip, ground, cycle,
-                                 correlation, peak_order, multi_axis, velocity))
+                                 correlation, peak_order, multi_axis, velocity, look_layer))
     return {
         "pass": gate_pass and effective_pass and torso_pass and all_body_pass,
         "animation": animation_id,
@@ -938,6 +1010,7 @@ def report(sampler: AnimationSampler, impact_window: tuple[float, float] | None 
         "ground_and_center": ground,
         "grip_pose": grip,
         "cycle_seam": cycle,
+        "look_layer": look_layer,
     }
 
 
@@ -1010,7 +1083,7 @@ def main() -> int:
                   f"multi_axis={gate_label(item['anti_forgery_multi_axis'])} "
                   f"grip={gate_label(item['grip_pose'])} "
                   f"ground={gate_label(item['ground_and_center'])} "
-                  f"seam={gate_label(item['cycle_seam'])} "
+                  f"seam={gate_label(item['cycle_seam'])} look={gate_label(item['look_layer'])} "
                   f"overall={'PASS' if item['pass'] else 'FAIL'}")
     if failed:
         print(f"门禁失败: {', '.join(failed)}", file=sys.stderr)

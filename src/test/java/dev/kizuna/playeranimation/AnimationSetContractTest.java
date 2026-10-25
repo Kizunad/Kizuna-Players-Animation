@@ -54,7 +54,11 @@ class AnimationSetContractTest {
                 "equip_leggings", "equip_leggings_off", "equip_boots", "equip_boots_off",
                 "mine_main", "mine_off", "place_block", "place_block_off", "spyglass", "spyglass_off",
                 "toot_horn", "toot_horn_off", "crossbow_charge", "crossbow_charge_off",
-                "crossbow_hold", "crossbow_hold_off", "brush", "brush_off", "use_item", "use_item_off"), ids);
+                "crossbow_hold", "crossbow_hold_off", "brush", "brush_off", "use_item", "use_item_off",
+                "sneak", "sneak_walk", "eat", "eat_off", "drink", "drink_off",
+                "head_follow", "head_follow_pitch", "block_shield", "block_shield_off",
+                "bow_draw", "bow_draw_off", "trident_charge", "trident_charge_off",
+                "ride", "sleep", "elytra", "climb", "swim"), ids);
         // 已交付标记必须与打包资源一致：调度只请求已交付动作，未打包的动作不得标为已交付。
         for (dev.kizuna.playeranimation.animation.PlayerAnimationAction action
                 : dev.kizuna.playeranimation.animation.PlayerAnimationAction.values()) {
@@ -99,6 +103,83 @@ class AnimationSetContractTest {
         combined.stop("mine_main", 1.5);
         assertEquals(support.sample(Rig.zeroPose(), 2, false)[BoneId.R_SHIN.ordinal()],
                 combined.sample(Rig.zeroPose(), 2, false)[BoneId.R_SHIN.ordinal()]);
+    }
+
+    @Test
+    void sneakBasesKeepTheirLegsUnderToolOverlays() throws Exception {
+        // 潜行与骑乘是移动/支撑底层：叠加挖掘时腿与胯仍取底层资源，工具只接管上身。
+        for (String base : new String[]{"sneak", "sneak_walk", "ride"}) {
+            AnimationPlayer combined = new AnimationPlayer();
+            combined.play(resource(base), 0, false);
+            combined.scrub(resource("mine_main"), 0, 0.22f, false);
+            AnimationPlayer alone = new AnimationPlayer();
+            alone.play(resource(base), 0, false);
+            for (double time : new double[]{0.3, 0.9, 1.4}) {
+                Pose[] expected = alone.sample(Rig.zeroPose(), time, false);
+                Pose[] actual = combined.sample(Rig.zeroPose(), time, false);
+                for (BoneId bone : BoneId.ALL) {
+                    if (AnimationEntry.Mask.LOWER.includes(bone)) {
+                        assertEquals(expected[bone.ordinal()], actual[bone.ordinal()], base + ":" + bone.key);
+                    }
+                }
+                assertNotEquals(expected[BoneId.R_FOREARM.ordinal()], actual[BoneId.R_FOREARM.ordinal()], base);
+            }
+        }
+    }
+
+    @Test
+    void eatingLoopCrossesItsSeamForwardInsteadOfReplayingTheChew() throws Exception {
+        // 已使用 15 → 16 tick 时进度从 0.75 秒回绕到 0.40 秒；插值中点必须落在 0.775 秒（接缝前），
+        // 而不是倒放经过 0.60 秒的咬下姿势。
+        AnimationPlayer wrapped = new AnimationPlayer();
+        // 先等淡入完成，只比较回绕插值本身。
+        wrapped.scrub(resource("eat"), 0, 0.75f / 0.80f, false);
+        wrapped.scrub(resource("eat"), 0.95, 0.75f / 0.80f, false);
+        wrapped.scrub(resource("eat"), 1.0, 0.40f / 0.80f, false);
+        AnimationPlayer expected = new AnimationPlayer();
+        expected.scrub(resource("eat"), 0, 0.775f / 0.80f, false);
+        Pose actualHead = wrapped.sample(Rig.zeroPose(), 1.025, false)[BoneId.HEAD.ordinal()];
+        Pose expectedHead = expected.sample(Rig.zeroPose(), 1, false)[BoneId.HEAD.ordinal()];
+        assertEquals(expectedHead.rotation().x(), actualHead.rotation().x(), 0.05f);
+        assertEquals(0.5f, wrapped.normalizedProgress("eat", 1.025), 0.0001f);
+    }
+
+    @Test
+    void loopingScrubTakesTheShortestWayAcrossTheSeam() throws Exception {
+        // 攀爬相位 0.95 → 0.05（爬过一格接缝）沿正向插值到 1.0，而不是倒放整个循环；反向下滑同理。
+        AnimationPlayer forward = new AnimationPlayer();
+        forward.scrub(resource("climb"), 0, 0.95f, false);
+        forward.scrub(resource("climb"), 0.5, 0.95f, false);
+        forward.scrub(resource("climb"), 1.0, 0.05f, false);
+        AnimationPlayer expected = new AnimationPlayer();
+        expected.scrub(resource("climb"), 0, 0.0f, false);
+        assertEquals(expected.sample(Rig.zeroPose(), 1, false)[BoneId.R_FOREARM.ordinal()].rotation().x(),
+                forward.sample(Rig.zeroPose(), 1.025, false)[BoneId.R_FOREARM.ordinal()].rotation().x(), 0.05f);
+        assertEquals(0.05f, forward.normalizedProgress("climb", 1.025), 0.0001f);
+        AnimationPlayer backward = new AnimationPlayer();
+        backward.scrub(resource("climb"), 0, 0.05f, false);
+        backward.scrub(resource("climb"), 0.5, 0.05f, false);
+        backward.scrub(resource("climb"), 1.0, 0.95f, false);
+        assertEquals(expected.sample(Rig.zeroPose(), 1, false)[BoneId.R_FOREARM.ordinal()].rotation().x(),
+                backward.sample(Rig.zeroPose(), 1.025, false)[BoneId.R_FOREARM.ordinal()].rotation().x(), 0.05f);
+    }
+
+    @Test
+    void climbingKeepsTheOtherHandOnTheLadderDuringAnAttack() throws Exception {
+        // 攀爬中攻击只接管右臂：左臂、躯干和双腿仍取攀爬资源。
+        AnimationPlayer combined = new AnimationPlayer();
+        combined.scrub(resource("climb"), 0, 0.3f, false);
+        combined.scrub(resource("attack_main"), 0, 0.3f, false);
+        AnimationPlayer alone = new AnimationPlayer();
+        alone.scrub(resource("climb"), 0, 0.3f, false);
+        Pose[] expected = alone.sample(Rig.zeroPose(), 1, false);
+        Pose[] actual = combined.sample(Rig.zeroPose(), 1, false);
+        for (BoneId bone : BoneId.ALL) {
+            if (!AnimationEntry.Mask.R_ARM.includes(bone)) {
+                assertEquals(expected[bone.ordinal()], actual[bone.ordinal()], bone.key);
+            }
+        }
+        assertNotEquals(expected[BoneId.R_FOREARM.ordinal()], actual[BoneId.R_FOREARM.ordinal()]);
     }
 
     private static AnimationEntry resource(String id) throws Exception {

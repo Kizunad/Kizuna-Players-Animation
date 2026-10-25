@@ -6,6 +6,18 @@ package dev.kizuna.playeranimation.animation;
 public enum PlayerAnimationAction {
     /** 潜行静止操作时的支撑姿态；结束操作或移动时显式停止。 */
     CROUCH_WORK("crouch_work"),
+    /** 静止潜行的低重心呼吸循环；与潜行行走、潜行操作支撑三选一，状态结束时显式停止。 */
+    SNEAK("sneak"),
+    /** 潜行行走循环；停步、松开潜行或离地时显式停止。 */
+    SNEAK_WALK("sneak_walk"),
+    /** 骑乘、睡眠、鞘翅滑翔是原版状态循环，状态结束时显式停止。 */
+    RIDE("ride"),
+    SLEEP("sleep"),
+    ELYTRA("elytra"),
+    /** 攀爬按累计竖直位移 scrub 循环资源，离开可攀爬方块或着地时停止。 */
+    CLIMB("climb"),
+    /** 游泳按原版肢体速度累计相位 scrub 循环资源，离开水中泳姿时停止。 */
+    SWIM("swim"),
     /** 跳跃是一段 0.90 秒剪辑，调度通过竖直速度 scrub。 */
     JUMP("jump", 18),
     ATTACK_MAIN("attack_main", 10),
@@ -22,6 +34,20 @@ public enum PlayerAnimationAction {
     CROSSBOW_HOLD_OFF("crossbow_hold_off", 8),
     BRUSH("brush", 19),
     BRUSH_OFF("brush_off", 19),
+    /** 进食与饮用按已使用 tick 取样，使用结束时由调度停止。 */
+    EAT("eat"),
+    EAT_OFF("eat_off"),
+    DRINK("drink"),
+    DRINK_OFF("drink_off"),
+    /** 持盾格挡按已使用 tick 取样，0.25 秒（5 tick）举盾到位，松手时由调度停止。 */
+    BLOCK_SHIELD("block_shield"),
+    BLOCK_SHIELD_OFF("block_shield_off"),
+    /** 拉弓按原版拉弓进度取样，松手发射后由调度推进撒放尾段再停止。 */
+    BOW_DRAW("bow_draw"),
+    BOW_DRAW_OFF("bow_draw_off"),
+    /** 三叉戟蓄力 10 tick 后引到位，投掷后由调度推进跟随段再停止。 */
+    TRIDENT_CHARGE("trident_charge"),
+    TRIDENT_CHARGE_OFF("trident_charge_off"),
     USE_ITEM("use_item", 8),
     USE_ITEM_OFF("use_item_off", 8),
     PLACE_BLOCK("place_block", 10),
