@@ -68,6 +68,10 @@ GRIP_IDS = {
 }
 
 NON_STANDING_IDS = {"meditate", "jump"}
+# 站立循环：静止潜行双脚全程锁定，循环动作也要检查脚底、滑动与重心。
+STANDING_LOOP_IDS = {"sneak"}
+# 原地循环步态：支撑脚相对 root 匀速后移，使用 walk/run 的循环支撑检查。
+GAIT_IDS = {"walk", "run", "sneak_walk"}
 IMPACT_WINDOW_IDS = {"attack_main", "attack_off", "mine_main", "mine_off"}
 ARM_INTERSECTION_TOLERANCE_PX = 0.25
 MIN_PREPARATION_FOLLOW_RATIO = 0.60
@@ -390,7 +394,7 @@ def ground_and_center_gates(sampler: AnimationSampler, times: list[float]) -> di
         contacts.append({side: min((point[1] for point in values), default=math.inf) for side, values in foot_points.items()})
     slips = {bone: max(vec_range(values)[:2]) for bone, values in foot_positions.items()}
     animation_id = sampler.key.rsplit(".", 1)[-1]
-    standing = not sampler.loop and animation_id not in NON_STANDING_IDS
+    standing = (not sampler.loop and animation_id not in NON_STANDING_IDS) or animation_id in STANDING_LOOP_IDS
     contact_frames = [index for index, value in enumerate(soles) if value >= -GROUND_TOLERANCE_PX]
     support_slip = {side: 0.0 for side in ("r", "l")}
     for side in support_slip:
@@ -411,9 +415,9 @@ def ground_and_center_gates(sampler: AnimationSampler, times: list[float]) -> di
     gait_support: dict[str, Any] = {
         "pass": True,
         "applicable": False,
-        "reason": "仅对 walk/run 原地循环步态检查支撑脚相对 root 的后移速度",
+        "reason": "仅对 walk/run/sneak_walk 原地循环步态检查支撑脚相对 root 的后移速度",
     }
-    if animation_id in {"walk", "run"} and sampler.loop:
+    if animation_id in GAIT_IDS and sampler.loop:
         # 走/跑的脚在接触地面时允许沿资源 +Z 后移；把每段连续接触分组，
         # 用相邻采样的相对 root 速度衡量是否匀速，避免把抬脚阶段混入统计。
         segments: list[dict[str, Any]] = []

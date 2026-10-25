@@ -6,6 +6,10 @@ package dev.kizuna.playeranimation.animation;
 public enum PlayerAnimationAction {
     /** 潜行静止操作时的支撑姿态；结束操作或移动时显式停止。 */
     CROUCH_WORK("crouch_work"),
+    /** 静止潜行的低重心呼吸循环；与潜行行走、潜行操作支撑三选一，状态结束时显式停止。 */
+    SNEAK("sneak"),
+    /** 潜行行走循环；停步、松开潜行或离地时显式停止。 */
+    SNEAK_WALK("sneak_walk"),
     /** 跳跃是一段 0.90 秒剪辑，调度通过竖直速度 scrub。 */
     JUMP("jump", 18),
     ATTACK_MAIN("attack_main", 10),

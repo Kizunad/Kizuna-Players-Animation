@@ -391,6 +391,26 @@
         0.3,
         0.8
       ]
+    },
+    {
+      "id": "sneak",
+      "file": "animations/sneak.animation.json",
+      "mask": "full",
+      "priority": 2,
+      "blend_in": 0.2,
+      "blend_out": 0.2,
+      "hand": "none",
+      "fpv": false
+    },
+    {
+      "id": "sneak_walk",
+      "file": "animations/sneak_walk.animation.json",
+      "mask": "full",
+      "priority": 2,
+      "blend_in": 0.2,
+      "blend_out": 0.2,
+      "hand": "none",
+      "fpv": false
     }
   ]
 }

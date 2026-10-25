@@ -54,7 +54,8 @@ class AnimationSetContractTest {
                 "equip_leggings", "equip_leggings_off", "equip_boots", "equip_boots_off",
                 "mine_main", "mine_off", "place_block", "place_block_off", "spyglass", "spyglass_off",
                 "toot_horn", "toot_horn_off", "crossbow_charge", "crossbow_charge_off",
-                "crossbow_hold", "crossbow_hold_off", "brush", "brush_off", "use_item", "use_item_off"), ids);
+                "crossbow_hold", "crossbow_hold_off", "brush", "brush_off", "use_item", "use_item_off",
+                "sneak", "sneak_walk"), ids);
         // 已交付标记必须与打包资源一致：调度只请求已交付动作，未打包的动作不得标为已交付。
         for (dev.kizuna.playeranimation.animation.PlayerAnimationAction action
                 : dev.kizuna.playeranimation.animation.PlayerAnimationAction.values()) {
@@ -99,6 +100,28 @@ class AnimationSetContractTest {
         combined.stop("mine_main", 1.5);
         assertEquals(support.sample(Rig.zeroPose(), 2, false)[BoneId.R_SHIN.ordinal()],
                 combined.sample(Rig.zeroPose(), 2, false)[BoneId.R_SHIN.ordinal()]);
+    }
+
+    @Test
+    void sneakBasesKeepTheirLegsUnderToolOverlays() throws Exception {
+        // 通用潜行是移动/支撑底层：叠加挖掘时腿与胯仍取潜行资源，工具只接管上身。
+        for (String base : new String[]{"sneak", "sneak_walk"}) {
+            AnimationPlayer combined = new AnimationPlayer();
+            combined.play(resource(base), 0, false);
+            combined.scrub(resource("mine_main"), 0, 0.22f, false);
+            AnimationPlayer alone = new AnimationPlayer();
+            alone.play(resource(base), 0, false);
+            for (double time : new double[]{0.3, 0.9, 1.4}) {
+                Pose[] expected = alone.sample(Rig.zeroPose(), time, false);
+                Pose[] actual = combined.sample(Rig.zeroPose(), time, false);
+                for (BoneId bone : BoneId.ALL) {
+                    if (AnimationEntry.Mask.LOWER.includes(bone)) {
+                        assertEquals(expected[bone.ordinal()], actual[bone.ordinal()], base + ":" + bone.key);
+                    }
+                }
+                assertNotEquals(expected[BoneId.R_FOREARM.ordinal()], actual[BoneId.R_FOREARM.ordinal()], base);
+            }
+        }
     }
 
     private static AnimationEntry resource(String id) throws Exception {

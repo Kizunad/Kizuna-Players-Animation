@@ -122,9 +122,11 @@ final class VanillaAnimationScheduler {
             ArmorSnapshot previousArmor = armor.put(id, ArmorSnapshot.capture(player));
             playArmorEquip(player, previousArmor);
             Set<String> desired = new HashSet<>();
+            boolean stationary = updateStationary(player);
             scheduleJump(player, desired);
             scheduleOriginalProgress(player, desired);
-            scheduleCrouchWork(player, desired);
+            scheduleCrouchWork(player, desired, stationary);
+            scheduleSneak(player, desired, stationary);
             Set<String> previous = scrubbed.put(id, desired);
             if (previous != null) {
                 for (String action : previous) {
@@ -222,24 +224,47 @@ final class VanillaAnimationScheduler {
         }
     }
 
-    private void scheduleCrouchWork(ServerPlayerEntity player, Set<String> desired) {
-        // 只在已制作的工具动作下提供静止支撑；移动时交回原版潜行步态，避免锁脚滑行。
+    private boolean updateStationary(ServerPlayerEntity player) {
+        // 静止判断取服务端相邻 tick 的实际水平位置差；首个 tick 没有上一位置，按移动处理。
         Vec3d position = player.getPos();
         Vec3d previousPosition = previousPositions.put(player.getUuid(), position);
-        boolean stationary = previousPosition != null
+        return previousPosition != null
                 && position.subtract(previousPosition).horizontalLengthSquared() <= STATIONARY_SPEED_SQUARED;
+    }
+
+    private static boolean groundedSneak(ServerPlayerEntity player) {
+        // 潜行底层只在着地的普通潜行中使用；骑乘、入水和攀爬有各自的姿态来源。
+        return player.isInSneakingPose() && player.isOnGround() && !player.hasVehicle()
+                && !player.isTouchingWater() && !player.isClimbing();
+    }
+
+    private void scheduleCrouchWork(ServerPlayerEntity player, Set<String> desired, boolean stationary) {
+        // 只在已制作的工具动作下提供静止支撑；移动时交回潜行步态，避免锁脚滑行。
         boolean working = desired.stream().anyMatch(action -> action.startsWith("attack_")
                 || action.startsWith("mine_") || action.startsWith("place_block")
                 || action.startsWith("use_item") || action.startsWith("spyglass")
                 || action.startsWith("toot_horn") || action.startsWith("crossbow_") || action.startsWith("brush"));
-        if (!working || !player.isInSneakingPose() || !player.isOnGround() || player.hasVehicle()
-                || player.isTouchingWater() || !stationary) {
+        if (!working || !groundedSneak(player) || !stationary) {
             return;
         }
-        desired.add("crouch_work");
+        playLoop(player, "crouch_work", desired);
+    }
+
+    private void scheduleSneak(ServerPlayerEntity player, Set<String> desired, boolean stationary) {
+        // sneak、sneak_walk、crouch_work 三选一：操作支撑已接管时不再叠加通用潜行。
+        if (desired.contains("crouch_work") || !groundedSneak(player)) {
+            return;
+        }
+        String action = stationary ? "sneak" : "sneak_walk";
+        playLoop(player, action, desired);
+    }
+
+    private void playLoop(ServerPlayerEntity player, String action, Set<String> desired) {
+        // 循环动作按自由时钟播放，只在本 tick 新进入时发送一次；离开状态由 tick 末尾统一停止。
+        desired.add(action);
         Set<String> previous = scrubbed.get(player.getUuid());
-        if (previous == null || !previous.contains("crouch_work")) {
-            ServerPlayerAnimations.play(player, "crouch_work");
+        if (previous == null || !previous.contains(action)) {
+            ServerPlayerAnimations.play(player, action);
         }
     }
 
