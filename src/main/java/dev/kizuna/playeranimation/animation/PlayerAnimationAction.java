@@ -10,6 +10,10 @@ public enum PlayerAnimationAction {
     SNEAK("sneak"),
     /** 潜行行走循环；停步、松开潜行或离地时显式停止。 */
     SNEAK_WALK("sneak_walk"),
+    /** 骑乘、睡眠、鞘翅滑翔是原版状态循环，状态结束时显式停止。 */
+    RIDE("ride"),
+    SLEEP("sleep"),
+    ELYTRA("elytra"),
     /** 跳跃是一段 0.90 秒剪辑，调度通过竖直速度 scrub。 */
     JUMP("jump", 18),
     ATTACK_MAIN("attack_main", 10),

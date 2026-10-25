@@ -649,6 +649,36 @@
           2.15
         ]
       ]
+    },
+    {
+      "id": "ride",
+      "file": "animations/ride.animation.json",
+      "mask": "full",
+      "priority": 3,
+      "blend_in": 0.25,
+      "blend_out": 0.25,
+      "hand": "none",
+      "fpv": false
+    },
+    {
+      "id": "sleep",
+      "file": "animations/sleep.animation.json",
+      "mask": "full",
+      "priority": 5,
+      "blend_in": 0.3,
+      "blend_out": 0.3,
+      "hand": "none",
+      "fpv": false
+    },
+    {
+      "id": "elytra",
+      "file": "animations/elytra.animation.json",
+      "mask": "full",
+      "priority": 4,
+      "blend_in": 0.25,
+      "blend_out": 0.25,
+      "hand": "none",
+      "fpv": false
     }
   ]
 }

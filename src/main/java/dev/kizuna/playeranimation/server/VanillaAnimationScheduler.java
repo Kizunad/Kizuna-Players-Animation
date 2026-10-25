@@ -58,6 +58,8 @@ final class VanillaAnimationScheduler {
     private static final float TRIDENT_READY_SECONDS = 0.50f;
     private static final float TRIDENT_HOLD_END_SECONDS = 1.70f;
     private static final int TRIDENT_MIN_THROW_TICKS = 10;
+    // 原版 BipedEntityModel 在滑翔超过 4 tick 后切换滑翔头部姿态，鞘翅动作使用同一阈值。
+    private static final int ELYTRA_POSE_TICKS = 4;
     // 每 tick 位移不超过 0.02 方块视作静止；比较水平位移平方（方块²/tick²）。
     private static final double STATIONARY_SPEED_SQUARED = 0.0004;
 
@@ -190,6 +192,7 @@ final class VanillaAnimationScheduler {
             scheduleOriginalProgress(player, desired);
             scheduleCrouchWork(player, desired, stationary);
             scheduleSneak(player, desired, stationary);
+            scheduleSpecialPose(player, desired);
             Set<String> previous = scrubbed.put(id, desired);
             if (previous != null) {
                 for (String action : previous) {
@@ -325,6 +328,21 @@ final class VanillaAnimationScheduler {
         }
         String action = stationary ? "sneak" : "sneak_walk";
         playLoop(player, action, desired);
+    }
+
+    private void scheduleSpecialPose(ServerPlayerEntity player, Set<String> desired) {
+        // 原版特殊姿态各自独占全身：睡眠、鞘翅滑翔（与原版头部切换同为滑翔超过 4 tick）、骑乘。
+        // Entity.shouldRiderSit 只存在于客户端；原版坐骑默认都让骑手坐下，服务端按 hasVehicle 判断。
+        if (!player.isAlive() || player.isSpectator()) {
+            return;
+        }
+        if (player.isSleeping()) {
+            playLoop(player, "sleep", desired);
+        } else if (player.isFallFlying() && player.getRoll() > ELYTRA_POSE_TICKS) {
+            playLoop(player, "elytra", desired);
+        } else if (player.hasVehicle()) {
+            playLoop(player, "ride", desired);
+        }
     }
 
     private void playLoop(ServerPlayerEntity player, String action, Set<String> desired) {

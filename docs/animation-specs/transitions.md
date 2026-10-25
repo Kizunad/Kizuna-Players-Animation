@@ -11,7 +11,7 @@
 2026-10-26 剩余原版动作第一阶段只写了设计稿（见下方“剩余原版动作（设计稿）”与 ArmPose 小节新增行）：
 `sneak`、`sneak_walk`、`eat`、`drink`、`bow_draw`、`block_shield`、`trident_charge`、`climb`、`swim`、`ride`、
 `sleep`、`elytra` 与视线叠加层 `head_follow`。设计稿行使用六列（末列“状态”），`AnimationTransitionContractTest` 只解析五列/ArmPose 四列的已实现行，
-阶段 2 实现某个动作时，把对应行改回五列/四列格式并同步更新测试中的边数（`sneak` / `sneak_walk`、`eat` / `drink`、`block_shield`、`bow_draw`、`trident_charge` 已实现，当前 173 条有向边）。
+阶段 2 实现某个动作时，把对应行改回五列/四列格式并同步更新测试中的边数（`sneak` / `sneak_walk`、`eat` / `drink`、`block_shield`、`bow_draw`、`trident_charge`、`ride`、`sleep`、`elytra` 已实现，当前 183 条有向边）。
 资源尚未制作，运行时仍使用原版姿势，不能当作已实现。
 
 状态集合：`stand`、`walk`、`run`、`jump_takeoff`、`jump_air`、`jump_land`、`meditate`、
@@ -54,12 +54,12 @@
 | climb | stand / walk / jump_air | 0.15 / 0.15 | 否 | 离开可攀爬方块或着地 | 设计稿 |
 | walk / run | swim | 0.3 / 0.3 | 否 | 进入泳姿；与原版 `leaningPitch` 放倒同步 | 设计稿 |
 | swim | stand / walk | 0.3 / 0.3 | 否 | 离开泳姿 | 设计稿 |
-| stand / walk / jump_air | ride | 0.25 / 0.25 | 否 | `hasVehicle()` 且坐骑 `shouldRiderSit()` | 设计稿 |
-| ride | stand | 0.25 / 0.25 | 否 | 下坐骑 | 设计稿 |
-| stand | sleep | 0.3 / 0.3 | 否 | 入睡；原版矩阵同时放倒身体 | 设计稿 |
-| sleep | stand | 0.3 / 0.3 | 否 | 醒来 | 设计稿 |
-| jump_air | elytra | 0.25 / 0.25 | 否 | `isFallFlying()` 且滑翔超过 4 tick | 设计稿 |
-| elytra | stand / walk / swim | 0.25 / 0.25 | 否 | 落地或入水 | 设计稿 |
+| stand / walk / jump_air | ride | 0.25 / 0.25 | 否 | `hasVehicle()`（原版坐骑均为坐姿） |
+| ride | stand | 0.25 / 0.25 | 否 | 下坐骑 |
+| stand | sleep | 0.3 / 0.3 | 否 | 入睡；原版矩阵同时放倒身体 |
+| sleep | stand | 0.3 / 0.3 | 否 | 醒来 |
+| jump_air | elytra | 0.25 / 0.25 | 否 | `isFallFlying()` 且滑翔超过 4 tick |
+| elytra | stand / walk / swim | 0.25 / 0.25 | 否 | 落地或入水 |
 
 `head_follow` 是客户端每帧的加性视线层，不是可切换的状态，不进入本表；启用与关闭条件见
 [head_follow](head_follow.md) 第 1、4 节。

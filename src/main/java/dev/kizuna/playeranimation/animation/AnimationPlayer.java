@@ -242,7 +242,7 @@ public final class AnimationPlayer {
 
     private static boolean lowerBase(String id) {
         return switch (id) {
-            case "walk", "run", "crouch_work", "sneak", "sneak_walk", "jump", "jump_air", "jump_takeoff", "jump_land",
+            case "walk", "run", "crouch_work", "sneak", "sneak_walk", "ride", "elytra", "jump", "jump_air", "jump_takeoff", "jump_land",
                  "meditate" -> true;
             default -> false;
         };

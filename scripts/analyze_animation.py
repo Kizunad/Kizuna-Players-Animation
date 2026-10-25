@@ -58,6 +58,7 @@ FULL_BODY_IDS = {
     "equip_helmet", "equip_helmet_off", "equip_chestplate", "equip_chestplate_off",
     "equip_leggings", "equip_leggings_off", "equip_boots", "equip_boots_off",
     "attack", "attack_main", "attack_off", "mine", "mine_main", "mine_off",
+    "climb", "swim", "ride", "sleep", "elytra",
 }
 
 GRIP_IDS = {
@@ -68,7 +69,7 @@ GRIP_IDS = {
     "block_shield", "block_shield_off", "bow_draw", "bow_draw_off", "trident_charge", "trident_charge_off",
 }
 
-NON_STANDING_IDS = {"meditate", "jump"}
+NON_STANDING_IDS = {"meditate", "jump", "climb", "swim", "ride", "sleep", "elytra"}
 # 站立循环：静止潜行双脚全程锁定，循环动作也要检查脚底、滑动与重心。
 STANDING_LOOP_IDS = {"sneak"}
 # 原地循环步态：支撑脚相对 root 匀速后移，使用 walk/run 的循环支撑检查。
@@ -76,6 +77,10 @@ GAIT_IDS = {"walk", "run", "sneak_walk"}
 # 视线叠加层（索引 layer: look）：时间轴表示视线角度而不是时间，只对这两个 ID 使用姿势层判据。
 LOOK_LAYER_IDS = {"head_follow": ("y", 50.0), "head_follow_pitch": ("x", -90.0)}
 MIN_LOOK_LAYER_BONES = 5
+# 睡眠是静止姿势上的轻微全身呼吸：只对 sleep 把“有效运动”阈值降到 1°，仍要求至少 10 根骨、
+# 双臂双腿与躯干头都参与；多轴门禁（要求 3° 双轴）对呼吸不适用。其他动作不受影响。
+SLEEP_POSE_IDS = {"sleep"}
+SLEEP_EFFECTIVE_ROTATION_DEG = 1.0
 LOOK_LAYER_SUM_TOLERANCE_DEG = 1.0
 LOOK_LAYER_SYMMETRY_TOLERANCE_DEG = 0.05
 IMPACT_WINDOW_IDS = {"attack_main", "attack_off", "mine_main", "mine_off"}
@@ -105,7 +110,8 @@ def pivot_ranges(sampler: AnimationSampler, times: list[float]) -> dict[str, flo
     return {bone: max(vec_range(values)) for bone, values in positions.items()}
 
 
-def effective_bones(sampler: AnimationSampler, times: list[float]) -> tuple[set[str], dict[str, dict[str, float]]]:
+def effective_bones(sampler: AnimationSampler, times: list[float],
+                    rotation_threshold: float = EFFECTIVE_ROTATION_DEG) -> tuple[set[str], dict[str, dict[str, float]]]:
     pivot = pivot_ranges(sampler, times)
     ranges: dict[str, dict[str, float]] = {}
     active: set[str] = set()
@@ -115,7 +121,7 @@ def effective_bones(sampler: AnimationSampler, times: list[float]) -> tuple[set[
         r = max(vec_range(rotations))
         p = max(vec_range(positions))
         ranges[bone] = {"rotation_range_deg": r, "position_range_px": p, "world_pivot_range_px": pivot[bone]}
-        if max(r, p, pivot[bone]) >= EFFECTIVE_ROTATION_DEG:
+        if max(r, p, pivot[bone]) >= rotation_threshold:
             active.add(bone)
         elif max(p, pivot[bone]) >= EFFECTIVE_POSITION_PX:
             active.add(bone)
@@ -676,13 +682,14 @@ def arm_intersection_gates(sampler: AnimationSampler, times: list[float]) -> dic
     }
 
 
-def _motion_series(sampler: AnimationSampler, bone: str, times: list[float]) -> tuple[list[float], str, int] | None:
+def _motion_series(sampler: AnimationSampler, bone: str, times: list[float],
+                   rotation_threshold: float = EFFECTIVE_ROTATION_DEG) -> tuple[list[float], str, int] | None:
     """选择骨骼最主要的局部运动通道，返回归一化前曲线和峰值帧。"""
     rotations = bone_local_values(sampler, bone, "rotation", times)
     positions = bone_local_values(sampler, bone, "position", times)
     rotation_ranges = vec_range(rotations)
     position_ranges = vec_range(positions)
-    if max(rotation_ranges, default=0.0) >= EFFECTIVE_ROTATION_DEG:
+    if max(rotation_ranges, default=0.0) >= rotation_threshold:
         axis = max(range(3), key=lambda index: rotation_ranges[index])
         values = [frame[axis] for frame in rotations]
         channel = f"rotation_{'xyz'[axis]}"
@@ -701,8 +708,11 @@ def anti_forgery_correlation_gates(sampler: AnimationSampler, times: list[float]
     normalized: dict[str, list[float]] = {}
     peaks: dict[str, int] = {}
     channels: dict[str, str] = {}
+    # 睡眠的有效运动阈值是 1°，相关性也按同一阈值取曲线，防伪造检查不因幅度小而失效。
+    animation_id = sampler.key.rsplit(".", 1)[-1]
+    threshold = SLEEP_EFFECTIVE_ROTATION_DEG if animation_id in SLEEP_POSE_IDS else EFFECTIVE_ROTATION_DEG
     for bone in sorted(active):
-        selected = _motion_series(sampler, bone, times)
+        selected = _motion_series(sampler, bone, times, threshold)
         if selected is None:
             continue
         values, channel, peak = selected
@@ -933,8 +943,9 @@ def look_layer_gates(sampler: AnimationSampler, times: list[float]) -> dict[str,
 
 def report(sampler: AnimationSampler, impact_window: tuple[float, float] | None = None) -> dict[str, Any]:
     times = sample_times(sampler)
-    active, ranges = effective_bones(sampler, times)
     animation_id = sampler.key.rsplit(".", 1)[-1]
+    threshold = SLEEP_EFFECTIVE_ROTATION_DEG if animation_id in SLEEP_POSE_IDS else EFFECTIVE_ROTATION_DEG
+    active, ranges = effective_bones(sampler, times, threshold)
     torso = {bone: bone in active for bone in ("pelvis", "waist", "chest", "head")}
     arms = {side: any(bone in active for bone in (f"{side}_upper_arm", f"{side}_forearm", f"{side}_hand"))
             for side in ("r", "l")}
@@ -952,7 +963,9 @@ def report(sampler: AnimationSampler, impact_window: tuple[float, float] | None 
     arm_intersection = arm_intersection_gates(sampler, times)
     correlation = anti_forgery_correlation_gates(sampler, times, active)
     peak_order = anti_forgery_peak_order_gates(sampler, times, active)
-    multi_axis = anti_forgery_multi_axis_gates(sampler, times, active, full_body)
+    multi_axis = anti_forgery_multi_axis_gates(sampler, times, active, full_body and animation_id not in SLEEP_POSE_IDS)
+    if animation_id in SLEEP_POSE_IDS:
+        multi_axis["reason"] = "睡眠姿势判据：静止睡姿上的轻微呼吸，不要求 3° 双轴运动"
     cycle = cycle_gates(sampler)
     velocity = velocity_gates(sampler, times, impact_window)
     look_layer: dict[str, Any] = {"pass": True, "applicable": False, "reason": "仅 layer: look 的视线层资源适用"}
