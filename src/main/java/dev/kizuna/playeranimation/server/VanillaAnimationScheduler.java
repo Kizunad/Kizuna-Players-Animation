@@ -34,6 +34,7 @@ final class VanillaAnimationScheduler {
     private final Map<UUID, HoldState> crossbowHolds = new HashMap<>();
     private final Map<UUID, Vec3d> previousPositions = new HashMap<>();
     private final Map<UUID, ReleaseTail> releases = new HashMap<>();
+    private final Map<UUID, ClimbState> climbs = new HashMap<>();
 
     private static final int LANDING_BUFFER_TICKS = 6;
     private static final float TOOL_PLAYBACK_SPEED = 0.8f;
@@ -176,6 +177,20 @@ final class VanillaAnimationScheduler {
         }
     }
 
+    /** 攀爬相位：累计竖直位移（格），一个循环对应爬升 1 格，下滑时反向，挂住不动时相位不变。 */
+    static final class ClimbState {
+        private double previousY = Double.NaN;
+        private double blocks;
+
+        float progress(double y) {
+            if (!Double.isNaN(previousY)) {
+                blocks += y - previousY;
+            }
+            previousY = y;
+            return (float) (blocks - Math.floor(blocks));
+        }
+    }
+
     private static final class HoldState {
         String action;
         long startTick;
@@ -193,6 +208,7 @@ final class VanillaAnimationScheduler {
             scheduleCrouchWork(player, desired, stationary);
             scheduleSneak(player, desired, stationary);
             scheduleSpecialPose(player, desired);
+            scheduleClimb(player, desired);
             Set<String> previous = scrubbed.put(id, desired);
             if (previous != null) {
                 for (String action : previous) {
@@ -209,6 +225,7 @@ final class VanillaAnimationScheduler {
         scrubbed.keySet().removeIf(id -> server.getPlayerManager().getPlayer(id) == null);
         previousPositions.keySet().removeIf(id -> server.getPlayerManager().getPlayer(id) == null);
         releases.keySet().removeIf(id -> server.getPlayerManager().getPlayer(id) == null);
+        climbs.keySet().removeIf(id -> server.getPlayerManager().getPlayer(id) == null);
     }
 
     void clear(UUID player) {
@@ -219,6 +236,7 @@ final class VanillaAnimationScheduler {
         scrubbed.remove(player);
         previousPositions.remove(player);
         releases.remove(player);
+        climbs.remove(player);
     }
 
     void clear() {
@@ -229,6 +247,7 @@ final class VanillaAnimationScheduler {
         scrubbed.clear();
         previousPositions.clear();
         releases.clear();
+        climbs.clear();
     }
 
     static float clampProgress(float value) {
@@ -343,6 +362,17 @@ final class VanillaAnimationScheduler {
         } else if (player.hasVehicle()) {
             playLoop(player, "ride", desired);
         }
+    }
+
+    private void scheduleClimb(ServerPlayerEntity player, Set<String> desired) {
+        // 只在攀爬且未站在地面时接管；着地站在梯子底部交回站立/步态，并重置相位起点。
+        if (!player.isAlive() || player.isSpectator() || !player.isClimbing() || player.isOnGround()
+                || player.hasVehicle()) {
+            climbs.remove(player.getUuid());
+            return;
+        }
+        ClimbState state = climbs.computeIfAbsent(player.getUuid(), ignored -> new ClimbState());
+        syncScrub(player, "climb", state.progress(player.getY()), desired);
     }
 
     private void playLoop(ServerPlayerEntity player, String action, Set<String> desired) {

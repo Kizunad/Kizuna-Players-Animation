@@ -97,6 +97,17 @@ class VanillaAnimationSchedulerTest {
     }
 
     @Test
+    void climbPhaseFollowsVerticalDistanceBothWays() {
+        // 一个循环 = 爬升 1 格；下滑时相位倒退，挂住不动时相位不变。
+        var state = new VanillaAnimationScheduler.ClimbState();
+        assertEquals(0, state.progress(64.0), 0.0001f);
+        assertEquals(0.25f, state.progress(64.25), 0.0001f);
+        assertEquals(0.25f, state.progress(64.25), 0.0001f);
+        assertEquals(0.10f, state.progress(65.10), 0.0001f);
+        assertEquals(0.85f, state.progress(64.85), 0.0001f);
+    }
+
+    @Test
     void jumpOnlyStartsAndStopsAtGroundEdges() {
         var state = new VanillaAnimationScheduler.JumpState();
         assertNull(state.progress(true, true, 0, 0));

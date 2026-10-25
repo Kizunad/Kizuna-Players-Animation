@@ -225,7 +225,13 @@ public final class AnimationPlayer {
             return playback.entry.mask();
         }
         // 潜行时工具动作只接管上身，腿部继续使用原版姿态；底层比工具动作晚开始同样有效。
-        boolean movingBase = crouching || playing.stream().anyMatch(lower -> !lower.finished(now)
+        boolean climbing = playing.stream().anyMatch(lower -> !lower.finished(now) && lower.weight(now) > 0
+                && lower.entry.id().equals("climb"));
+        if (climbing && singleArmWhileClimbing(playback.entry.id())) {
+            // 攀爬中攻击、挖掘、放置只接管动作手臂，另一只手和双脚继续抓梯。
+            return playback.entry.id().endsWith("_off") ? AnimationEntry.Mask.L_ARM : AnimationEntry.Mask.R_ARM;
+        }
+        boolean movingBase = crouching || climbing || playing.stream().anyMatch(lower -> !lower.finished(now)
                 && lower.weight(now) > 0 && lowerBase(lower.entry.id()));
         return movingBase ? AnimationEntry.Mask.UPPER : AnimationEntry.Mask.FULL;
     }
@@ -238,6 +244,10 @@ public final class AnimationPlayer {
                 || id.startsWith("equip_")
                 || id.startsWith("spyglass") || id.startsWith("toot_horn")
                 || id.startsWith("crossbow_") || id.startsWith("brush");
+    }
+
+    private static boolean singleArmWhileClimbing(String id) {
+        return id.startsWith("attack") || id.startsWith("mine") || id.startsWith("place_block");
     }
 
     private static boolean lowerBase(String id) {

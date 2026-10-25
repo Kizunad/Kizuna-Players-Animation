@@ -679,6 +679,16 @@
       "blend_out": 0.25,
       "hand": "none",
       "fpv": false
+    },
+    {
+      "id": "climb",
+      "file": "animations/climb.animation.json",
+      "mask": "full",
+      "priority": 4,
+      "blend_in": 0.15,
+      "blend_out": 0.15,
+      "hand": "none",
+      "fpv": false
     }
   ]
 }

@@ -11,7 +11,7 @@
 2026-10-26 剩余原版动作第一阶段只写了设计稿（见下方“剩余原版动作（设计稿）”与 ArmPose 小节新增行）：
 `sneak`、`sneak_walk`、`eat`、`drink`、`bow_draw`、`block_shield`、`trident_charge`、`climb`、`swim`、`ride`、
 `sleep`、`elytra` 与视线叠加层 `head_follow`。设计稿行使用六列（末列“状态”），`AnimationTransitionContractTest` 只解析五列/ArmPose 四列的已实现行，
-阶段 2 实现某个动作时，把对应行改回五列/四列格式并同步更新测试中的边数（`sneak` / `sneak_walk`、`eat` / `drink`、`block_shield`、`bow_draw`、`trident_charge`、`ride`、`sleep`、`elytra` 已实现，当前 183 条有向边）。
+阶段 2 实现某个动作时，把对应行改回五列/四列格式并同步更新测试中的边数（`sneak` / `sneak_walk`、`eat` / `drink`、`block_shield`、`bow_draw`、`trident_charge`、`ride`、`sleep`、`elytra`、`climb` 已实现，当前 189 条有向边）。
 资源尚未制作，运行时仍使用原版姿势，不能当作已实现。
 
 状态集合：`stand`、`walk`、`run`、`jump_takeoff`、`jump_air`、`jump_land`、`meditate`、
@@ -50,8 +50,8 @@
 | sneak | sneak_walk / crouch_work / stand / walk / jump_takeoff | 0.2 / 0.2 | 否 | 开始移动 / 开始工具动作 / 松开潜行 / 离地 |
 | sneak_walk | sneak / walk / run / jump_takeoff | 0.2 / 0.2 | 否 | 停步 / 松开潜行 / 离地 |
 | crouch_work | sneak / sneak_walk | 0.18 / 0.18 | 否 | 工具动作结束 / 开始移动 |
-| stand / walk / jump_air | climb | 0.15 / 0.15 | 否 | `isClimbing()` 且未站稳；按竖直位移 scrub | 设计稿 |
-| climb | stand / walk / jump_air | 0.15 / 0.15 | 否 | 离开可攀爬方块或着地 | 设计稿 |
+| stand / walk / jump_air | climb | 0.15 / 0.15 | 否 | `isClimbing()` 且未站稳；按竖直位移 scrub |
+| climb | stand / walk / jump_air | 0.15 / 0.15 | 否 | 离开可攀爬方块或着地 |
 | walk / run | swim | 0.3 / 0.3 | 否 | 进入泳姿；与原版 `leaningPitch` 放倒同步 | 设计稿 |
 | swim | stand / walk | 0.3 / 0.3 | 否 | 离开泳姿 | 设计稿 |
 | stand / walk / jump_air | ride | 0.25 / 0.25 | 否 | `hasVehicle()`（原版坐骑均为坐姿） |

@@ -14,6 +14,8 @@ public enum PlayerAnimationAction {
     RIDE("ride"),
     SLEEP("sleep"),
     ELYTRA("elytra"),
+    /** 攀爬按累计竖直位移 scrub 循环资源，离开可攀爬方块或着地时停止。 */
+    CLIMB("climb"),
     /** 跳跃是一段 0.90 秒剪辑，调度通过竖直速度 scrub。 */
     JUMP("jump", 18),
     ATTACK_MAIN("attack_main", 10),
