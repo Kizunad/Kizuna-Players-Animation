@@ -30,6 +30,10 @@ import org.joml.Vector3f;
 
 public final class PlayerMeshRenderer {
     private static final float SLIM_ITEM_SHOULDER_OFFSET = 0.5f;
+    private static final float LOOK_PITCH_FULL = 1;
+    private static final float LOOK_PITCH_DRINK = 0.5f;
+    private static final String[] PITCH_COMPENSATED = {"spyglass", "spyglass_off", "toot_horn", "toot_horn_off",
+            "crossbow_hold", "crossbow_hold_off"};
     public record Frame(PlayerAssets.Model model, Matrix4f[] matrices) { }
     private PlayerMeshRenderer() { }
 
@@ -39,15 +43,46 @@ public final class PlayerMeshRenderer {
             return null;
         }
         // 先还原原版姿态，再按实际存在的轨道覆盖，未写的腿仍保持原版走路。
-        Pose[] base = basePose(model.skeleton(), vanilla, firstPerson, "slim".equals(player.getModel()));
+        // 视线层启用时底层去掉原版头部偏航/俯仰，最后由视线层统一加回，避免动作头轨道吞掉视线或重复计算。
+        LookLayer.Clips look = lookEnabled(player, firstPerson) ? LookLayer.clips(PlayerAnimationClient.ASSETS.animations()) : null;
+        Pose[] base = basePose(model.skeleton(), vanilla, firstPerson, "slim".equals(player.getModel()), look != null);
         var animation = PlayerAnimationClient.PLAYBACK.player(player.getUuid());
+        double now = PlayerPlayback.now(tickDelta);
         Pose[] pose = animation == null ? base
-                : animation.sample(base, PlayerPlayback.now(tickDelta), firstPerson, vanilla.sneaking);
+                : animation.sample(base, now, firstPerson, vanilla.sneaking);
         if (animation != null) {
-            applyArmPosePitch(pose, model.skeleton(), animation, PlayerPlayback.now(tickDelta), player.getPitch(tickDelta),
+            applyArmPosePitch(pose, model.skeleton(), animation, now, player.getPitch(tickDelta),
                     player.getMainArm());
         }
+        if (look != null) {
+            float yaw = (float) Math.toDegrees(vanilla.head.yaw);
+            float pitch = (float) Math.toDegrees(vanilla.head.pitch);
+            LookLayer.apply(pose, look, yaw, pitch, lookPitchWeight(animation, now));
+        }
         return new Frame(model, Rig.matrices(model.skeleton(), pose));
+    }
+
+    private static boolean lookEnabled(AbstractClientPlayerEntity player, boolean firstPerson) {
+        // 睡眠、泳姿/爬行过渡、鞘翅、激流和死亡时原版头部有专用姿态，视线层不接管；独立手臂入口不画头。
+        return !firstPerson && !player.isSleeping() && !player.isInSwimmingPose() && !player.isFallFlying()
+                && !player.isUsingRiptide() && player.deathTime == 0 && player.getLeaningPitch(0) == 0;
+    }
+
+    static float lookPitchWeight(dev.kizuna.playeranimation.animation.AnimationPlayer animation, double now) {
+        // 望远镜、号角、持弩已在 applyArmPosePitch 中把俯仰加到头部，视线层只叠偏航；
+        // 饮用末段本身已仰头，俯仰层按一半叠加。
+        if (animation == null) {
+            return LOOK_PITCH_FULL;
+        }
+        for (String id : PITCH_COMPENSATED) {
+            if (animation.hasActive(id, now)) {
+                return 0;
+            }
+        }
+        if (animation.hasActive("drink", now) || animation.hasActive("drink_off", now)) {
+            return LOOK_PITCH_DRINK;
+        }
+        return LOOK_PITCH_FULL;
     }
 
     static void applyArmPosePitch(Pose[] pose, Skeleton skeleton,
@@ -106,13 +141,20 @@ public final class PlayerMeshRenderer {
     }
 
     public static Pose[] basePose(Skeleton skeleton, PlayerEntityModel<?> model, boolean firstPerson, boolean slim) {
+        return basePose(skeleton, model, firstPerson, slim, false);
+    }
+
+    public static Pose[] basePose(Skeleton skeleton, PlayerEntityModel<?> model, boolean firstPerson, boolean slim,
+                                  boolean stripLook) {
         Map<BoneId, Matrix4f> absolute = new EnumMap<>(BoneId.class);
         Pose[] pose = Rig.zeroPose();
         // 原版六部件在绑定空间的变换转换为 25 骨局部姿态；保留蹲伏等枢轴位移。
         for (BoneId bone : BoneId.ALL) {
             ModelPart part = part(model, bone, false);
+            // 去视线时头部只保留枢轴位移（潜行下移）与滚转，偏航/俯仰交给视线层。
+            boolean lookless = stripLook && bone == BoneId.HEAD;
             Matrix4f target = bone == BoneId.ROOT || (firstPerson && !bone.arm())
-                    ? new Matrix4f() : vanillaTransform(part);
+                    ? new Matrix4f() : vanillaTransform(part, lookless);
             absolute.put(bone, target);
             Matrix4f local = bone.parent == null ? target : new Matrix4f(absolute.get(bone.parent)).invert().mul(target);
             if (slim && bone.socket()) {
@@ -128,11 +170,13 @@ public final class PlayerMeshRenderer {
         return pose;
     }
 
-    private static Matrix4f vanillaTransform(ModelPart part) {
+    private static Matrix4f vanillaTransform(ModelPart part, boolean lookless) {
         ModelTransform bind = part.getDefaultTransform();
+        float yaw = lookless ? 0 : part.yaw;
+        float pitch = lookless ? 0 : part.pitch;
         // Y 轴反射使 X/Z 旋转反号；每节矩阵最终仍作用于全局像素位置。
         return new Matrix4f().translate(part.pivotX, Rig.MODEL_ORIGIN_HEIGHT - part.pivotY, part.pivotZ)
-                .rotateZYX(-part.roll, part.yaw, -part.pitch)
+                .rotateZYX(-part.roll, yaw, -pitch)
                 .translate(-bind.pivotX, bind.pivotY - Rig.MODEL_ORIGIN_HEIGHT, -bind.pivotZ);
     }
 

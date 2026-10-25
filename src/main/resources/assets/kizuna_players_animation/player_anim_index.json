@@ -483,6 +483,28 @@
           0.4
         ]
       ]
+    },
+    {
+      "id": "head_follow",
+      "file": "animations/head_follow.animation.json",
+      "mask": "upper",
+      "priority": 0,
+      "blend_in": 0,
+      "blend_out": 0,
+      "hand": "none",
+      "fpv": false,
+      "layer": "look"
+    },
+    {
+      "id": "head_follow_pitch",
+      "file": "animations/head_follow_pitch.animation.json",
+      "mask": "upper",
+      "priority": 0,
+      "blend_in": 0,
+      "blend_out": 0,
+      "hand": "none",
+      "fpv": false,
+      "layer": "look"
     }
   ]
 }

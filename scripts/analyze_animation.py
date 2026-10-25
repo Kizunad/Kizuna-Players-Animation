@@ -72,6 +72,11 @@ NON_STANDING_IDS = {"meditate", "jump"}
 STANDING_LOOP_IDS = {"sneak"}
 # 原地循环步态：支撑脚相对 root 匀速后移，使用 walk/run 的循环支撑检查。
 GAIT_IDS = {"walk", "run", "sneak_walk"}
+# 视线叠加层（索引 layer: look）：时间轴表示视线角度而不是时间，只对这两个 ID 使用姿势层判据。
+LOOK_LAYER_IDS = {"head_follow": ("y", 50.0), "head_follow_pitch": ("x", -90.0)}
+MIN_LOOK_LAYER_BONES = 5
+LOOK_LAYER_SUM_TOLERANCE_DEG = 1.0
+LOOK_LAYER_SYMMETRY_TOLERANCE_DEG = 0.05
 IMPACT_WINDOW_IDS = {"attack_main", "attack_off", "mine_main", "mine_off"}
 ARM_INTERSECTION_TOLERANCE_PX = 0.25
 MIN_PREPARATION_FOLLOW_RATIO = 0.60
@@ -885,6 +890,45 @@ def grip_gates(sampler: AnimationSampler, times: list[float], active: set[str]) 
             "max_abs_deg": measurements, "failures": failures}
 
 
+def look_layer_gates(sampler: AnimationSampler, times: list[float]) -> dict[str, Any]:
+    """视线层：头/胸/腰主轴随角度单调，两端合计等于原版视线角度；偏航层左右镜像对称。"""
+    animation_id = sampler.key.rsplit(".", 1)[-1]
+    axis_name, end_angle = LOOK_LAYER_IDS[animation_id]
+    axis = "xyz".index(axis_name)
+    chain = ("head", "chest", "waist")
+    failures: list[str] = []
+    # 主轴方向：时间从 0 到 1 时，偏航层角度增大、俯仰层（Minecraft 正值低头）面板 X 减小。
+    direction = 1.0 if end_angle > 0 else -1.0
+    for bone in chain:
+        values = [sampler.value(bone, "rotation", time, wrap=False)[axis] for time in times]
+        drops = [direction * (right - left) for left, right in zip(values, values[1:])]
+        if min(drops) < -1e-6:
+            failures.append(f"{bone} 主轴不单调")
+    end_sum = sum(sampler.value(bone, "rotation", sampler.duration, wrap=False)[axis] for bone in chain)
+    start_sum = sum(sampler.value(bone, "rotation", 0.0, wrap=False)[axis] for bone in chain)
+    if abs(end_sum - end_angle) > LOOK_LAYER_SUM_TOLERANCE_DEG or abs(start_sum + end_angle) > LOOK_LAYER_SUM_TOLERANCE_DEG:
+        failures.append(f"头胸腰合计 {start_sum:.2f}/{end_sum:.2f}° 不等于原版 ±{abs(end_angle)}°")
+    symmetry = 0.0
+    if axis_name == "y":
+        # 偏航层：pose(t) 必须等于 pose(1-t) 的左右镜像（交换 r_/l_，Y、Z 取反）。
+        for time in times:
+            for bone in sampler.model.bones:
+                mirrored = ("l_" + bone[2:]) if bone.startswith("r_") else ("r_" + bone[2:]) if bone.startswith("l_") else bone
+                a = sampler.value(bone, "rotation", time, wrap=False)
+                b = sampler.value(mirrored, "rotation", sampler.duration - time, wrap=False)
+                symmetry = max(symmetry, abs(a[0] - b[0]), abs(a[1] + b[1]), abs(a[2] + b[2]))
+        if symmetry > LOOK_LAYER_SYMMETRY_TOLERANCE_DEG:
+            failures.append(f"左右镜像误差 {symmetry:.3f}°")
+    neutral = max(abs(component) for bone in sampler.model.bones
+                  for component in sampler.value(bone, "rotation", sampler.duration / 2, wrap=False))
+    if neutral > LOOK_LAYER_SYMMETRY_TOLERANCE_DEG:
+        failures.append(f"零视线姿态不为零（{neutral:.3f}°）")
+    return {"pass": not failures, "applicable": True,
+            "reason": "视线层：主轴单调、两端合计等于原版视线角度、零点为零；偏航层左右镜像",
+            "start_sum_deg": start_sum, "end_sum_deg": end_sum, "symmetry_error_deg": symmetry,
+            "failures": failures}
+
+
 def report(sampler: AnimationSampler, impact_window: tuple[float, float] | None = None) -> dict[str, Any]:
     times = sample_times(sampler)
     active, ranges = effective_bones(sampler, times)
@@ -909,10 +953,19 @@ def report(sampler: AnimationSampler, impact_window: tuple[float, float] | None 
     multi_axis = anti_forgery_multi_axis_gates(sampler, times, active, full_body)
     cycle = cycle_gates(sampler)
     velocity = velocity_gates(sampler, times, impact_window)
+    look_layer: dict[str, Any] = {"pass": True, "applicable": False, "reason": "仅 layer: look 的视线层资源适用"}
+    if animation_id in LOOK_LAYER_IDS:
+        # 视线层没有时间意义：时间型门禁写明不适用，改由姿势层判据；其他动作不受影响。
+        reason = "视线层是姿势空间剪辑（时间轴表示视线角度），改由视线层判据检查"
+        for item in (preparation, overlap, correlation, peak_order, velocity, ground):
+            item.update({"pass": True, "applicable": False, "reason": reason})
+        look_layer = look_layer_gates(sampler, times)
+        effective_pass = len(active) >= MIN_LOOK_LAYER_BONES
+        torso_pass = all(torso[bone] for bone in ("waist", "chest", "head"))
     # 总结果必须包含角速度/抽搐检查，不能只在明细中报告失败却返回成功。
     gate_pass = all((item.get("pass", True) or not item.get("applicable", True))
                     for item in (angle, preparation, overlap, arm_intersection, grip, ground, cycle,
-                                 correlation, peak_order, multi_axis, velocity))
+                                 correlation, peak_order, multi_axis, velocity, look_layer))
     return {
         "pass": gate_pass and effective_pass and torso_pass and all_body_pass,
         "animation": animation_id,
@@ -942,6 +995,7 @@ def report(sampler: AnimationSampler, impact_window: tuple[float, float] | None 
         "ground_and_center": ground,
         "grip_pose": grip,
         "cycle_seam": cycle,
+        "look_layer": look_layer,
     }
 
 
@@ -1014,7 +1068,7 @@ def main() -> int:
                   f"multi_axis={gate_label(item['anti_forgery_multi_axis'])} "
                   f"grip={gate_label(item['grip_pose'])} "
                   f"ground={gate_label(item['ground_and_center'])} "
-                  f"seam={gate_label(item['cycle_seam'])} "
+                  f"seam={gate_label(item['cycle_seam'])} look={gate_label(item['look_layer'])} "
                   f"overall={'PASS' if item['pass'] else 'FAIL'}")
     if failed:
         print(f"门禁失败: {', '.join(failed)}", file=sys.stderr)

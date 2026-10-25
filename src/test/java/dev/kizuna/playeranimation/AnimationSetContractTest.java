@@ -55,7 +55,8 @@ class AnimationSetContractTest {
                 "mine_main", "mine_off", "place_block", "place_block_off", "spyglass", "spyglass_off",
                 "toot_horn", "toot_horn_off", "crossbow_charge", "crossbow_charge_off",
                 "crossbow_hold", "crossbow_hold_off", "brush", "brush_off", "use_item", "use_item_off",
-                "sneak", "sneak_walk", "eat", "eat_off", "drink", "drink_off"), ids);
+                "sneak", "sneak_walk", "eat", "eat_off", "drink", "drink_off",
+                "head_follow", "head_follow_pitch"), ids);
         // 已交付标记必须与打包资源一致：调度只请求已交付动作，未打包的动作不得标为已交付。
         for (dev.kizuna.playeranimation.animation.PlayerAnimationAction action
                 : dev.kizuna.playeranimation.animation.PlayerAnimationAction.values()) {
