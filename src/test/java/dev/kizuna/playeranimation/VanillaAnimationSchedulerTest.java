@@ -79,6 +79,13 @@ class VanillaAnimationSchedulerTest {
     }
 
     @Test
+    void tridentIsReadyExactlyAtTheVanillaThrowThreshold() {
+        // 原版已使用 10 tick 才能投掷：剪辑 0.50 秒后引到位，之后在 0.50–1.70 秒回绕，不进入投掷跟随段。
+        assertEquals(0.50f, VanillaAnimationScheduler.loopedSecondsProgress(10, 2.15f, 0.50f, 1.70f) * 2.15f, 0.0001f);
+        assertEquals(0.60f, VanillaAnimationScheduler.loopedSecondsProgress(36, 2.15f, 0.50f, 1.70f) * 2.15f, 0.0001f);
+    }
+
+    @Test
     void releaseTailPlaysOnceOnlyWhenTheShotFires() {
         var tail = new VanillaAnimationScheduler.ReleaseTail();
         tail.using("bow_draw", true, 1.6f, 1.9f, 1.9f);

@@ -10,6 +10,7 @@ import java.util.Set;
 import java.util.UUID;
 import net.minecraft.item.ArmorItem;
 import net.minecraft.item.BlockItem;
+import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.item.BowItem;
 import net.minecraft.item.CrossbowItem;
 import net.minecraft.item.ItemStack;
@@ -52,6 +53,11 @@ final class VanillaAnimationScheduler {
     // 原版拉弓进度低于 0.1 松手不发射，此时不播撒放尾段。
     private static final float BOW_MIN_RELEASE_PULL = 0.1f;
     private static final float TAIL_END_EPSILON_SECONDS = 0.001f;
+    // 三叉戟剪辑：原版已使用 10 tick 才能投掷，0.50 秒后引到位并在 [0.50, 1.70] 回绕；1.70–2.15 秒投掷跟随。
+    private static final float TRIDENT_CLIP_SECONDS = 2.15f;
+    private static final float TRIDENT_READY_SECONDS = 0.50f;
+    private static final float TRIDENT_HOLD_END_SECONDS = 1.70f;
+    private static final int TRIDENT_MIN_THROW_TICKS = 10;
     // 每 tick 位移不超过 0.02 方块视作静止；比较水平位移平方（方块²/tick²）。
     private static final double STATIONARY_SPEED_SQUARED = 0.0004;
 
@@ -305,7 +311,7 @@ final class VanillaAnimationScheduler {
                 || action.startsWith("use_item") || action.startsWith("spyglass")
                 || action.startsWith("toot_horn") || action.startsWith("crossbow_") || action.startsWith("brush")
                 || action.startsWith("eat") || action.startsWith("drink") || action.startsWith("block_shield")
-                || action.startsWith("bow_draw"));
+                || action.startsWith("bow_draw") || action.startsWith("trident_charge"));
         if (!working || !groundedSneak(player) || !stationary) {
             return;
         }
@@ -366,13 +372,22 @@ final class VanillaAnimationScheduler {
     private void armReleaseTail(ServerPlayerEntity player, ItemStack stack, String action) {
         // 只有拉弓与投掷有松手尾段；其他使用动作清掉旧状态，避免换物品后误播。
         String base = action == null ? "" : action.replace("_off", "");
-        if (!base.equals("bow_draw")) {
-            releases.remove(player.getUuid());
+        int used = usedTicks(player, stack);
+        if (base.equals("bow_draw")) {
+            boolean fires = BowItem.getPullProgress(used) >= BOW_MIN_RELEASE_PULL;
+            releases.computeIfAbsent(player.getUuid(), ignored -> new ReleaseTail())
+                    .using(action, fires, BOW_HOLD_END_SECONDS, BOW_CLIP_SECONDS, BOW_CLIP_SECONDS);
             return;
         }
-        boolean fires = BowItem.getPullProgress(usedTicks(player, stack)) >= BOW_MIN_RELEASE_PULL;
-        releases.computeIfAbsent(player.getUuid(), ignored -> new ReleaseTail())
-                .using(action, fires, BOW_HOLD_END_SECONDS, BOW_CLIP_SECONDS, BOW_CLIP_SECONDS);
+        if (base.equals("trident_charge")) {
+            // 激流在水中或雨中发动时原版旋转整身，不播投掷跟随；不足 10 tick 原版不投掷。
+            boolean riptide = EnchantmentHelper.getRiptide(stack) > 0 && player.isTouchingWaterOrRain();
+            boolean throwsTrident = used >= TRIDENT_MIN_THROW_TICKS && !riptide;
+            releases.computeIfAbsent(player.getUuid(), ignored -> new ReleaseTail())
+                    .using(action, throwsTrident, TRIDENT_HOLD_END_SECONDS, TRIDENT_CLIP_SECONDS, TRIDENT_CLIP_SECONDS);
+            return;
+        }
+        releases.remove(player.getUuid());
     }
 
     private void scheduleReleaseTail(ServerPlayerEntity player, Set<String> desired) {
@@ -498,6 +513,8 @@ final class VanillaAnimationScheduler {
             case "use_item" -> clipSecondsProgress(used / 20f * TOOL_PLAYBACK_SPEED, 0.40f);
             case "eat" -> loopedSecondsProgress(used, EAT_CLIP_SECONDS, EAT_LOOP_START_SECONDS, EAT_CLIP_SECONDS);
             case "bow_draw" -> bowProgress(BowItem.getPullProgress(used), used);
+            case "trident_charge" -> loopedSecondsProgress(used, TRIDENT_CLIP_SECONDS, TRIDENT_READY_SECONDS,
+                    TRIDENT_HOLD_END_SECONDS);
             case "block_shield" -> loopedSecondsProgress(used, SHIELD_CLIP_SECONDS, SHIELD_LOOP_START_SECONDS,
                     SHIELD_CLIP_SECONDS);
             case "drink" -> clipSecondsProgress(Math.min(used / 20f, DRINK_CLIP_SECONDS), DRINK_CLIP_SECONDS);
@@ -517,7 +534,7 @@ final class VanillaAnimationScheduler {
             case DRINK -> handAction("drink", "drink_off", hand);
             case BLOCK -> handAction("block_shield", "block_shield_off", hand);
             case BOW -> handAction("bow_draw", "bow_draw_off", hand);
-            case SPEAR -> null;
+            case SPEAR -> handAction("trident_charge", "trident_charge_off", hand);
             default -> handAction("use_item", "use_item_off", hand);
         };
     }

@@ -37,6 +37,9 @@ public enum PlayerAnimationAction {
     /** 拉弓按原版拉弓进度取样，松手发射后由调度推进撒放尾段再停止。 */
     BOW_DRAW("bow_draw"),
     BOW_DRAW_OFF("bow_draw_off"),
+    /** 三叉戟蓄力 10 tick 后引到位，投掷后由调度推进跟随段再停止。 */
+    TRIDENT_CHARGE("trident_charge"),
+    TRIDENT_CHARGE_OFF("trident_charge_off"),
     USE_ITEM("use_item", 8),
     USE_ITEM_OFF("use_item_off", 8),
     PLACE_BLOCK("place_block", 10),

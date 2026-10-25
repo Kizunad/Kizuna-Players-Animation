@@ -11,7 +11,7 @@
 2026-10-26 剩余原版动作第一阶段只写了设计稿（见下方“剩余原版动作（设计稿）”与 ArmPose 小节新增行）：
 `sneak`、`sneak_walk`、`eat`、`drink`、`bow_draw`、`block_shield`、`trident_charge`、`climb`、`swim`、`ride`、
 `sleep`、`elytra` 与视线叠加层 `head_follow`。设计稿行使用六列（末列“状态”），`AnimationTransitionContractTest` 只解析五列/ArmPose 四列的已实现行，
-阶段 2 实现某个动作时，把对应行改回五列/四列格式并同步更新测试中的边数（`sneak` / `sneak_walk`、`eat` / `drink`、`block_shield`、`bow_draw` 已实现，当前 165 条有向边）。
+阶段 2 实现某个动作时，把对应行改回五列/四列格式并同步更新测试中的边数（`sneak` / `sneak_walk`、`eat` / `drink`、`block_shield`、`bow_draw`、`trident_charge` 已实现，当前 173 条有向边）。
 资源尚未制作，运行时仍使用原版姿势，不能当作已实现。
 
 状态集合：`stand`、`walk`、`run`、`jump_takeoff`、`jump_air`、`jump_land`、`meditate`、
@@ -77,10 +77,8 @@
 ## 原版 ArmPose 使用动作
 
 调度按原版 `PlayerEntityRenderer.getArmPose` 的语义选 ID：`UseAction.SPYGLASS → spyglass`、
-`TOOT_HORN → toot_horn`、`EAT → eat`、`DRINK → drink`、`BLOCK → block_shield`、`BOW → bow_draw`、使用中的弩 `→ crossbow_charge`、持已上弦且未使用的弩 `→ crossbow_hold`、
-`BRUSH → brush`；其余持续使用 `→ use_item`。SPEAR 保持原版姿势。
-设计稿（未实现）把其余一项改为：
-`SPEAR → trident_charge`，副手同样选 `*_off`。
+`TOOT_HORN → toot_horn`、`EAT → eat`、`DRINK → drink`、`BLOCK → block_shield`、`BOW → bow_draw`、`SPEAR → trident_charge`、使用中的弩 `→ crossbow_charge`、持已上弦且未使用的弩 `→ crossbow_hold`、
+`BRUSH → brush`；其余持续使用 `→ use_item`。
 物品在副手时选对应 `*_off`。驱动方式（已使用时长、装填进度、循环段）见各设计稿第 1 节。
 
 | 来源 → 目标 | 淡入 / 淡出 | 触发 | 约束 |
@@ -95,7 +93,7 @@
 连续挖掘与连续放置在同一 ID 上重复 scrub：原版每 4 tick 重开挥动，剪辑 0–0.20 s 是可回绕
 的循环，重开时游标向前接回 0，不做淡入（见 `mine_main` / `place_block` 设计稿第 1 节）。
 
-设计稿新增的 ArmPose 切换（阶段 2 实现；底层集合含潜行与骑乘）：
+剩余原版动作新增的 ArmPose 切换（2026-10-26 已实现；底层集合含潜行与骑乘）：
 
 | 来源 | 目标 | 淡入 / 淡出 | 触发 | 约束 | 状态 |
 | --- | --- | ---: | --- | --- | --- |
@@ -119,4 +117,8 @@
 | --- | ---: | --- | --- |
 | stand / walk / run / sneak / sneak_walk / crouch_work / ride / jump_air → block_shield | 0.06 / 0.15 | 开始持盾 | 0.25 s（5 tick）举盾到位，与原版格挡生效同步 |
 
-| stand / walk / run / sneak / sneak_walk / crouch_work / ride / jump_air | trident_charge | 0.08 / 0.15 | 开始蓄力 | 0.50 s（10 tick）后引到位；松手投掷时先播 1.7–2.1 跟随段 | 设计稿 |
+
+| 来源 → 目标 | 淡入 / 淡出 | 触发 | 约束 |
+| --- | ---: | --- | --- |
+| stand / walk / run / sneak / sneak_walk / crouch_work / ride / jump_air → trident_charge | 0.08 / 0.15 | 开始蓄力 | 0.50 s（10 tick）后引到位；松手投掷时先播 1.70–2.15 跟随段（激流不播） |
+

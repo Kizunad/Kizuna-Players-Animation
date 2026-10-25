@@ -234,7 +234,7 @@ public final class AnimationPlayer {
         return id.startsWith("attack") || id.startsWith("mine")
                 || id.startsWith("use_item") || id.startsWith("place_block")
                 || id.startsWith("eat") || id.startsWith("drink") || id.startsWith("block_shield")
-                || id.startsWith("bow_draw")
+                || id.startsWith("bow_draw") || id.startsWith("trident_charge")
                 || id.startsWith("equip_")
                 || id.startsWith("spyglass") || id.startsWith("toot_horn")
                 || id.startsWith("crossbow_") || id.startsWith("brush");

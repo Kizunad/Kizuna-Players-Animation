@@ -57,7 +57,7 @@ class AnimationSetContractTest {
                 "crossbow_hold", "crossbow_hold_off", "brush", "brush_off", "use_item", "use_item_off",
                 "sneak", "sneak_walk", "eat", "eat_off", "drink", "drink_off",
                 "head_follow", "head_follow_pitch", "block_shield", "block_shield_off",
-                "bow_draw", "bow_draw_off"), ids);
+                "bow_draw", "bow_draw_off", "trident_charge", "trident_charge_off"), ids);
         // 已交付标记必须与打包资源一致：调度只请求已交付动作，未打包的动作不得标为已交付。
         for (dev.kizuna.playeranimation.animation.PlayerAnimationAction action
                 : dev.kizuna.playeranimation.animation.PlayerAnimationAction.values()) {

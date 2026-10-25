@@ -601,6 +601,54 @@
           1.9
         ]
       ]
+    },
+    {
+      "id": "trident_charge",
+      "file": "animations/trident_charge.animation.json",
+      "mask": "full",
+      "priority": 15,
+      "blend_in": 0.08,
+      "blend_out": 0.15,
+      "hand": "main",
+      "fpv": false,
+      "loop_region": [
+        0.5,
+        1.7
+      ],
+      "phases": [
+        [
+          0,
+          0.5
+        ],
+        [
+          1.7,
+          2.15
+        ]
+      ]
+    },
+    {
+      "id": "trident_charge_off",
+      "file": "animations/trident_charge_off.animation.json",
+      "mask": "full",
+      "priority": 15,
+      "blend_in": 0.08,
+      "blend_out": 0.15,
+      "hand": "off",
+      "fpv": false,
+      "loop_region": [
+        0.5,
+        1.7
+      ],
+      "phases": [
+        [
+          0,
+          0.5
+        ],
+        [
+          1.7,
+          2.15
+        ]
+      ]
     }
   ]
 }
