@@ -8,9 +8,16 @@
 骑乘、睡觉、鞘翅、吃喝、拉弓、三叉戟、扭头、闪避和格挡继续使用原版姿势；潜行时的工具
 操作由 `crouch_work` 只接管支撑腿与躯干，工具动作仍按上层遮罩叠加。
 
+2026-10-26 剩余原版动作第一阶段只写了设计稿（见下方“剩余原版动作（设计稿）”与 ArmPose 小节新增行）：
+`sneak`、`sneak_walk`、`eat`、`drink`、`bow_draw`、`block_shield`、`trident_charge`、`climb`、`swim`、`ride`、
+`sleep`、`elytra` 与视线叠加层 `head_follow`。设计稿行使用六列（末列“状态”），`AnimationTransitionContractTest` 只解析五列/ArmPose 四列的已实现行，
+因此当前 108 条有向边的回归不变；阶段 2 实现某个动作时，把对应行改回五列/四列格式并同步更新测试中的边数。
+资源尚未制作，运行时仍使用原版姿势，不能当作已实现。
+
 状态集合：`stand`、`walk`、`run`、`jump_takeoff`、`jump_air`、`jump_land`、`meditate`、
 `attack`、`mine`、`use_item`、`place_block`、`equip_helmet`、`equip_chestplate`、
-`equip_leggings`、`equip_boots`。
+`equip_leggings`、`equip_boots`。设计中的状态：`sneak`、`sneak_walk`、`climb`、`swim`、`ride`、`sleep`、`elytra`，以及
+上层 `eat`、`drink`、`bow_draw`、`block_shield`、`trident_charge`。
 
 ## 允许切换
 
@@ -31,6 +38,32 @@
 斜杠分隔的来源或目标表示同一条规则对每个状态分别生效，测试展开为独立有向边。未列出的
 有向边禁止；上层动作必须先结束再切入睡觉、飞行、游泳、攀爬或骑乘等原版状态。
 
+## 剩余原版动作（设计稿，2026-10-26）
+
+`sneak` / `sneak_walk` / `crouch_work` 三者由调度互斥选择（静止、移动、静止且有工具动作）。`climb`、`swim`、
+`ride`、`sleep`、`elytra` 是原版特殊状态的全身动作，进入前上层动作必须已经结束（同上节规则）；`climb`、`swim`
+按位移 scrub，`elytra` 按滑翔 tick scrub，其余为自由时钟循环。
+
+| 来源 | 目标 | 淡入/淡出 | 专门过渡 | 触发与约束 | 状态 |
+| --- | --- | ---: | :---: | --- | --- |
+| stand / walk / run | sneak / sneak_walk | 0.2 / 0.2 | 否 | 按下潜行；静止选 sneak，移动选 sneak_walk | 设计稿 |
+| sneak | sneak_walk / crouch_work / stand / walk / jump_takeoff | 0.2 / 0.2 | 否 | 开始移动 / 开始工具动作 / 松开潜行 / 离地 | 设计稿 |
+| sneak_walk | sneak / walk / run / jump_takeoff | 0.2 / 0.2 | 否 | 停步 / 松开潜行 / 离地 | 设计稿 |
+| crouch_work | sneak / sneak_walk | 0.18 / 0.18 | 否 | 工具动作结束 / 开始移动 | 设计稿 |
+| stand / walk / jump_air | climb | 0.15 / 0.15 | 否 | `isClimbing()` 且未站稳；按竖直位移 scrub | 设计稿 |
+| climb | stand / walk / jump_air | 0.15 / 0.15 | 否 | 离开可攀爬方块或着地 | 设计稿 |
+| walk / run | swim | 0.3 / 0.3 | 否 | 进入泳姿；与原版 `leaningPitch` 放倒同步 | 设计稿 |
+| swim | stand / walk | 0.3 / 0.3 | 否 | 离开泳姿 | 设计稿 |
+| stand / walk / jump_air | ride | 0.25 / 0.25 | 否 | `hasVehicle()` 且坐骑 `shouldRiderSit()` | 设计稿 |
+| ride | stand | 0.25 / 0.25 | 否 | 下坐骑 | 设计稿 |
+| stand | sleep | 0.3 / 0.3 | 否 | 入睡；原版矩阵同时放倒身体 | 设计稿 |
+| sleep | stand | 0.3 / 0.3 | 否 | 醒来 | 设计稿 |
+| jump_air | elytra | 0.25 / 0.25 | 否 | `isFallFlying()` 且滑翔超过 4 tick | 设计稿 |
+| elytra | stand / walk / swim | 0.25 / 0.25 | 否 | 落地或入水 | 设计稿 |
+
+`head_follow` 是客户端每帧的加性视线层，不是可切换的状态，不进入本表；启用与关闭条件见
+[head_follow](head_follow.md) 第 1、4 节。
+
 ## 叠加组合回归
 
 以下组合必须用真实 `AnimationPlayer` 逐帧采样：`walk+attack`、`run+mine`、`walk+use_item`、
@@ -38,11 +71,16 @@
 检查上下身骨骼没有断开，手臂不穿过躯干，停止上层后底层轨道继续推进；一次性动作结束走
 淡出而不是瞬间复位。
 
+设计中新增的组合（阶段 2 加入 Java 回归）：`walk+eat`、`sneak+drink`、`sneak_walk+block_shield`、
+`ride+bow_draw`、`run+trident_charge`、`ride+attack`、`climb+place_block`（攀爬中只取单臂，待审阅）。
+
 ## 原版 ArmPose 使用动作
 
 调度按原版 `PlayerEntityRenderer.getArmPose` 的语义选 ID：`UseAction.SPYGLASS → spyglass`、
 `TOOT_HORN → toot_horn`、使用中的弩 `→ crossbow_charge`、持已上弦且未使用的弩 `→ crossbow_hold`、
 `BRUSH → brush`；其余持续使用 `→ use_item`。EAT / DRINK / BOW / SPEAR / BLOCK 保持原版姿势。
+设计稿（未实现）把它们改为：`EAT → eat`、`DRINK → drink`、`BOW → bow_draw`、`BLOCK → block_shield`、
+`SPEAR → trident_charge`，副手同样选 `*_off`。
 物品在副手时选对应 `*_off`。驱动方式（已使用时长、装填进度、循环段）见各设计稿第 1 节。
 
 | 来源 → 目标 | 淡入 / 淡出 | 触发 | 约束 |
@@ -56,3 +94,13 @@
 
 连续挖掘与连续放置在同一 ID 上重复 scrub：原版每 4 tick 重开挥动，剪辑 0–0.20 s 是可回绕
 的循环，重开时游标向前接回 0，不做淡入（见 `mine_main` / `place_block` 设计稿第 1 节）。
+
+设计稿新增的 ArmPose 切换（阶段 2 实现；底层集合含潜行与骑乘）：
+
+| 来源 | 目标 | 淡入 / 淡出 | 触发 | 约束 | 状态 |
+| --- | --- | ---: | --- | --- | --- |
+| stand / walk / run / sneak / sneak_walk / crouch_work / ride / jump_air | eat / drink | 0.10 / 0.20 | 开始进食 / 饮用 | 按已使用 tick 取样；进食在 0.40–0.80 回绕，对齐进食音效 | 设计稿 |
+| stand / walk / run / sneak / sneak_walk / crouch_work / ride / jump_air | bow_draw | 0.08 / 0.15 | 开始拉弓 | 按 `BowItem.getPullProgress` scrub；满弓在 1.0–1.6 回绕 | 设计稿 |
+| bow_draw | stand / walk / run / sneak / sneak_walk / crouch_work / ride / jump_air | — / 0.15 | 松手 | pull ≥ 0.1 时先播 1.6–1.9 撒放尾段再淡出 | 设计稿 |
+| stand / walk / run / sneak / sneak_walk / crouch_work / ride / jump_air | block_shield | 0.06 / 0.15 | 开始持盾 | 0.25 s（5 tick）举盾到位，与原版格挡生效同步 | 设计稿 |
+| stand / walk / run / sneak / sneak_walk / crouch_work / ride / jump_air | trident_charge | 0.08 / 0.15 | 开始蓄力 | 0.50 s（10 tick）后引到位；松手投掷时先播 1.7–2.1 跟随段 | 设计稿 |
