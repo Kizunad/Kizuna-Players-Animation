@@ -1,5 +1,6 @@
 package dev.kizuna.playeranimation.client;
 
+import dev.kizuna.playeranimation.animation.AnimationEntry;
 import dev.kizuna.playeranimation.animation.AnimationPlayer;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -13,6 +14,7 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.util.Arm;
 
 public final class PlayerPlayback {
+    private static final double TICKS_PER_SECOND = 20;
     private final Map<UUID, AnimationPlayer> players = new HashMap<>();
     private final Map<UUID, PlayerMeshRenderer.Frame> frames = new HashMap<>();
     private final Map<EquipKey, EquipVisual> equipVisuals = new HashMap<>();
@@ -22,15 +24,32 @@ public final class PlayerPlayback {
         final String animation;
         final EquipmentSlot slot;
         final ItemStack item;
+        final Arm firstBootSide;
         boolean equipped;
         boolean rightBootEquipped;
         boolean leftBootEquipped;
         int equipEvents;
 
-        EquipVisual(String animation, EquipmentSlot slot, ItemStack item) {
+        EquipVisual(String animation, EquipmentSlot slot, ItemStack item, Arm firstBootSide) {
             this.animation = animation;
             this.slot = slot;
             this.item = item;
+            this.firstBootSide = firstBootSide;
+        }
+
+        void markEquipped() {
+            // 两只靴子按模板与惯用手依次穿上，历史恢复与实时事件使用同一规则。
+            equipEvents++;
+            if (slot != EquipmentSlot.FEET) {
+                equipped = true;
+            } else if (equipEvents == 1) {
+                rightBootEquipped = firstBootSide == Arm.RIGHT;
+                leftBootEquipped = firstBootSide == Arm.LEFT;
+            } else if (equipEvents == 2) {
+                rightBootEquipped = true;
+                leftBootEquipped = true;
+                equipped = true;
+            }
         }
     }
     private record EquipKey(UUID player, EquipmentSlot slot) { }
@@ -53,7 +72,7 @@ public final class PlayerPlayback {
             throw new IllegalArgumentException("客户端未加载玩家: " + playerId);
         }
         AnimationPlayer playback = players.computeIfAbsent(playerId, ignored -> new AnimationPlayer());
-        beginEquip(player, animationId);
+        beginEquip(player, entry);
         playback.scrub(entry, now(0), normalizedProgress, player.getMainArm() == Arm.LEFT);
     }
 
@@ -70,12 +89,20 @@ public final class PlayerPlayback {
             throw new IllegalArgumentException("客户端未加载玩家: " + playerId);
         }
         AnimationPlayer playback = players.computeIfAbsent(playerId, ignored -> new AnimationPlayer());
-        beginEquip(player, animationId, true);
+        double time = now(0);
+        boolean leftHanded = player.getMainArm() == Arm.LEFT;
+        double elapsedSeconds;
         if (startTick == null) {
-            playback.play(entry, now(0), player.getMainArm() == Arm.LEFT);
+            playback.play(entry, time, leftHanded);
+            elapsedSeconds = 0;
         } else {
-            playback.synchronize(entry, now(0), startTick / 20d, player.getMainArm() == Arm.LEFT, playId);
+            double startSeconds = startTick / TICKS_PER_SECOND;
+            if (!playback.synchronize(entry, time, startSeconds, leftHanded, playId)) {
+                return;
+            }
+            elapsedSeconds = time - startSeconds;
         }
+        restartEquip(player, entry, elapsedSeconds);
     }
 
     public void stop(UUID playerId, String animationId) {
@@ -121,7 +148,10 @@ public final class PlayerPlayback {
     public static double now(float tickDelta) {
         // 世界总 tick 不受 /time set 昼夜时间影响，暂停时也不会继续推进动画。
         var world = MinecraftClient.getInstance().world;
-        return world == null ? 0 : (world.getTime() + tickDelta) / 20d;
+        if (world == null) {
+            return 0;
+        }
+        return (world.getTime() + tickDelta) / TICKS_PER_SECOND;
     }
 
     public void clear() {
@@ -240,48 +270,53 @@ public final class PlayerPlayback {
         return entity instanceof AbstractClientPlayerEntity client && arm == client.getMainArm();
     }
 
-    private void beginEquip(AbstractClientPlayerEntity player, String animationId) {
-        beginEquip(player, animationId, false);
-    }
-
-    private void beginEquip(AbstractClientPlayerEntity player, String animationId, boolean restart) {
+    private void beginEquip(AbstractClientPlayerEntity player, AnimationEntry entry) {
+        // 连续 scrub 沿用已有穿戴状态，自由播放则由播放器决定是否重启。
+        String animationId = entry.id();
         EquipmentSlot slot = equipSlot(animationId);
         if (slot == null) {
             return;
         }
         EquipVisual current = equipVisuals.get(new EquipKey(player.getUuid(), slot));
-        if (!restart && current != null && current.animation.equals(animationId)) {
+        if (current != null && current.animation.equals(animationId)) {
             return;
         }
-        equipVisuals.put(new EquipKey(player.getUuid(), slot), new EquipVisual(animationId, slot,
-                player.getEquippedStack(slot).copy()));
+        restartEquip(player, entry, 0);
+    }
+
+    private void restartEquip(AbstractClientPlayerEntity player, AnimationEntry entry, double elapsedSeconds) {
+        String animationId = entry.id();
+        EquipmentSlot slot = equipSlot(animationId);
+        if (slot == null) {
+            return;
+        }
+        Arm mainArm = player.getMainArm();
+        Arm firstBootSide;
+        if (animationId.endsWith("_off")) {
+            firstBootSide = mainArm.getOpposite();
+        } else {
+            firstBootSide = mainArm;
+        }
+        EquipVisual visual = new EquipVisual(animationId, slot, player.getEquippedStack(slot).copy(), firstBootSide);
+        equipVisuals.put(new EquipKey(player.getUuid(), slot), visual);
+        // 同步播放器已跳过历史事件，只恢复内部显隐；起点的零秒事件仍留给正常 tick。
+        if (elapsedSeconds <= 0) {
+            return;
+        }
+        for (var event : entry.clip().events()) {
+            if (event.name().equals("equip") && event.seconds() <= elapsedSeconds) {
+                visual.markEquipped();
+            }
+        }
     }
 
     private void markEquip(UUID id, String animationId) {
-        equipVisuals.entrySet().stream().filter(entry -> entry.getKey().player().equals(id)
-                && entry.getValue().animation.equals(animationId))
-                .forEach(entry -> {
-                    EquipVisual visual = entry.getValue();
-                    visual.equipEvents++;
-                    if (visual.slot != EquipmentSlot.FEET) {
-                        visual.equipped = true;
-                    } else if (visual.equipEvents == 1) {
-                        boolean offHandTemplate = visual.animation.endsWith("_off");
-                        if (offHandTemplate) {
-                            visual.leftBootEquipped = true;
-                        } else {
-                            visual.rightBootEquipped = true;
-                        }
-                    } else if (visual.equipEvents == 2) {
-                        boolean offHandTemplate = visual.animation.endsWith("_off");
-                        if (offHandTemplate) {
-                            visual.rightBootEquipped = true;
-                        } else {
-                            visual.leftBootEquipped = true;
-                        }
-                        visual.equipped = true;
-                    }
-                });
+        // 实时事件只推进同一玩家、同一穿戴动画的视觉状态。
+        equipVisuals.entrySet().stream()
+                .filter(entry -> entry.getKey().player().equals(id))
+                .map(Map.Entry::getValue)
+                .filter(visual -> visual.animation.equals(animationId))
+                .forEach(EquipVisual::markEquipped);
     }
 
     private float progress(UUID id, String animationId, double now) {

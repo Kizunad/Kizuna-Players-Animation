@@ -65,15 +65,17 @@ public final class AnimationPlayer {
                 .thenComparingInt(p -> p.entry.priority()).thenComparingLong(p -> p.sequence));
     }
 
-    public void synchronize(AnimationEntry entry, double now, double start, boolean leftHanded, String playId) {
+    /** 返回是否处理了新的播放请求；同一实例的补发返回 false，供调用方保留附属视觉状态。 */
+    public boolean synchronize(AnimationEntry entry, double now, double start, boolean leftHanded, String playId) {
         // 同一播放请求的补发不重置播放器；同 tick 的再次播放仍有不同请求 ID。
         for (Playback playback : playing) {
             if (playback.entry.id().equals(entry.id()) && playId.equals(playback.playId) && playback.start == start
                     && Double.isNaN(playback.stopped)) {
-                return;
+                return false;
             }
         }
         play(entry, now, start, leftHanded, playId);
+        return true;
     }
 
     private void play(AnimationEntry entry, double now, double start, boolean leftHanded, String playId) {

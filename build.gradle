@@ -90,3 +90,71 @@ tasks.named('check') {
 }
 
 apply from: '../Kizuna-Meridian-Mod-Framework/scripts/full-assembly.gradle'
+
+sourceSets {
+    gametest {
+        compileClasspath += sourceSets.main.compileClasspath + sourceSets.main.output
+        runtimeClasspath += sourceSets.main.runtimeClasspath + sourceSets.main.output
+    }
+    clientTest {
+        compileClasspath += sourceSets.main.compileClasspath + sourceSets.main.output
+        runtimeClasspath += sourceSets.main.runtimeClasspath + sourceSets.main.output
+    }
+}
+
+dependencies {
+    clientTestImplementation 'org.junit.jupiter:junit-jupiter:5.11.4'
+    clientTestImplementation 'org.junit.platform:junit-platform-launcher:1.11.4'
+    clientTestRuntimeOnly files('../Kizuna-Meridian-Human-Addon/client/build/libs/kizuna-meridian-human-addon-client-0.1.0-SNAPSHOT.jar')
+}
+
+// Loom 不展开其他模组安装包里的纯 Java 嵌套库，测试运行显式装配实际依赖。
+['gametest', 'clientTest'].each { sourceSet ->
+    dependencies.add("${sourceSet}RuntimeOnly", files(
+            '../Kizuna-Meridian-Mod-Framework/server/build/libs/kizuna-meridian-mod-framework-server-0.1.0-SNAPSHOT.jar',
+            '../Kizuna-Meridian-Vanilla-Humanoid-Threatening/server/build/libs/kizuna-meridian-vanilla-humanoid-threatening-server-0.1.0-SNAPSHOT.jar'))
+    dependencies.add("${sourceSet}RuntimeOnly", 'org.tomlj:tomlj:1.1.1')
+}
+
+loom {
+    mods {
+        kizuna_players_animation { sourceSet sourceSets.main }
+        kpa_gametest { sourceSet sourceSets.gametest }
+        kpa_client_test { sourceSet sourceSets.clientTest }
+    }
+    runs {
+        gametest {
+            server()
+            source sourceSets.gametest
+            runDir 'build/gametest'
+            vmArg '-Dfabric-api.gametest'
+            vmArg '-Dfabric-api.gametest.report-file=../gametest-results.xml'
+        }
+        clientTest {
+            client()
+            source sourceSets.clientTest
+            runDir 'build/clienttest'
+            programArgs '--quickPlaySingleplayer', 'animation-test'
+            vmArg '-Dkpa.clientTest.report=../clienttest-results.txt'
+        }
+    }
+}
+
+// 客户端复用本仓 GameTest 生成的世界，不依赖其他项目的测试存档。
+tasks.register('prepareClientTestWorld', Copy) {
+    dependsOn tasks.named('runGametest')
+    from layout.buildDirectory.dir('gametest/world')
+    into layout.buildDirectory.dir('clienttest/saves/animation-test')
+    exclude 'session.lock'
+}
+
+tasks.named('runClientTest') {
+    dependsOn tasks.named('prepareClientTestWorld')
+    def report = layout.buildDirectory.file('clienttest-results.txt')
+    doFirst { report.get().asFile.text = 'success=false\n' }
+    doLast {
+        if (report.get().asFile.readLines().first() != 'success=true') {
+            throw new GradleException("客户端 JUnit 未全部通过，查看 ${report.get().asFile}")
+        }
+    }
+}

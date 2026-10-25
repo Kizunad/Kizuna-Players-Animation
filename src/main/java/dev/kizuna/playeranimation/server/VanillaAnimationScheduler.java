@@ -275,7 +275,8 @@ final class VanillaAnimationScheduler {
 
     private void scheduleHandSwing(ServerPlayerEntity player, Set<String> desired) {
         UUID id = player.getUuid();
-        Hand hand = player.getActiveHand();
+        // 挥动手独立于持续使用物品的手，由原版 swingHand 更新。
+        Hand hand = player.preferredHand;
         ItemStack swung = player.getStackInHand(hand);
         boolean mining = swung.getItem() instanceof MiningToolItem;
         boolean placing = swung.getItem() instanceof BlockItem;

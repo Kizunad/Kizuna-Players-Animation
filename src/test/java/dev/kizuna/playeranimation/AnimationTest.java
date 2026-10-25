@@ -235,11 +235,11 @@ class AnimationTest {
         var second = entry("second", rotationClip("[-60,0,0]", ",\"loop\":true"),
                 AnimationEntry.Mask.R_ARM, 0, 0, 0, AnimationEntry.Hand.NONE, false);
         AnimationPlayer player = new AnimationPlayer();
-        player.synchronize(first, 10, 10, false, "first-request");
+        assertTrue(player.synchronize(first, 10, 10, false /* leftHanded */, "first-request"));
         player.synchronize(second, 10, 10, false, "second-request");
-        player.synchronize(first, 10, 10, false, "first-request");
+        assertFalse(player.synchronize(first, 10, 10, false /* leftHanded */, "first-request"));
         assertEquals(60, player.sample(Rig.zeroPose(), 10, false)[BoneId.R_FOREARM.ordinal()].rotation().x());
-        player.synchronize(first, 10, 10, false, "new-request");
+        assertTrue(player.synchronize(first, 10, 10, false /* leftHanded */, "new-request"));
         assertEquals(30, player.sample(Rig.zeroPose(), 10, false)[BoneId.R_FOREARM.ordinal()].rotation().x());
     }
 

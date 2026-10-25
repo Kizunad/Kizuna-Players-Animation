@@ -88,7 +88,17 @@ ServerPlayerAnimations.RESULT.register((viewer, result) -> {
 
 协议测试固定 v1 消息的二进制样例，检查字段编号、停止范围、可选起始 tick、未知结果码和字段保留；另检查网络载荷边界、晚入范围进度与历史事件抑制。
 
-回归包含全部资源导出一致性、三段基线及本轮八段动作的双体型门禁、`AnimationPlayer` 状态切换/叠加和运行时测试。2026-10-23 已用 Java 17 直接编译全部主源码与测试并运行 JUnit，67 项通过；36 段导出一致性、31 段非校准动画的 62 组双体型门禁、防伪造回归通过。当前沙箱无法写入默认 Gradle 缓存锁，因此本轮未完成 Gradle 构建。Windows Native 逐项动作录制和本轮双客户端视觉验收尚未执行。
+`./gradlew runGametest` 使用真实服务端玩家核对主副手放置与攻击选择；首次运行须在 `build/gametest/eula.txt` 确认 Minecraft EULA。`./gradlew runClientTest` 先运行 GameTest，再复用其世界启动真实客户端，检查穿戴的晚加入、重复同步、新播放、靴子分侧与左主手镜像，并检查历史事件不补发。两者沿用整套模组装配，运行前需构建相邻仓库的安装产物；客户端回归单独报告于 `build/clienttest-results.txt`。无显示器的 Linux 环境可执行：
+
+```bash
+timeout 240s xvfb-run -a -s "-screen 0 1024x768x24" \
+  env JAVA_HOME="/usr/lib/jvm/java-17-openjdk-amd64" LIBGL_ALWAYS_SOFTWARE=true \
+  "./gradlew" runClientTest --console=plain
+```
+
+回归包含全部资源导出一致性、三段基线及本轮八段动作的双体型门禁、`AnimationPlayer` 状态切换/叠加和运行时测试。2026-10-23 已用 Java 17 直接编译全部主源码与测试并运行 JUnit，67 项通过；36 段导出一致性、31 段非校准动画的 62 组双体型门禁、防伪造回归通过。
+
+2026-10-25 已用 Java 17 执行 Gradle `test build runClientTest`：现有 75 项 JUnit、4 项挥手 GameTest、16 项真实客户端穿戴回归及构建中的资源门禁全部通过。挥手选择读取原版挥动手；晚加入按资源时间线恢复穿戴状态，重复同步保留已显示的盔甲，靴子显隐遵循主副手模板与惯用手镜像。客户端回归在 Xvfb 下检查实际玩家和播放状态；Windows Native 逐项动作录制和双客户端视觉验收尚未执行。
 
 校准动画 `calib_zero`、`calib_axes`、`calib_item`、`calib_mirror`、`calib_layer` 已交付，仍需在游戏中逐帧对照 Blockbench。手持挂点 pivot 由原版 `HeldItemFeatureRenderer` 的平移推算得到，未经游戏内校准，不能视为已对齐原版持物位置。
 
