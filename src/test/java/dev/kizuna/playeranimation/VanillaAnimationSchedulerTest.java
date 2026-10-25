@@ -3,6 +3,7 @@ package dev.kizuna.playeranimation.server;
 import org.junit.jupiter.api.Test;
 import dev.kizuna.playeranimation.animation.PlayerAnimationAction;
 import net.minecraft.util.Hand;
+import net.minecraft.util.math.Vec3d;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -105,6 +106,16 @@ class VanillaAnimationSchedulerTest {
         assertEquals(0.25f, state.progress(64.25), 0.0001f);
         assertEquals(0.10f, state.progress(65.10), 0.0001f);
         assertEquals(0.85f, state.progress(64.85), 0.0001f);
+    }
+
+    @Test
+    void swimStrokeFollowsTheVanillaLimbClock() {
+        // 全速（每 tick 位移 ≥ 0.25 格）时 26 tick 一个划臂周期；慢游按 位移 × 4 变慢，停下不前进。
+        var state = new VanillaAnimationScheduler.SwimState();
+        assertEquals(0, state.progress(new Vec3d(0, 0, 0)), 0.0001f);
+        assertEquals(1 / 26f, state.progress(new Vec3d(0.3, 0, 0)), 0.0001f);
+        assertEquals(1.5f / 26f, state.progress(new Vec3d(0.3, 0, 0.125)), 0.0001f);
+        assertEquals(1.5f / 26f, state.progress(new Vec3d(0.3, 0, 0.125)), 0.0001f);
     }
 
     @Test

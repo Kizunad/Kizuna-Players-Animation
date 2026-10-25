@@ -18,7 +18,7 @@
 
 `meditate` 是一段打坐吐纳循环草稿，仍使用上述 classic 模板与内嵌 Steve 皮肤，导出到 `animations/meditate.animation.json`。时长 6 秒，约 2.4 秒吸气、3.6 秒呼气；双腿盘坐、双手搭膝，root 与腿部轨道恒定，腰胸、头部和手指有轻微呼吸变化。前臂仅屈肘 8°，不做轴向扭转。索引为 `full`、`hand: none`、`fpv: false`，淡入淡出各 0.6 秒。Human 正式吐纳会话启动时播放，真实位移先执行权威结束与资源结算，再切换运动动画；转头不结束。动作资源本身不含入座、起身、事件帧或缩放。
 
-旧 `animations/player_actions.animation.json` 已从打包资源和索引移除。动作设计文件位于 [`docs/animation-specs/`](animation-specs/)，classic `.bbmodel` 是关键帧源文件，运行时 JSON 均从该文件导出。索引中当前交付跳跃、攻击、挖掘、普通使用物品、放置方块、穿戴、望远镜、号角、弩装填/持弩、刷子，以及潜行操作支撑 `crouch_work`、通用潜行 `sneak` / `sneak_walk`、进食 `eat(_off)`、饮用 `drink(_off)`、持盾格挡 `block_shield(_off)`、拉弓 `bow_draw(_off)`、三叉戟蓄力 `trident_charge(_off)`、骑乘 `ride`、睡眠 `sleep`、鞘翅 `elytra`、攀爬 `climb`；另含行走、奔跑、吐纳和校准资源。游泳、闪避、单手格挡、双手格挡及通用手持单手/双手格挡动作均未制作，继续使用原版姿态。主副手剪辑标记 `hand: main/off`。自动门禁通过不代表游戏内视觉验收完成，当前视觉验收状态见文末。
+旧 `animations/player_actions.animation.json` 已从打包资源和索引移除。动作设计文件位于 [`docs/animation-specs/`](animation-specs/)，classic `.bbmodel` 是关键帧源文件，运行时 JSON 均从该文件导出。索引中当前交付跳跃、攻击、挖掘、普通使用物品、放置方块、穿戴、望远镜、号角、弩装填/持弩、刷子，以及潜行操作支撑 `crouch_work`、通用潜行 `sneak` / `sneak_walk`、进食 `eat(_off)`、饮用 `drink(_off)`、持盾格挡 `block_shield(_off)`、拉弓 `bow_draw(_off)`、三叉戟蓄力 `trident_charge(_off)`、骑乘 `ride`、睡眠 `sleep`、鞘翅 `elytra`、攀爬 `climb`、游泳 `swim`；另含行走、奔跑、吐纳和校准资源。游泳、闪避、单手格挡、双手格挡及通用手持单手/双手格挡动作均未制作，继续使用原版姿态。主副手剪辑标记 `hand: main/off`。自动门禁通过不代表游戏内视觉验收完成，当前视觉验收状态见文末。
 
 盘腿使用大腿三轴组合旋转，其中 X 约 130°–133°、Z 约 −77° / +91°，超出原方案的初稿逐轴范围。因此本动作仍是坐姿预览草稿，不能标记为已通过原方案角度门禁；正式验收前需校准盘腿姿态的关节范围。
 
@@ -106,6 +106,12 @@
 下滑相位倒退，挂住不动时相位不变，着地或离开可攀爬方块即停止并重置。资源按“面朝梯子”制作，侧身或背对攀爬时手会抓空
 （已知限制，不做朝向判断）。攀爬激活时 `attack*`、`mine*`、`place_block*` 只接管动作手臂（主手模板 `r_arm`、副手模板 `l_arm`），
 其他上层动作仍取 `upper`。
+
+### 游泳（2026-10-26）
+
+水中泳姿（`isInSwimmingPose()` 且 `isTouchingWater()`）时，调度按原版 `LivingEntity.updateLimbs` 同一公式每 tick 累计
+`min(三维位移 × 4, 1) / 26` 作为相位并 scrub `swim`（`loop: true`，1.3 秒 = 原版 26 单位划臂周期）；陆地爬行不触发，保持原版。
+资源在身体空间制作（头向 +Y），放倒与俯仰由原版矩阵负责。
 
 ### 视线叠加层（2026-10-26）
 

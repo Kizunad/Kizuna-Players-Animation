@@ -35,6 +35,7 @@ final class VanillaAnimationScheduler {
     private final Map<UUID, Vec3d> previousPositions = new HashMap<>();
     private final Map<UUID, ReleaseTail> releases = new HashMap<>();
     private final Map<UUID, ClimbState> climbs = new HashMap<>();
+    private final Map<UUID, SwimState> swims = new HashMap<>();
 
     private static final int LANDING_BUFFER_TICKS = 6;
     private static final float TOOL_PLAYBACK_SPEED = 0.8f;
@@ -61,6 +62,9 @@ final class VanillaAnimationScheduler {
     private static final int TRIDENT_MIN_THROW_TICKS = 10;
     // 原版 BipedEntityModel 在滑翔超过 4 tick 后切换滑翔头部姿态，鞘翅动作使用同一阈值。
     private static final int ELYTRA_POSE_TICKS = 4;
+    // 原版 LivingEntity.updateLimbs：肢体速度 = min(位移 × 4, 1)；泳姿划臂周期 limbAngle % 26。
+    static final double SWIM_LIMB_SCALE = 4.0;
+    static final double SWIM_STROKE_LIMB_UNITS = 26.0;
     // 每 tick 位移不超过 0.02 方块视作静止；比较水平位移平方（方块²/tick²）。
     private static final double STATIONARY_SPEED_SQUARED = 0.0004;
 
@@ -191,6 +195,24 @@ final class VanillaAnimationScheduler {
         }
     }
 
+    /**
+     * 游泳相位：与原版 LimbAnimator 同一公式，每 tick 前进 min(位移 × 4, 1) 个肢体单位，
+     * 原版划臂一周期 26 单位，因此划臂节奏随实际速度变化，停下时停在当前姿态。
+     */
+    static final class SwimState {
+        private Vec3d previous;
+        private double phase;
+
+        float progress(Vec3d position) {
+            if (previous != null) {
+                double limbSpeed = Math.min(position.distanceTo(previous) * SWIM_LIMB_SCALE, 1.0);
+                phase += limbSpeed / SWIM_STROKE_LIMB_UNITS;
+            }
+            previous = position;
+            return (float) (phase - Math.floor(phase));
+        }
+    }
+
     private static final class HoldState {
         String action;
         long startTick;
@@ -209,6 +231,7 @@ final class VanillaAnimationScheduler {
             scheduleSneak(player, desired, stationary);
             scheduleSpecialPose(player, desired);
             scheduleClimb(player, desired);
+            scheduleSwim(player, desired);
             Set<String> previous = scrubbed.put(id, desired);
             if (previous != null) {
                 for (String action : previous) {
@@ -226,6 +249,7 @@ final class VanillaAnimationScheduler {
         previousPositions.keySet().removeIf(id -> server.getPlayerManager().getPlayer(id) == null);
         releases.keySet().removeIf(id -> server.getPlayerManager().getPlayer(id) == null);
         climbs.keySet().removeIf(id -> server.getPlayerManager().getPlayer(id) == null);
+        swims.keySet().removeIf(id -> server.getPlayerManager().getPlayer(id) == null);
     }
 
     void clear(UUID player) {
@@ -237,6 +261,7 @@ final class VanillaAnimationScheduler {
         previousPositions.remove(player);
         releases.remove(player);
         climbs.remove(player);
+        swims.remove(player);
     }
 
     void clear() {
@@ -248,6 +273,7 @@ final class VanillaAnimationScheduler {
         previousPositions.clear();
         releases.clear();
         climbs.clear();
+        swims.clear();
     }
 
     static float clampProgress(float value) {
@@ -373,6 +399,16 @@ final class VanillaAnimationScheduler {
         }
         ClimbState state = climbs.computeIfAbsent(player.getUuid(), ignored -> new ClimbState());
         syncScrub(player, "climb", state.progress(player.getY()), desired);
+    }
+
+    private void scheduleSwim(ServerPlayerEntity player, Set<String> desired) {
+        // 只在水中泳姿使用；陆地爬行同为 SWIMMING 姿态但不在水中，保持原版。
+        if (!player.isAlive() || player.isSpectator() || !player.isInSwimmingPose() || !player.isTouchingWater()) {
+            swims.remove(player.getUuid());
+            return;
+        }
+        SwimState state = swims.computeIfAbsent(player.getUuid(), ignored -> new SwimState());
+        syncScrub(player, "swim", state.progress(player.getPos()), desired);
     }
 
     private void playLoop(ServerPlayerEntity player, String action, Set<String> desired) {

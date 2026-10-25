@@ -689,6 +689,16 @@
       "blend_out": 0.15,
       "hand": "none",
       "fpv": false
+    },
+    {
+      "id": "swim",
+      "file": "animations/swim.animation.json",
+      "mask": "full",
+      "priority": 4,
+      "blend_in": 0.3,
+      "blend_out": 0.3,
+      "hand": "none",
+      "fpv": false
     }
   ]
 }

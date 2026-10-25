@@ -80,7 +80,7 @@ tasks.register('checkAnimationGates', Exec) {
             'sneak', 'sneak_walk', 'eat', 'eat_off', 'drink', 'drink_off',
             'head_follow', 'head_follow_pitch', 'block_shield', 'block_shield_off',
             'bow_draw', 'bow_draw_off', 'trident_charge', 'trident_charge_off',
-            'ride', 'sleep', 'elytra', 'climb'
+            'ride', 'sleep', 'elytra', 'climb', 'swim'
 }
 
 tasks.register('checkAnimationAntiForgery', Exec) {
