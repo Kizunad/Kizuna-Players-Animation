@@ -223,6 +223,12 @@ public final class AnimationPlayer {
     }
 
     private AnimationEntry.Mask effectiveMask(Playback playback, double now, boolean crouching) {
+        if (playback.entry.mask() == AnimationEntry.Mask.FULL && stanceOverlay(playback.entry.id())) {
+            // 格挡、受击、调息、蓄力的腿锁在架势踝位：静止架势上整段生效，移动底层、闪避和轻步上只取上身。
+            boolean moving = crouching || playing.stream().anyMatch(lower -> !lower.finished(now) && lower.weight(now) > 0
+                    && (lowerBase(lower.entry.id()) || movingStance(lower.entry.id())));
+            return moving ? AnimationEntry.Mask.UPPER : AnimationEntry.Mask.FULL;
+        }
         if (playback.entry.mask() != AnimationEntry.Mask.FULL || !upperOverlay(playback.entry.id())) {
             return playback.entry.mask();
         }
@@ -233,8 +239,10 @@ public final class AnimationPlayer {
             // 攀爬中攻击、挖掘、放置只接管动作手臂，另一只手和双脚继续抓梯。
             return playback.entry.id().endsWith("_off") ? AnimationEntry.Mask.L_ARM : AnimationEntry.Mask.R_ARM;
         }
+        // 架势底层（含静止的 stance_idle）是错步站姿：原版剪辑的腿是并步零位，整段生效会拖动脚，只取上身。
         boolean movingBase = crouching || climbing || playing.stream().anyMatch(lower -> !lower.finished(now)
-                && lower.weight(now) > 0 && lowerBase(lower.entry.id()));
+                && lower.weight(now) > 0 && (lowerBase(lower.entry.id()) || movingStance(lower.entry.id())
+                || lower.entry.id().equals("stance_idle") || stanceOverlay(lower.entry.id())));
         return movingBase ? AnimationEntry.Mask.UPPER : AnimationEntry.Mask.FULL;
     }
 
@@ -246,6 +254,16 @@ public final class AnimationPlayer {
                 || id.startsWith("equip_")
                 || id.startsWith("spyglass") || id.startsWith("toot_horn")
                 || id.startsWith("crossbow_") || id.startsWith("brush");
+    }
+
+    private static boolean stanceOverlay(String id) {
+        return id.startsWith("block_one_hand") || id.startsWith("block_two_hand")
+                || id.equals("technique_breath") || id.equals("technique_charge");
+    }
+
+    private static boolean movingStance(String id) {
+        return id.startsWith("stance_walk_") || id.equals("stance_run") || id.equals("stance_enter")
+                || id.equals("stance_exit") || id.startsWith("dodge_") || id.startsWith("technique_dash_");
     }
 
     private static boolean singleArmWhileClimbing(String id) {

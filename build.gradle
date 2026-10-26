@@ -80,7 +80,12 @@ tasks.register('checkAnimationGates', Exec) {
             'sneak', 'sneak_walk', 'eat', 'eat_off', 'drink', 'drink_off',
             'head_follow', 'head_follow_pitch', 'block_shield', 'block_shield_off',
             'bow_draw', 'bow_draw_off', 'trident_charge', 'trident_charge_off',
-            'ride', 'sleep', 'elytra', 'climb', 'swim'
+            'ride', 'sleep', 'elytra', 'climb', 'swim',
+            'stance_idle', 'stance_enter', 'stance_exit', 'stance_walk_forward', 'stance_walk_back',
+            'stance_walk_left', 'stance_walk_right', 'stance_run', 'dodge_forward', 'dodge_back',
+            'dodge_left', 'dodge_right', 'technique_dash_forward', 'technique_dash_back',
+            'technique_dash_left', 'technique_dash_right', 'block_one_hand', 'block_one_hand_hit',
+            'block_two_hand', 'block_two_hand_hit', 'technique_breath', 'technique_charge'
 }
 
 tasks.register('checkAnimationAntiForgery', Exec) {

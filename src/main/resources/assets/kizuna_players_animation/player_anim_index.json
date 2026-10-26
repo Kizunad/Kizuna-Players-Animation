@@ -699,6 +699,484 @@
       "blend_out": 0.3,
       "hand": "none",
       "fpv": false
+    },
+    {
+      "id": "stance_idle",
+      "file": "animations/stance_idle.animation.json",
+      "mask": "full",
+      "priority": 2,
+      "blend_in": 0.15,
+      "blend_out": 0.15,
+      "hand": "main",
+      "fpv": false
+    },
+    {
+      "id": "stance_enter",
+      "file": "animations/stance_enter.animation.json",
+      "mask": "full",
+      "priority": 3,
+      "blend_in": 0.06,
+      "blend_out": 0.1,
+      "hand": "main",
+      "fpv": false,
+      "phases": [
+        [
+          0.0,
+          0.43
+        ]
+      ]
+    },
+    {
+      "id": "stance_exit",
+      "file": "animations/stance_exit.animation.json",
+      "mask": "full",
+      "priority": 3,
+      "blend_in": 0.1,
+      "blend_out": 0.1,
+      "hand": "main",
+      "fpv": false,
+      "phases": [
+        [
+          0.0,
+          0.43
+        ]
+      ]
+    },
+    {
+      "id": "stance_walk_forward",
+      "file": "animations/stance_walk_forward.animation.json",
+      "mask": "full",
+      "priority": 2,
+      "blend_in": 0.15,
+      "blend_out": 0.15,
+      "hand": "main",
+      "fpv": false
+    },
+    {
+      "id": "stance_walk_back",
+      "file": "animations/stance_walk_back.animation.json",
+      "mask": "full",
+      "priority": 2,
+      "blend_in": 0.15,
+      "blend_out": 0.15,
+      "hand": "main",
+      "fpv": false
+    },
+    {
+      "id": "stance_walk_left",
+      "file": "animations/stance_walk_left.animation.json",
+      "mask": "full",
+      "priority": 2,
+      "blend_in": 0.15,
+      "blend_out": 0.15,
+      "hand": "main",
+      "fpv": false
+    },
+    {
+      "id": "stance_walk_right",
+      "file": "animations/stance_walk_right.animation.json",
+      "mask": "full",
+      "priority": 2,
+      "blend_in": 0.15,
+      "blend_out": 0.15,
+      "hand": "main",
+      "fpv": false
+    },
+    {
+      "id": "stance_run",
+      "file": "animations/stance_run.animation.json",
+      "mask": "full",
+      "priority": 2,
+      "blend_in": 0.12,
+      "blend_out": 0.15,
+      "hand": "main",
+      "fpv": false
+    },
+    {
+      "id": "dodge_forward",
+      "file": "animations/dodge_forward.animation.json",
+      "mask": "full",
+      "priority": 16,
+      "blend_in": 0.05,
+      "blend_out": 0.15,
+      "hand": "main",
+      "fpv": false,
+      "phases": [
+        [
+          0.0,
+          0.26
+        ]
+      ],
+      "unbalanced_windows": [
+        [
+          0.16,
+          0.26
+        ],
+        [
+          0.4,
+          0.5
+        ]
+      ],
+      "burst_windows": [
+        [
+          0.2,
+          0.28
+        ]
+      ]
+    },
+    {
+      "id": "dodge_back",
+      "file": "animations/dodge_back.animation.json",
+      "mask": "full",
+      "priority": 16,
+      "blend_in": 0.05,
+      "blend_out": 0.15,
+      "hand": "main",
+      "fpv": false,
+      "phases": [
+        [
+          0.0,
+          0.26
+        ]
+      ],
+      "unbalanced_windows": [
+        [
+          0.16,
+          0.26
+        ],
+        [
+          0.4,
+          0.5
+        ]
+      ],
+      "burst_windows": [
+        [
+          0.215,
+          0.295
+        ]
+      ]
+    },
+    {
+      "id": "dodge_left",
+      "file": "animations/dodge_left.animation.json",
+      "mask": "full",
+      "priority": 16,
+      "blend_in": 0.05,
+      "blend_out": 0.15,
+      "hand": "main",
+      "fpv": false,
+      "phases": [
+        [
+          0.0,
+          0.26
+        ]
+      ],
+      "unbalanced_windows": [
+        [
+          0.16,
+          0.26
+        ],
+        [
+          0.4,
+          0.5
+        ]
+      ],
+      "burst_windows": [
+        [
+          0.2,
+          0.28
+        ]
+      ]
+    },
+    {
+      "id": "dodge_right",
+      "file": "animations/dodge_right.animation.json",
+      "mask": "full",
+      "priority": 16,
+      "blend_in": 0.05,
+      "blend_out": 0.15,
+      "hand": "main",
+      "fpv": false,
+      "phases": [
+        [
+          0.0,
+          0.26
+        ]
+      ],
+      "unbalanced_windows": [
+        [
+          0.16,
+          0.26
+        ],
+        [
+          0.4,
+          0.5
+        ]
+      ],
+      "burst_windows": [
+        [
+          0.215,
+          0.295
+        ]
+      ]
+    },
+    {
+      "id": "technique_dash_forward",
+      "file": "animations/technique_dash_forward.animation.json",
+      "mask": "full",
+      "priority": 16,
+      "blend_in": 0.05,
+      "blend_out": 0.15,
+      "hand": "main",
+      "fpv": false,
+      "phases": [
+        [
+          0.0,
+          0.16
+        ]
+      ],
+      "slide_window": [
+        0.45,
+        0.65
+      ],
+      "unbalanced_windows": [
+        [
+          0.08,
+          0.18
+        ],
+        [
+          0.38,
+          0.49
+        ]
+      ],
+      "burst_windows": [
+        [
+          0.04,
+          0.12
+        ]
+      ]
+    },
+    {
+      "id": "technique_dash_back",
+      "file": "animations/technique_dash_back.animation.json",
+      "mask": "full",
+      "priority": 16,
+      "blend_in": 0.05,
+      "blend_out": 0.15,
+      "hand": "main",
+      "fpv": false,
+      "phases": [
+        [
+          0.0,
+          0.16
+        ]
+      ],
+      "slide_window": [
+        0.45,
+        0.65
+      ],
+      "unbalanced_windows": [
+        [
+          0.08,
+          0.18
+        ],
+        [
+          0.38,
+          0.49
+        ]
+      ],
+      "burst_windows": [
+        [
+          0.04,
+          0.12
+        ]
+      ]
+    },
+    {
+      "id": "technique_dash_left",
+      "file": "animations/technique_dash_left.animation.json",
+      "mask": "full",
+      "priority": 16,
+      "blend_in": 0.05,
+      "blend_out": 0.15,
+      "hand": "main",
+      "fpv": false,
+      "phases": [
+        [
+          0.0,
+          0.16
+        ]
+      ],
+      "slide_window": [
+        0.45,
+        0.65
+      ],
+      "unbalanced_windows": [
+        [
+          0.08,
+          0.18
+        ],
+        [
+          0.38,
+          0.49
+        ]
+      ],
+      "burst_windows": [
+        [
+          0.04,
+          0.12
+        ]
+      ]
+    },
+    {
+      "id": "technique_dash_right",
+      "file": "animations/technique_dash_right.animation.json",
+      "mask": "full",
+      "priority": 16,
+      "blend_in": 0.05,
+      "blend_out": 0.15,
+      "hand": "main",
+      "fpv": false,
+      "phases": [
+        [
+          0.0,
+          0.16
+        ]
+      ],
+      "slide_window": [
+        0.45,
+        0.65
+      ],
+      "unbalanced_windows": [
+        [
+          0.08,
+          0.18
+        ],
+        [
+          0.38,
+          0.49
+        ]
+      ],
+      "burst_windows": [
+        [
+          0.04,
+          0.12
+        ]
+      ]
+    },
+    {
+      "id": "block_one_hand",
+      "file": "animations/block_one_hand.animation.json",
+      "mask": "full",
+      "priority": 15,
+      "blend_in": 0.06,
+      "blend_out": 0.15,
+      "hand": "main",
+      "fpv": false,
+      "loop_region": [
+        0.35,
+        1.95
+      ],
+      "phases": [
+        [
+          0.0,
+          0.35
+        ]
+      ]
+    },
+    {
+      "id": "block_one_hand_hit",
+      "file": "animations/block_one_hand_hit.animation.json",
+      "mask": "full",
+      "priority": 16,
+      "blend_in": 0.03,
+      "blend_out": 0.08,
+      "hand": "main",
+      "fpv": false,
+      "phases": [
+        [
+          0.0,
+          0.3
+        ]
+      ],
+      "reaction": "hit"
+    },
+    {
+      "id": "block_two_hand",
+      "file": "animations/block_two_hand.animation.json",
+      "mask": "full",
+      "priority": 15,
+      "blend_in": 0.06,
+      "blend_out": 0.15,
+      "hand": "main",
+      "fpv": false,
+      "loop_region": [
+        0.35,
+        1.95
+      ],
+      "phases": [
+        [
+          0.0,
+          0.35
+        ]
+      ]
+    },
+    {
+      "id": "block_two_hand_hit",
+      "file": "animations/block_two_hand_hit.animation.json",
+      "mask": "full",
+      "priority": 16,
+      "blend_in": 0.03,
+      "blend_out": 0.08,
+      "hand": "main",
+      "fpv": false,
+      "phases": [
+        [
+          0.0,
+          0.3
+        ]
+      ],
+      "reaction": "hit"
+    },
+    {
+      "id": "technique_breath",
+      "file": "animations/technique_breath.animation.json",
+      "mask": "full",
+      "priority": 17,
+      "blend_in": 0.1,
+      "blend_out": 0.2,
+      "hand": "main",
+      "fpv": false,
+      "phases": [
+        [
+          0.0,
+          0.55
+        ],
+        [
+          1.45,
+          2.0
+        ]
+      ]
+    },
+    {
+      "id": "technique_charge",
+      "file": "animations/technique_charge.animation.json",
+      "mask": "full",
+      "priority": 17,
+      "blend_in": 0.08,
+      "blend_out": 0.15,
+      "hand": "main",
+      "fpv": false,
+      "phases": [
+        [
+          0.58,
+          1.0
+        ],
+        [
+          1.55,
+          2.0
+        ]
+      ]
     }
   ]
 }

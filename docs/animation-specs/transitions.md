@@ -11,7 +11,7 @@
 2026-10-26 剩余原版动作第一阶段只写了设计稿（见下方“剩余原版动作（设计稿）”与 ArmPose 小节新增行）：
 `sneak`、`sneak_walk`、`eat`、`drink`、`bow_draw`、`block_shield`、`trident_charge`、`climb`、`swim`、`ride`、
 `sleep`、`elytra` 与视线叠加层 `head_follow`。设计稿行使用六列（末列“状态”），`AnimationTransitionContractTest` 只解析五列/ArmPose 四列的已实现行，
-阶段 2 实现某个动作时，把对应行改回五列/四列格式并同步更新测试中的边数（`sneak` / `sneak_walk`、`eat` / `drink`、`block_shield`、`bow_draw`、`trident_charge`、`ride`、`sleep`、`elytra`、`climb`、`swim` 已实现，当前 193 条有向边）。
+阶段 2 实现某个动作时，把对应行改回五列/四列格式并同步更新测试中的边数（`sneak` / `sneak_walk`、`eat` / `drink`、`block_shield`、`bow_draw`、`trident_charge`、`ride`、`sleep`、`elytra`、`climb`、`swim` 已实现，当前 193 条有向边；2026-10-27 战斗架势 22 段资源交付后为 439 条）。
 资源尚未制作，运行时仍使用原版姿势，不能当作已实现。
 
 状态集合：`stand`、`walk`、`run`、`jump_takeoff`、`jump_air`、`jump_land`、`meditate`、
@@ -121,3 +121,63 @@
 | 来源 → 目标 | 淡入 / 淡出 | 触发 | 约束 |
 | --- | ---: | --- | --- |
 | stand / walk / run / sneak / sneak_walk / crouch_work / ride / jump_air → trident_charge | 0.08 / 0.15 | 开始蓄力 | 0.50 s（10 tick）后引到位；松手投掷时先播 1.70–2.15 跟随段（激流不播） |
+
+## 战斗架势（2026-10-27 已交付资源）
+
+设计稿见 [战斗架势总览](PROGRESS-combat-stance.md)。22 段资源已录入 `.bbmodel` 并导出；本仓库只交付资源、ID 和播放层次，**触发与“架势中”标志的同步由战斗 UI / 宿主负责**，
+原版调度不会请求这些动作。下面五列 / 四列的行是已实现行（`AnimationTransitionContractTest` 解析并逐边模拟）；六列行是给调用方的调度约定。
+
+### 底层：进入、退出与架势内切换
+
+架势底层优先级 2（高于 `walk` / `run` 的 1）；进出过渡 `stance_enter` / `stance_exit` 优先级 3。方向按移动速度相对身体朝向的 4 个 90° 扇区选择，斜向取最近扇区，边界 10° 迟滞。
+
+| 来源 | 目标 | 淡入/淡出 | 专门过渡 | 触发与约束 |
+| --- | --- | ---: | :---: | --- |
+| stand | stance_enter | 0.06 / 0.10 | 是 | 静止时进入架势；0.45 s 换脚（左脚上步、右脚后撤提踵） |
+| stance_enter | stance_idle | 0.10 / 0.10 | 是 | 过渡播完（末帧即 stance_idle 首帧） |
+| stance_enter | stance_walk_forward / stance_walk_back / stance_walk_left / stance_walk_right | 0.15 / 0.15 | 否 | 过渡中开始移动 |
+| stance_idle / stance_enter | stance_exit | 0.10 / 0.10 | 是 | 静止时退出架势；0.45 s 换脚（右脚上步、左脚收回） |
+| stance_exit | stand / walk | 0.10 / 0.15 | 是 | 过渡播完回站姿；过渡中开始移动淡入 walk |
+| walk | stance_walk_forward / stance_walk_back / stance_walk_left / stance_walk_right | 0.15 / 0.15 | 否 | 移动中进入架势（步态本身在换脚，不播 stance_enter） |
+| stance_walk_forward / stance_walk_back / stance_walk_left / stance_walk_right | walk | 0.25 / 0.25 | 否 | 移动中退出架势 |
+| run | stance_run | 0.12 / 0.15 | 否 | 疾跑中进入架势 |
+| stance_run | run | 0.12 / 0.15 | 否 | 疾跑中退出架势 |
+| stance_idle | stance_walk_forward / stance_walk_back / stance_walk_left / stance_walk_right | 0.15 / 0.15 | 否 | 开始移动 |
+| stance_walk_forward / stance_walk_back / stance_walk_left / stance_walk_right | stance_idle | 0.15 / 0.15 | 否 | 停步 |
+| stance_walk_forward / stance_walk_back / stance_walk_left / stance_walk_right | stance_walk_forward / stance_walk_back / stance_walk_left / stance_walk_right | 0.12 / 0.12 | 否 | 方向扇区变化 |
+| stance_idle / stance_walk_forward | stance_run | 0.12 / 0.12 | 否 | 开始疾跑（原版只允许向前疾跑） |
+| stance_run | stance_walk_forward / stance_idle | 0.12 / 0.15 | 否 | 疾跑结束 / 停下 |
+| stance_idle / stance_walk_forward / stance_walk_back / stance_walk_left / stance_walk_right / stance_run | jump_takeoff | 0.05 / 0.05 | 是 | 离地沿，`jump` 接管 |
+| jump_land | stance_idle / stance_walk_forward / stance_walk_back / stance_walk_left / stance_walk_right / stance_run | 0.08 / 0.15 | 是 | 架势中落地，落地缓冲段播完淡回架势底层 |
+| stance_idle / stance_walk_forward / stance_walk_back / stance_walk_left / stance_walk_right / stance_run | sneak / sneak_walk | 0.2 / 0.2 | 否 | 架势中按潜行：潜行底层优先，架势状态保留，松开潜行回架势底层 |
+
+| 来源 | 目标 | 淡入/淡出 | 专门过渡 | 触发与约束 | 状态 |
+| --- | --- | ---: | :---: | --- | --- |
+| stance_idle / stance_walk_forward / stance_walk_back / stance_walk_left / stance_walk_right / stance_run | swim / climb / ride / sleep / elytra | 各目标状态的淡入 | 否 | 进入原版特殊状态时架势底层让位；离开后若仍在架势，回架势底层 | 调度约定 |
+| 任何架势动作 | — | 立即 | 否 | 死亡、断线时直接停止，不播 stance_exit | 调度约定 |
+
+### 架势上的一次性 / 保持动作
+
+“静止全身”指底层是 `stance_idle` 时整段生效（这些剪辑的腿锁在同一组架势踝位）；底层是移动架势、进出过渡、闪避或轻步时只取上身——`AnimationPlayer` 已按此实现。
+
+| 来源 → 目标 | 淡入 / 淡出 | 触发 | 约束 |
+| --- | ---: | --- | --- |
+| stance_idle / stance_walk_forward / stance_walk_back / stance_walk_left / stance_walk_right / stance_run → dodge_forward / dodge_back / dodge_left / dodge_right | 0.05 / 0.15 | 调用方发起闪避（方向扇区） | 全身；位移由调用方负责；0.70 s 播完淡回当前架势底层；闪避中再闪避交叉淡入 0.05 s |
+| dodge_forward / dodge_back / dodge_left / dodge_right → stance_idle / stance_walk_forward / stance_walk_back / stance_walk_left / stance_walk_right / stance_run | 0.15 / 0.15 | 闪避播完 | 回当前架势底层 |
+| stance_idle / stance_walk_forward / stance_walk_back / stance_walk_left / stance_walk_right / stance_run / jump_air → technique_dash_forward / technique_dash_back / technique_dash_left / technique_dash_right | 0.05 / 0.15 | 轻步起手开始 | 全身；腾空段按竖直速度取样；按实际落地结束（含 0.45–0.65 s 落地滑停），不在功法收势时刻停止；空中施放从 0.10 开始 |
+| technique_dash_forward / technique_dash_back / technique_dash_left / technique_dash_right → stance_idle / stance_walk_forward / stance_walk_back / stance_walk_left / stance_walk_right / stance_run | 0.15 / 0.15 | 落地滑停与收势播完 | 回当前架势底层 |
+| stance_idle / stance_walk_forward / stance_walk_back / stance_walk_left / stance_walk_right / stance_run → block_one_hand / block_two_hand | 0.06 / 0.15 | 调用方进入格挡 | 静止全身、移动只取上身；0.35 s 举起，`loop_region [0.35, 1.95]`；空手用 block_two_hand |
+| block_one_hand → block_one_hand_hit | 0.03 / 0.08 | `block_hit` 事件 | 叠在保持段之上（优先级 16），0.30 s 播完淡回保持段；连续受击交叉淡入 0.04 s 重播 |
+| block_two_hand → block_two_hand_hit | 0.03 / 0.08 | `block_hit` 事件 | 同上 |
+| stance_idle / stance_walk_forward / stance_walk_back / stance_walk_left / stance_walk_right / stance_run → technique_breath | 0.10 / 0.20 | 调息起手开始 | 静止全身、移动只取上身；起手被打断淡出 0.15 s |
+| stance_idle / stance_walk_forward / stance_walk_back / stance_walk_left / stance_walk_right / stance_run → technique_charge | 0.08 / 0.15 | 蓄力起手开始 | 同上 |
+| dodge_forward / dodge_back / dodge_left / dodge_right / technique_dash_forward / technique_dash_back / technique_dash_left / technique_dash_right → technique_breath / technique_charge | 0.10 / 0.15 | 功法起手开始 | 调息/蓄力只取上身叠加 |
+| stance_idle / stance_walk_forward / stance_walk_back / stance_walk_left / stance_walk_right / stance_run / stance_enter / stance_exit → attack / mine / use_item / place_block | 0.04 / 0.14 | 原版输入 | 保留原版上层；在任何架势底层上都只取上身（包括 `stance_idle`）：原版剪辑的腿是并步零位，整段生效会把错步的脚拖回并步 |
+
+功法上层（优先级 17）低于攻击（20）：施放调息/蓄力时出手，攻击接管手臂与躯干上段，功法剪辑继续计时，攻击结束后淡回功法当前时刻的姿态。
+
+### 叠加组合回归
+
+`AnimationSetContractTest` 用真实资源验证：`stance_idle` / `stance_walk_left` / `stance_run` + `attack_main`（腿保持架势底层）、`stance_idle` + `block_one_hand`（整段生效）、
+`stance_walk_forward` + `technique_charge`（只取上身）。其余组合（`block_two_hand+block_two_hand_hit`、`dodge_left+technique_charge`、`technique_dash_forward+attack_main`、
+`stance_enter+attack_main`、格挡中闪避）随调用方接线时补充。

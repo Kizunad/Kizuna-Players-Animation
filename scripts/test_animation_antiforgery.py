@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""回归：上一轮按同一条曲线缩放的动作设计必须被防伪造门禁拒绝。"""
+"""回归：上一轮按同一条曲线缩放的动作设计必须被防伪造门禁拒绝；爆发窗口只放宽窗口内的角速度上限。"""
 
 from __future__ import annotations
 
@@ -10,8 +10,8 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from animation_analysis import AnimationSampler, SkeletonModel, load_json
-from analyze_animation import report
+from animation_analysis import AnimationSampler, SkeletonModel, load_json, sample_times
+from analyze_animation import report, velocity_gates
 
 
 def fake_from_spec(path: Path) -> tuple[dict, str]:
@@ -67,6 +67,22 @@ def fake_from_spec(path: Path) -> tuple[dict, str]:
     }}}, key
 
 
+def burst_window_passes(model: SkeletonModel, windows: list[list[float]] | None) -> bool:
+    """小腿单轴蹬伸：60 Hz 逐帧角速度 0 → 1,200°/s → 0（超过 720°/s 的严格上限、低于 1,500°/s 的爆发上限）。"""
+    speeds_deg_s = [0.0] * 7 + [150.0, 500.0, 950.0, 1200.0, 950.0, 500.0, 150.0] + [0.0] * 10
+    angle = 0.0
+    keys = {}
+    for index, speed in enumerate(speeds_deg_s):
+        angle += speed / 60
+        keys[f"{index / 60:.4f}"] = [-angle, 0.0, 0.0]
+    key = "animation.kizuna_players_animation.player.dodge_forward"
+    animation = {"animation_length": (len(speeds_deg_s) - 1) / 60, "bones": {"r_shin": {"rotation": keys}}}
+    if windows is not None:
+        animation["burst_windows"] = windows
+    sampler = AnimationSampler(model, {"format_version": "1.8.0", "animations": {key: animation}}, key)
+    return velocity_gates(sampler, sample_times(sampler))["pass"]
+
+
 def main() -> int:
     root = Path(__file__).resolve().parents[1]
     document, key = fake_from_spec(root / "docs/animation-specs/attack_main.md")
@@ -85,10 +101,15 @@ def main() -> int:
     with patch("analyze_animation.velocity_gates", return_value={"pass": False, "applicable": True}):
         rejected = report(AnimationSampler(model, baseline, baseline_key))
     assert not rejected["pass"], "总结果遗漏了速度门禁"
+    # 爆发窗口：覆盖蹬伸峰值时放行，不声明或窗口错位时仍按 720°/s 拒绝。
+    assert not burst_window_passes(model, None), "未声明爆发窗口的蹬伸峰值应被拒绝"
+    assert burst_window_passes(model, [[0.12, 0.20]]), "爆发窗口内的蹬伸峰值应放行"
+    assert not burst_window_passes(model, [[0.30, 0.38]]), "窗口外的蹬伸峰值不得放行"
     print("旧伪造 attack_main 夹具被相关性、主链错峰、多轴门禁全部拒绝")
     print(f"correlation ratio={correlation['ratio']:.3f}, pairs={correlation['correlated_pair_count']}")
     print(f"peak order={peak_order['peak_times_s']}")
     print(f"multi-axis bones={multi_axis['count']}")
+    print("爆发窗口只放宽窗口内的蹬伸峰值")
     return 0
 
 

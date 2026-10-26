@@ -3,9 +3,9 @@
 
 渲染器只用于离线审图，不替代 Minecraft 的蒙皮渲染。它使用 .bbmodel
 内嵌的 Steve 贴图、同一套骨架正向运动学，并在每帧标出地面线和重心。
-离线图按刚性 cube 绘制，弯肘处可能出现像素级接缝；游戏内 `SkinnedMesh`
-使用同一关节的 seam 权重带（见 `src/main/java/.../SkinnedMesh.java`）连续蒙皮，
-因此接缝诊断必须区分渲染器限制和骨架枢轴问题。
+离线图按刚性 cube 绘制；父子分段切口按游戏内 `SkinnedMesh` 的规则补 1 像素过渡带
+（切口顶点随父骨、向子段内部 1 像素过渡到子骨），屈膝、屈肘时凸侧不再露出楔形缝。
+过渡带只补凸侧缺口，不模拟整条关节带的蒙皮形变。
 
 Blockbench 空间到游戏是 Y 反射（`Rig.toVanilla`），游戏里看到的是 Blockbench
 视口的镜像；投影时把 X 取反，GIF 的左右与游戏一致（`r_*` 在正视图位于观察者左侧）。
@@ -63,6 +63,10 @@ KEY_TIMES = {
     "brush": (0.0, 0.06, 0.12, 0.18, 0.24, 0.30, 0.425, 0.55, 0.675, 0.80),
     "use_item": (0.0, 0.05, 0.10, 0.15, 0.20, 0.24, 0.28, 0.32, 0.36, 0.40),
 }
+# 闪避 / 轻步：下蹲、蹬伸离地、收腿、迎地、先后触地、缓冲、回架势各取一帧，接触表能看清腿部动作链。
+for _direction in ("forward", "back", "left", "right"):
+    KEY_TIMES[f"dodge_{_direction}"] = (0.0, 0.15, 0.22, 0.27, 0.32, 0.38, 0.42, 0.46, 0.55, 0.70)
+    KEY_TIMES[f"technique_dash_{_direction}"] = (0.0, 0.06, 0.11, 0.14, 0.25, 0.35, 0.40, 0.45, 0.55, 0.78)
 
 # 手持与穿戴道具。剑刃方向由原版 handheld 第三人称 display 推算（见 conventions.md），
 # 胸甲在手中显示到“胸甲上身”时刻，之后改画穿在身上的盔甲层。
@@ -366,10 +370,89 @@ def active_props(model: SkeletonModel, animation_id: str, time: float, world: di
     return boxes
 
 
+_SEAM_CACHE: dict[int, list[tuple[dict[str, Any], str, int, float]]] = {}
+
+
+def skin_part(bone: str) -> str:
+    """与 `BoneId.skinPart` 一致：胯腰胸是身体，头单独，每条手臂、每条腿各一个原版部件。"""
+    if bone in ("pelvis", "waist", "chest"):
+        return "body"
+    if bone == "head":
+        return "head"
+    side = bone[:2]
+    leg = any(bone.endswith(part) for part in ("thigh", "shin", "foot", "toe"))
+    return side + ("leg" if leg else "arm")
+
+
+def seam_cuts(model: SkeletonModel) -> list[tuple[dict[str, Any], str, int, float]]:
+    """父子分段的切口：子段 cube 的某个面与父骨 cube 的反向面共面且有正面积交叠。
+
+    返回 (子 cube, 父骨, 切口轴, 切口坐标)。游戏内 `SkinnedMesh` 让切口顶点继承父段权重，
+    向子段内部 1 像素过渡到子骨；离线刚性 cube 在屈膝、屈肘时会在凸侧露出楔形缝，
+    这里用同样的规则补一条 1 像素的过渡带。"""
+    key = id(model)
+    if key in _SEAM_CACHE:
+        return _SEAM_CACHE[key]
+    cuts = []
+    for element in model.elements:
+        bone = model.element_bones.get(element.get("uuid"))
+        parent = model.parent.get(bone) if bone else None
+        # 只连接同一原版皮肤部件的分段（与 SkinnedMesh 相同），头、肩、胯保留原版部件边界。
+        if parent is None or element.get("type") != "cube" or skin_part(parent) != skin_part(bone):
+            continue
+        lo, hi = element["from"], element["to"]
+        for other in model.elements:
+            if model.element_bones.get(other.get("uuid")) != parent or other.get("type") != "cube" \
+                    or float(other.get("inflate", 0)) != float(element.get("inflate", 0)):
+                continue
+            plo, phi = other["from"], other["to"]
+            for axis in range(3):
+                for value, parent_value in ((lo[axis], phi[axis]), (hi[axis], plo[axis])):
+                    if abs(float(value) - float(parent_value)) > 1e-6:
+                        continue
+                    rest = [a for a in range(3) if a != axis]
+                    if all(min(hi[a], phi[a]) - max(lo[a], plo[a]) > 1e-6 for a in rest):
+                        cuts.append((element, parent, axis, float(value)))
+    _SEAM_CACHE[key] = cuts
+    return cuts
+
+
+def seam_band_faces(model: SkeletonModel, world: dict[str, Any], lifted, yaw: float, center: tuple[float, float],
+                    scale: float) -> list[tuple[float, list[tuple[float, float]], list[float] | None, tuple[int, ...] | None]]:
+    bands = []
+    for element, parent, axis, value in seam_cuts(model):
+        bone = model.element_bones[element["uuid"]]
+        x0, y0, z0 = (float(v) for v in element["from"])
+        x1, y1, z1 = (float(v) for v in element["to"])
+        bounds = (x0, y0, z0, x1, y1, z1)
+        for name, face in element.get("faces", {}).items():
+            if face.get("texture") is None or name not in BOX_FACES:
+                continue
+            vertices = face_vertices(bounds, name)
+            on_cut = [v for v in vertices if abs(v[axis] - value) < 1e-6]
+            if len(on_cut) != 2:
+                continue  # 切口面本身或与切口平行的面
+            inward = 1.0 if value == bounds[axis] else -1.0
+            inner = [tuple(v[i] + (inward if i == axis else 0.0) for i in range(3)) for v in on_cut]
+            points = [lifted(world[parent].point(on_cut[0])), lifted(world[parent].point(on_cut[1])),
+                      lifted(world[bone].point(inner[1])), lifted(world[bone].point(inner[0]))]
+            projected = [projection(point, yaw, center, scale) for point in points]
+            depth = sum(point[2] for point in projected) / len(projected)
+            uv = face.get("uv")
+            if uv and len(uv) == 4 and axis == 1:
+                # 竖直侧面的贴图上沿对应高 y：取紧贴切口的一行像素。
+                top, bottom = sorted((uv[1], uv[3]))
+                row = (top, top + 1) if value == bounds[4] else (bottom - 1, bottom)
+                uv = [uv[0], row[0], uv[2], row[1]]
+            bands.append((depth, [(p[0], p[1]) for p in projected], uv, "band"))
+    return bands
+
+
 def element_faces(model: SkeletonModel, world: dict[str, Any], yaw: float, center: tuple[float, float], scale: float,
                   image: Image.Image, texture: Image.Image | None, props: list, lift: float) -> None:
     faces: list[tuple[float, list[tuple[float, float]], list[float] | None, tuple[int, ...] | None]] = []
     lifted = lambda point: (point[0], point[1] + lift, point[2])
+    faces.extend(seam_band_faces(model, world, lifted, yaw, center, scale))
     for element in model.elements:
         bone = model.element_bones.get(element.get("uuid"))
         if bone not in world or element.get("type") != "cube":
@@ -397,7 +480,9 @@ def element_faces(model: SkeletonModel, world: dict[str, Any], yaw: float, cente
             faces.append((depth, [(point[0], point[1]) for point in projected], None, color))
     draw = ImageDraw.Draw(image)
     for _, polygon, uv, color in sorted(faces, key=lambda item: item[0]):
-        if color is None:
+        if color == "band":
+            textured_polygon(image, texture, polygon, uv)  # 过渡带不描边，否则会画出一条假接缝
+        elif color is None:
             textured_polygon(image, texture, polygon, uv)
             draw.line(polygon + [polygon[0]], fill=OUTLINE, width=1, joint="curve")
         else:

@@ -58,7 +58,12 @@ class AnimationSetContractTest {
                 "sneak", "sneak_walk", "eat", "eat_off", "drink", "drink_off",
                 "head_follow", "head_follow_pitch", "block_shield", "block_shield_off",
                 "bow_draw", "bow_draw_off", "trident_charge", "trident_charge_off",
-                "ride", "sleep", "elytra", "climb", "swim"), ids);
+                "ride", "sleep", "elytra", "climb", "swim",
+                "stance_idle", "stance_enter", "stance_exit", "stance_walk_forward", "stance_walk_back",
+                "stance_walk_left", "stance_walk_right", "stance_run", "dodge_forward", "dodge_back",
+                "dodge_left", "dodge_right", "technique_dash_forward", "technique_dash_back",
+                "technique_dash_left", "technique_dash_right", "block_one_hand", "block_one_hand_hit",
+                "block_two_hand", "block_two_hand_hit", "technique_breath", "technique_charge"), ids);
         // 已交付标记必须与打包资源一致：调度只请求已交付动作，未打包的动作不得标为已交付。
         for (dev.kizuna.playeranimation.animation.PlayerAnimationAction action
                 : dev.kizuna.playeranimation.animation.PlayerAnimationAction.values()) {
@@ -103,6 +108,51 @@ class AnimationSetContractTest {
         combined.stop("mine_main", 1.5);
         assertEquals(support.sample(Rig.zeroPose(), 2, false)[BoneId.R_SHIN.ordinal()],
                 combined.sample(Rig.zeroPose(), 2, false)[BoneId.R_SHIN.ordinal()]);
+    }
+
+    @Test
+    void stanceBasesKeepTheirLegsUnderVanillaOverlays() throws Exception {
+        // 架势底层（含静止的 stance_idle）上，原版攻击、挖掘只取上身，错步的腿不被拖回并步。
+        for (String base : new String[]{"stance_idle", "stance_walk_left", "stance_run"}) {
+            AnimationPlayer combined = new AnimationPlayer();
+            combined.play(resource(base), 0, false);
+            combined.scrub(resource("attack_main"), 0, 0.12f, false);
+            AnimationPlayer alone = new AnimationPlayer();
+            alone.play(resource(base), 0, false);
+            Pose[] expected = alone.sample(Rig.zeroPose(), 0.5, false);
+            Pose[] actual = combined.sample(Rig.zeroPose(), 0.5, false);
+            for (BoneId bone : BoneId.ALL) {
+                if (AnimationEntry.Mask.LOWER.includes(bone)) {
+                    assertEquals(expected[bone.ordinal()], actual[bone.ordinal()], base + ":" + bone.key);
+                }
+            }
+            assertNotEquals(expected[BoneId.R_FOREARM.ordinal()], actual[BoneId.R_FOREARM.ordinal()], base);
+        }
+    }
+
+    @Test
+    void stanceOverlaysOwnTheLegsOnlyOnTheStationaryStance() throws Exception {
+        // 格挡与功法的腿锁在架势踝位：静止架势上整段生效；移动架势底层上只取上身。
+        AnimationPlayer still = new AnimationPlayer();
+        still.play(resource("stance_idle"), 0, false);
+        still.play(resource("block_one_hand"), 0, false);
+        AnimationPlayer blockAlone = new AnimationPlayer();
+        blockAlone.play(resource("block_one_hand"), 0, false);
+        assertEquals(blockAlone.sample(Rig.zeroPose(), 1.0, false)[BoneId.R_SHIN.ordinal()],
+                still.sample(Rig.zeroPose(), 1.0, false)[BoneId.R_SHIN.ordinal()]);
+        AnimationPlayer walking = new AnimationPlayer();
+        walking.play(resource("stance_walk_forward"), 0, false);
+        walking.play(resource("technique_charge"), 0, false);
+        AnimationPlayer walkAlone = new AnimationPlayer();
+        walkAlone.play(resource("stance_walk_forward"), 0, false);
+        Pose[] expected = walkAlone.sample(Rig.zeroPose(), 0.3, false);
+        Pose[] actual = walking.sample(Rig.zeroPose(), 0.3, false);
+        for (BoneId bone : BoneId.ALL) {
+            if (AnimationEntry.Mask.LOWER.includes(bone)) {
+                assertEquals(expected[bone.ordinal()], actual[bone.ordinal()], bone.key);
+            }
+        }
+        assertNotEquals(expected[BoneId.R_FOREARM.ordinal()], actual[BoneId.R_FOREARM.ordinal()]);
     }
 
     @Test

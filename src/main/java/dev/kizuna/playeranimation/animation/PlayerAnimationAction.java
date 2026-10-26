@@ -59,7 +59,36 @@ public enum PlayerAnimationAction {
     EQUIP_LEGGINGS("equip_leggings", 50),
     EQUIP_LEGGINGS_OFF("equip_leggings_off", 50),
     EQUIP_BOOTS("equip_boots", 51),
-    EQUIP_BOOTS_OFF("equip_boots_off", 51);
+    EQUIP_BOOTS_OFF("equip_boots_off", 51),
+    /**
+     * 战斗架势（docs/animation-specs/PROGRESS-combat-stance.md）。本仓库只交付资源和显式接口：
+     * 架势状态、闪避、格挡、受击与功法的触发由战斗 UI / 宿主决定，原版调度不会请求这些动作。
+     * 底层循环与进出过渡由调用方显式停止。
+     */
+    STANCE_IDLE("stance_idle"),
+    STANCE_ENTER("stance_enter"),
+    STANCE_EXIT("stance_exit"),
+    STANCE_WALK_FORWARD("stance_walk_forward"),
+    STANCE_WALK_BACK("stance_walk_back"),
+    STANCE_WALK_LEFT("stance_walk_left"),
+    STANCE_WALK_RIGHT("stance_walk_right"),
+    STANCE_RUN("stance_run"),
+    DODGE_FORWARD("dodge_forward", 14),
+    DODGE_BACK("dodge_back", 14),
+    DODGE_LEFT("dodge_left", 14),
+    DODGE_RIGHT("dodge_right", 14),
+    /** 轻步与 jump 同样按竖直速度取样腾空段，按实际落地结束；目录时长覆盖落地滑停与收势。 */
+    TECHNIQUE_DASH_FORWARD("technique_dash_forward", 16),
+    TECHNIQUE_DASH_BACK("technique_dash_back", 16),
+    TECHNIQUE_DASH_LEFT("technique_dash_left", 16),
+    TECHNIQUE_DASH_RIGHT("technique_dash_right", 16),
+    /** 格挡是保持动作，调用方结束格挡时停止；受击后坐叠在保持段之上，0.30 秒播完。 */
+    BLOCK_ONE_HAND("block_one_hand"),
+    BLOCK_ONE_HAND_HIT("block_one_hand_hit", 6),
+    BLOCK_TWO_HAND("block_two_hand"),
+    BLOCK_TWO_HAND_HIT("block_two_hand_hit", 6),
+    TECHNIQUE_BREATH("technique_breath", 40),
+    TECHNIQUE_CHARGE("technique_charge", 40);
 
     private final String id;
     private final int naturalDurationTicks;

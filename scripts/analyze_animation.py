@@ -34,6 +34,11 @@ MAX_CYCLIC_SPEED_DEG_S = 1_800.0
 MAX_CYCLIC_JERK_DEG_S3 = 7_000_000.0
 MAX_IMPACT_SPEED_DEG_S = 1_800.0
 MAX_IMPACT_JERK_DEG_S3 = 7_000_000.0
+# 爆发窗口（索引 burst_windows）：只允许闪避与轻步，每段动作至多声明一段（蹬伸起跳），不超过 0.08 s。
+# 窗口内角速度、角加加速度用放宽上限，窗口外仍按一次性动作的严格上限；差分按末帧时刻归属，与 impact_window 相同。
+MAX_BURST_SPEED_DEG_S = 1_500.0
+MAX_BURST_JERK_DEG_S3 = 6_000_000.0
+MAX_BURST_WINDOW_S = 0.08
 GROUND_TOLERANCE_PX = 0.25
 MAX_FOOT_SLIP_PX = 0.5
 MAX_SEAM_POSITION_PX = 0.05
@@ -59,6 +64,9 @@ FULL_BODY_IDS = {
     "equip_leggings", "equip_leggings_off", "equip_boots", "equip_boots_off",
     "attack", "attack_main", "attack_off", "mine", "mine_main", "mine_off",
     "climb", "swim", "ride", "sleep", "elytra",
+    "dodge_forward", "dodge_back", "dodge_left", "dodge_right",
+    "technique_dash_forward", "technique_dash_back", "technique_dash_left", "technique_dash_right",
+    "block_two_hand", "block_two_hand_hit",
 }
 
 GRIP_IDS = {
@@ -66,14 +74,20 @@ GRIP_IDS = {
     "use_item_main", "use_item_off", "place_block", "place_block_off", "spyglass", "spyglass_off",
     "toot_horn", "toot_horn_off", "crossbow_charge", "crossbow_charge_off", "crossbow_hold",
     "crossbow_hold_off", "brush", "brush_off", "eat", "eat_off", "drink", "drink_off",
-    "block_shield", "block_shield_off", "bow_draw", "bow_draw_off", "trident_charge", "trident_charge_off",
+    "block_shield", "block_shield_off", "block_one_hand", "block_one_hand_hit", "block_two_hand",
+    "block_two_hand_hit", "bow_draw", "bow_draw_off", "trident_charge", "trident_charge_off",
 }
 
 NON_STANDING_IDS = {"meditate", "jump", "climb", "swim", "ride", "sleep", "elytra"}
 # 站立循环：静止潜行双脚全程锁定，循环动作也要检查脚底、滑动与重心。
-STANDING_LOOP_IDS = {"sneak"}
+STANDING_LOOP_IDS = {"sneak", "stance_idle"}
 # 原地循环步态：支撑脚相对 root 匀速后移，使用 walk/run 的循环支撑检查。
-GAIT_IDS = {"walk", "run", "sneak_walk"}
+GAIT_IDS = {"walk", "run", "sneak_walk", "stance_walk_forward", "stance_walk_back", "stance_walk_left",
+            "stance_walk_right", "stance_run"}
+# 侧滑步的支撑脚沿 X 后移，循环支撑检查改查 X 向速度。
+LATERAL_GAIT_IDS = {"stance_walk_left", "stance_walk_right"}
+# 失衡窗口（索引字段 unbalanced_windows）：验收规则允许闪避类写明失衡，窗口内不查重心投影。
+UNBALANCED_WINDOW_PREFIXES = ("dodge_", "technique_dash_")
 # 视线叠加层（索引 layer: look）：时间轴表示视线角度而不是时间，只对这两个 ID 使用姿势层判据。
 LOOK_LAYER_IDS = {"head_follow": ("y", 50.0), "head_follow_pitch": ("x", -90.0)}
 MIN_LOOK_LAYER_BONES = 5
@@ -194,6 +208,7 @@ def preparation_follow_gates(sampler: AnimationSampler, times: list[float]) -> d
     if sampler.loop:
         return {"pass": True, "applicable": False, "reason": "循环动作没有唯一的进入/退出边界，改由循环接缝门禁覆盖"}
     animation_id = sampler.key.rsplit(".", 1)[-1]
+    hit_reaction = sampler.animation.get("reaction") == "hit"
     if animation_id == "jump":
         chain = ["r_thigh", "r_shin", "l_thigh", "l_shin"]
     else:
@@ -228,9 +243,11 @@ def preparation_follow_gates(sampler: AnimationSampler, times: list[float]) -> d
             follow_distance = max((abs(value - series[-1]) for value in tail), default=0.0)
             overshoot = recovered
         else:
-            recovered = bool(after) and min(abs(value) for value in after) <= recovery_tolerance
+            # 回到首帧或零姿态附近（验收规则第 3 节）；架势类动作的起点不是零姿态。
+            recovered = bool(after) and min(min(abs(value), abs(value - start)) for value in after) <= recovery_tolerance
             overshoot = follow_distance >= EFFECTIVE_ROTATION_DEG
-        opposite = opposite_distance >= EFFECTIVE_ROTATION_DEG
+        # 受击类（索引 reaction: hit）是被动动作，没有反向蓄力；跟随与回落照查。
+        opposite = opposite_distance >= EFFECTIVE_ROTATION_DEG or hit_reaction
         hold_pass = sampler.hold and recovered
         checks[bone] = {
             "axis": axis,
@@ -240,6 +257,7 @@ def preparation_follow_gates(sampler: AnimationSampler, times: list[float]) -> d
             "opposite_distance_deg": opposite_distance,
             "follow_distance_deg": follow_distance,
             "preparation": opposite,
+            "preparation_exempt_hit_reaction": hit_reaction,
             "overshoot": overshoot,
             "recovered": recovered,
             "pass": hold_pass or (opposite and overshoot and recovered),
@@ -268,6 +286,10 @@ def velocity_gates(sampler: AnimationSampler, times: list[float], impact_window:
     max_jerk_outside = 0.0
     speed_at: tuple[str, float] | None = None
     jerk_at: tuple[str, float] | None = None
+    bursts = [tuple(map(float, window)) for window in sampler.animation.get("burst_windows", [])]
+    in_burst = lambda at: any(start <= at <= end for start, end in bursts)
+    max_speed_burst = 0.0
+    max_jerk_burst = 0.0
     values = {bone: [sampler.value(bone, "rotation", time) for time in times] for bone in sampler.model.bones}
     for bone, frames in values.items():
         speeds = [max(abs(frames[i][axis] - frames[i - 1][axis]) for axis in range(3)) / dt
@@ -279,6 +301,8 @@ def velocity_gates(sampler: AnimationSampler, times: list[float], impact_window:
                 max_speed, speed_at = speed, (bone, times[index + 1])
             if inside:
                 max_speed_inside = max(max_speed_inside, speed)
+            elif in_burst(at):
+                max_speed_burst = max(max_speed_burst, speed)
             else:
                 max_speed_outside = max(max_speed_outside, speed)
         accelerations = [(speeds[i] - speeds[i - 1]) / dt for i in range(1, len(speeds))]
@@ -290,6 +314,8 @@ def velocity_gates(sampler: AnimationSampler, times: list[float], impact_window:
                 max_jerk, jerk_at = abs(jerk), (bone, times[index + 3])
             if inside:
                 max_jerk_inside = max(max_jerk_inside, abs(jerk))
+            elif in_burst(at):
+                max_jerk_burst = max(max_jerk_burst, abs(jerk))
             else:
                 max_jerk_outside = max(max_jerk_outside, abs(jerk))
     speed_limit = MAX_CYCLIC_SPEED_DEG_S if sampler.loop else MAX_ANGULAR_SPEED_DEG_S
@@ -299,14 +325,20 @@ def velocity_gates(sampler: AnimationSampler, times: list[float], impact_window:
     if impact_window is not None:
         speed_pass = max_speed_inside <= MAX_IMPACT_SPEED_DEG_S + 0.001 and max_speed_outside <= MAX_ANGULAR_SPEED_DEG_S + 0.001
         jerk_pass = max_jerk_inside <= MAX_IMPACT_JERK_DEG_S3 + 1 and max_jerk_outside <= MAX_JERK_DEG_S3 + 1
+    elif bursts:
+        if sampler.loop:
+            raise ValueError("循环动画不能声明 burst_windows")
+        speed_pass = max_speed_burst <= MAX_BURST_SPEED_DEG_S + 0.001 and max_speed_outside <= MAX_ANGULAR_SPEED_DEG_S + 0.001
+        jerk_pass = max_jerk_burst <= MAX_BURST_JERK_DEG_S3 + 1 and max_jerk_outside <= MAX_JERK_DEG_S3 + 1
     else:
         speed_pass = max_speed <= speed_limit + 0.001
         jerk_pass = max_jerk <= jerk_limit + 1
     return {
         "pass": speed_pass and jerk_pass,
         "applicable": True,
-        "reason": "窗口内打击动作使用声明的放宽上限，窗口外严格限制；循环步态使用基线校准上限"
-                   if impact_window else "所有动作检查角速度与角加加速度；循环步态使用基线校准上限",
+        "reason": ("窗口内打击动作使用声明的放宽上限，窗口外严格限制" if impact_window
+                   else "爆发窗口内蹬伸使用声明的放宽上限，窗口外严格限制" if bursts
+                   else "所有动作检查角速度与角加加速度；循环步态使用基线校准上限"),
         "max_speed_deg_s": max_speed,
         "max_speed_at": speed_at,
         "max_jerk_deg_s3": max_jerk,
@@ -316,11 +348,16 @@ def velocity_gates(sampler: AnimationSampler, times: list[float], impact_window:
         "max_speed_outside_deg_s": max_speed_outside,
         "max_jerk_inside_deg_s3": max_jerk_inside,
         "max_jerk_outside_deg_s3": max_jerk_outside,
+        "burst_windows_s": bursts,
+        "max_speed_burst_deg_s": max_speed_burst,
+        "max_jerk_burst_deg_s3": max_jerk_burst,
         "limits": {"speed_deg_s": speed_limit, "jerk_deg_s3": jerk_limit,
                     "strict_one_shot_speed_deg_s": MAX_ANGULAR_SPEED_DEG_S,
                     "strict_one_shot_jerk_deg_s3": MAX_JERK_DEG_S3,
                     "impact_speed_deg_s": MAX_IMPACT_SPEED_DEG_S,
                     "impact_jerk_deg_s3": MAX_IMPACT_JERK_DEG_S3,
+                    "burst_speed_deg_s": MAX_BURST_SPEED_DEG_S,
+                    "burst_jerk_deg_s3": MAX_BURST_JERK_DEG_S3,
                     "cyclic_baseline_calibration": sampler.loop},
     }
 
@@ -410,13 +447,24 @@ def ground_and_center_gates(sampler: AnimationSampler, times: list[float]) -> di
     contact_frames = [index for index, value in enumerate(soles) if value >= -GROUND_TOLERANCE_PX]
     support_slip = {side: 0.0 for side in ("r", "l")}
     for side in support_slip:
-        positions = [foot_positions[f"{side}_foot"][index] for index in contact_frames
-                     if contacts[index][side] <= GROUND_TOLERANCE_PX]
-        if positions:
-            support_slip[side] = max(vec_range(positions)[:2])
+        # 按每段连续着地分别统计：脚离地后落到别处是迈步，不是滑动。
+        segments: list[list[int]] = []
+        for index in contact_frames:
+            if contacts[index][side] > GROUND_TOLERANCE_PX:
+                continue
+            if segments and index == segments[-1][-1] + 1:
+                segments[-1].append(index)
+            else:
+                segments.append([index])
+        for segment in segments:
+            positions = [foot_positions[f"{side}_foot"][index] for index in segment]
+            support_slip[side] = max(support_slip[side], max(vec_range(positions)[:2]))
     center_pass = True
+    unbalanced = [tuple(map(float, window)) for window in sampler.animation.get("unbalanced_windows", [])]
     if standing and contact_frames:
         for index in contact_frames:
+            if any(start <= times[index] <= end for start, end in unbalanced):
+                continue
             support = [foot_positions[f"{side}_foot"][index] for side in ("r", "l")
                        if contacts[index][side] <= GROUND_TOLERANCE_PX]
             if support:
@@ -459,7 +507,8 @@ def ground_and_center_gates(sampler: AnimationSampler, times: list[float]) -> di
                         gait_center_max_offset = max(gait_center_max_offset, offset)
                         if offset > MAX_GAIT_CENTER_OFFSET_PX:
                             gait_center_pass = False
-                speeds = [(relative[index + 1][2] - relative[index][2]) / (times[index + 1] - times[index])
+                axis = 0 if animation_id in LATERAL_GAIT_IDS else 2
+                speeds = [(relative[index + 1][axis] - relative[index][axis]) / (times[index + 1] - times[index])
                           for index in range(len(relative) - 1)]
                 median = sorted(speeds)[len(speeds) // 2]
                 variation = max(abs(speed - median) for speed in speeds)
@@ -518,6 +567,7 @@ def ground_and_center_gates(sampler: AnimationSampler, times: list[float]) -> di
         "foot_pivot_range_px": slips,
         "center_of_mass_range_px": vec_range(centers),
         "center_pass": center_pass,
+        "unbalanced_windows_s": unbalanced,
         "gait_support": gait_support,
         "limits": {"ground_tolerance_px": GROUND_TOLERANCE_PX, "foot_slip_px": MAX_FOOT_SLIP_PX,
                     "support_margin_px": 2.0},
@@ -1036,10 +1086,30 @@ def main() -> int:
     index = load_json(args.index)
     impact_windows: dict[str, tuple[float, float]] = {}
     phase_declarations: dict[str, Any] = {}
+    index_extras: dict[str, dict[str, Any]] = {}
     for raw in index.get("animations", []):
         animation_id = raw.get("id")
         if "phases" in raw:
             phase_declarations[animation_id] = raw["phases"]
+        if "unbalanced_windows" in raw:
+            if not animation_id.startswith(UNBALANCED_WINDOW_PREFIXES):
+                raise SystemExit(f"unbalanced_windows 只能用于 {UNBALANCED_WINDOW_PREFIXES}: {animation_id}")
+            index_extras.setdefault(animation_id, {})["unbalanced_windows"] = raw["unbalanced_windows"]
+        if "burst_windows" in raw:
+            windows = raw["burst_windows"]
+            if not animation_id.startswith(UNBALANCED_WINDOW_PREFIXES):
+                raise SystemExit(f"burst_windows 只能用于 {UNBALANCED_WINDOW_PREFIXES}: {animation_id}")
+            # 每段动作只开放一个爆发窗口，时长上限在资源边界校验一次。
+            if not isinstance(windows, list) or len(windows) != 1 or len(windows[0]) != 2:
+                raise SystemExit(f"burst_windows 必须是只含一段的 [[开始, 结束]]: {animation_id}")
+            start, end = map(float, windows[0])
+            if not 0 <= start < end or end - start > MAX_BURST_WINDOW_S + 1e-9:
+                raise SystemExit(f"burst_windows 时长必须在 (0, {MAX_BURST_WINDOW_S}] s 内: {animation_id}")
+            index_extras.setdefault(animation_id, {})["burst_windows"] = windows
+        if "reaction" in raw:
+            if raw["reaction"] != "hit" or not animation_id.endswith("_hit"):
+                raise SystemExit(f"reaction 只能为 hit，且只用于 *_hit 动作: {animation_id}")
+            index_extras.setdefault(animation_id, {})["reaction"] = "hit"
         if "impact_window" not in raw:
             continue
         values = raw["impact_window"]
@@ -1058,6 +1128,8 @@ def main() -> int:
                 # 阶段属于索引契约，临时注入采样文档供门禁使用；不改写资源文件。
                 for animation in document.get("animations", {}).values():
                     animation["phases"] = phase_declarations[animation_id]
+            for animation in document.get("animations", {}).values():
+                animation.update(index_extras.get(animation_id, {}))
             key = next(name for name in document["animations"] if name.rsplit(".", 1)[-1] == animation_id)
             item = report(AnimationSampler(model, document, key), impact_windows.get(animation_id))
             item["model"] = label
