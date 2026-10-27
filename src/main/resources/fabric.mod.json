@@ -9,7 +9,8 @@
   "environment": "*",
   "entrypoints": {
     "client": ["dev.kizuna.playeranimation.client.PlayerAnimationClient"],
-    "main": ["dev.kizuna.playeranimation.server.ServerPlayerAnimations"]
+    "main": ["dev.kizuna.playeranimation.server.ServerPlayerAnimations"],
+    "kizuna_player_animation": ["dev.kizuna.playeranimation.api.PlayerAnimationHostImpl"]
   },
   "mixins": ["kizuna_players_animation.mixins.json"],
   "depends": {

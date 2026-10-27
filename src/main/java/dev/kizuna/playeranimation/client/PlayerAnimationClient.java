@@ -2,6 +2,7 @@ package dev.kizuna.playeranimation.client;
 
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.arguments.BoolArgumentType;
+import dev.kizuna.playeranimation.api.PlayerAnimationHostImpl;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
@@ -25,12 +26,16 @@ public final class PlayerAnimationClient implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
         // 资源和时钟使用 Fabric 生命周期，渲染入口只负责取样与提交顶点。
+        PlayerAnimationHostImpl.bind(EntityAnimationApi::exchange);
         ClientAnimationNetworking.register();
         WorldRenderEvents.AFTER_ENTITIES.register(FirstPersonBody::render);
         ResourceManagerHelper.get(ResourceType.CLIENT_RESOURCES).registerReloadListener(ASSETS);
         ClientTickEvents.END_CLIENT_TICK.register(PLAYBACK::tick);
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> PLAYBACK.clear());
-        ClientEntityEvents.ENTITY_UNLOAD.register((entity, world) -> PLAYBACK.remove(entity.getUuid()));
+        ClientEntityEvents.ENTITY_UNLOAD.register((entity, world) -> {
+            PLAYBACK.remove(entity.getUuid());
+            PLAYBACK.remove(entity.getId());
+        });
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, registry) -> dispatcher.register(
                 ClientCommandManager.literal("kpa")
                         .then(ClientCommandManager.literal("firstperson")

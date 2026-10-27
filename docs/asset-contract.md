@@ -177,7 +177,40 @@
 
 构建固定使用同版 `protoc` / `protobuf-java` 4.36.2，Java 类型为 `dev.kizuna.playeranimation.protocol.pb.PlayerAnimationProtocol` 内的 `PlayRequest`、`StopRequest`、`Result`。生成代码位于 `build/generated/sources/proto/main/java/`，不提交；模组 JAR 内含生成类及 Protobuf 运行库。
 
-`build/distributions/kizuna-players-animation-0.1.0-SNAPSHOT-proto.zip` 包含唯一 `.proto`、`descriptors/player-animation-v1.desc` 与 MIT License；`./gradlew build` 同时生成此包。调用方可以只消费该包，从中生成所需语言的类型，无需依赖 Minecraft 客户端。Java 调用方若直接依赖本模组已有类型，就不要再次生成同名 Java 类。
+`build/distributions/kizuna-players-animation-0.1.0-SNAPSHOT-proto.zip` 包含本仓的唯一协议源文件、`descriptors/player-animation-v1.desc` 与 MIT License；`./gradlew build` 同时生成此包。调用方可以只消费该包，从中生成所需语言的类型，无需依赖 Minecraft 客户端。Java 调用方若直接依赖本模组已有类型，就不要再次生成同名 Java 类。
+
+## 实体字节入口 v1
+
+唯一协议源为 [`entity_animation.proto`](../src/main/proto/kizuna/playeranimation/v1/entity_animation.proto)，Java 类型为 `dev.kizuna.playeranimation.protocol.pb.EntityAnimationProtocol`。Fabric entrypoint 名为 `kizuna_player_animation`，类型为 `dev.kizuna.playeranimation.api.PlayerAnimationHost`，唯一操作为 `byte[] exchange(byte[] payload)`。调用方只依赖此接口及生成协议，不引用 PA 的渲染、骨架或播放器实现。入口必须在客户端初始化完成后、客户端主线程调用。
+
+| 操作 | 字段与行为 |
+| --- | --- |
+| `RegisterGeometry` | `geometry_id`、UTF-8 `geometry_json`、`entity_types`，以及可选的 `overlay_geometry_id`。同一 JSON 中的本体与外层共享骨序和枢轴；完成校验后按实体类型替换绑定。玩家仍使用原有玩家模型。 |
+| `Play` | `entity_id` 是当前客户端世界的运行时实体 ID；`animation_id` 引用已加载索引；`start_tick`、`normalized_progress`、`loop` 均使用 presence。目标须为已加载玩家，或已注册几何的已加载生物。 |
+| `Stop` | `entity_id` 加 `animation_id` / `all: true` 二选一；缺少目标、空动作名、`all: false` 返回无效请求。停止不存在的状态仍成功，不创建播放器。 |
+| `Clear` | 立即移除指定实体的客户端播放状态；用于卸载清理，不保留停止淡出。 |
+
+`entity_types` 按 Minecraft `Identifier` 规范化；省略命名空间时使用 `minecraft`，例如 `zombie` 与 `minecraft:zombie` 绑定同一实体类型。注册会先校验全部类型，再替换绑定，失败不会留下部分映射。
+
+`normalized_progress` 范围为有限的 `[0,1]`，存在时优先使用 scrub，忽略自由时钟的 `start_tick` 和 `loop`。否则 `start_tick` 使用世界总 tick（1/20 秒），调用方提供非负起点；缺省时从当前时刻重播。携带起点时，同一动作、请求 ID、起点的补发不重置现有实例，并跳过过去的时间线事件。`loop` 缺省沿用资源，显式 `true` 为重复，显式 `false` 为一次播放，二者不能与“未设置”混淆。`request_id` 用于关联响应与带起点补发；此入口不沿用玩家网络协议的非空 ID 校验。
+
+每次调用返回 `EntityAnimationResponse`：正常解析的业务响应回传 `request_id`，`detail` 只用于诊断。非法 protobuf、线程错误和入口捕获的参数异常可能返回空 ID。
+
+| Code | 数值 | 含义 |
+| --- | --- | --- |
+| `CODE_UNSPECIFIED` | 0 | 未指定，不能视为成功 |
+| `OK` | 1 | 注册或播放控制已处理，不代表播放结束 |
+| `INVALID_REQUEST` | 2 | 非法字节、线程错误、缺少操作、进度无效、未注册几何或停止范围无效 |
+| `GEOMETRY_INVALID` | 3 | 几何解析、实体类型或本体与外层绑定校验失败 |
+| `ANIMATION_NOT_FOUND` | 4 | 动作未加载 |
+| `ENTITY_NOT_LOADED` | 5 | 播放目标未加载或不是 LivingEntity |
+| `UNBOUND` | 6 | PA 客户端处理器尚未绑定 |
+
+实体几何沿用 `format_version: 1.12.0`、完整固定骨名和父子关系，共 24 个可见骨、root 与两个物品挂点；root 和挂点不带盒。玩家几何继续要求 64×64 及原有外层厚度；实体几何允许原版纹理宽高与 dilation，UV 仍必须在纹理边界内。实体 cube 可附 `part`（原版子部件路径）、`inflate_origin` / `inflate_size`（切段前完整盒的膨胀边界）、`rotation` / `pivot`（静态子部件旋转）。这些扩展用于保留鼻子、耳朵、袍子、帽沿和逐面 UV；不改变动画骨层级。可见骨不强制拥有玩家式内外两层。
+
+PA 用同一帧采样矩阵绘制实体本体、标准 `FeatureRenderer.renderModel` 覆盖层、原版盔甲与手持物。本体及覆盖层材质仍由原版 renderer 选择，覆盖层可用独立几何，部件显隐沿用原版模型。没有生物播放状态时保留原版渲染。玩家调用仍走玩家播放器、装备显隐和 `PlayerAnimations.EVENT`；生物使用独立实体播放器，不发出玩家事件，卸载和世界切换清理状态。
+
+此入口是进程内调用，不实现服务端同步。Mobs Addon 负责自身 S2C 通道、追踪补发、停止与卸载清理；网络载荷上限由附属控制为 32 KiB，资源注册不经此网络通道。附属的 PA 响应只记入客户端日志，没有服务端结果回执。附属直接从 `-PkpaDir` 指向的 PA 唯一 proto 生成协议；当前使用本地 `0.1.0-SNAPSHOT` 构建，尚未声明已发布的固定版本。字段演进继续遵守 v1 兼容与编号保留规则。
 
 ## 挂点与范围
 
@@ -187,7 +220,7 @@
 
 当前实现玩家皮肤、外层开关、第三人称动画、手持物、全身第一人称与独立 `fpv` 手臂播放；Vanilla 盔甲保留原版材质与渲染生命周期，顶点使用身体同一帧的多关节蒙皮，并由动作资源提供穿戴姿势。双手动作的物品矩阵取 `r_item` 与 `l_item` 两挂点的世界位置中点，只渲染一次，避免左右各画一件。穿戴动作按 `equip` 事件隐藏和恢复装备层，事件前物品从对应主/副手挂点开始，双手阶段切换到两挂点中点。披风、自定义 3D 装备分骨与旧 PlayerAnimator 动画转换仍不在范围内。
 
-Vanilla 盔甲适配约定：从原版内、外层模型的绑定几何读取面、厚度与归一化 UV，按像素细分；以未膨胀位置选择现有皮肤分段骨并复用蒙皮权重。逐帧只读取身体同一次渲染的骨骼矩阵，皮革染色及覆盖层、纹饰与附魔光效共用该网格。头盔保持刚体，袖子、胸腰和腿靴跟随对应关节；细臂仍使用原版四像素宽的盔甲袖子，肩高对齐细臂骨架。穿戴事件、第一人称头盔/手臂显隐及非玩家实体的原版渲染保持各自既有规则。几何缓存随资源重载清空；不新增盔甲动画、独立骨架或材质注册表。此约定限于 Vanilla 盔甲，不承诺任意自定义装备模型；实际弯折厚度仍需游戏内验收。
+Vanilla 盔甲适配约定：从原版内、外层模型的绑定几何读取面、厚度与归一化 UV，按像素细分；以未膨胀位置选择现有皮肤分段骨并复用蒙皮权重。逐帧只读取身体同一次渲染的骨骼矩阵，皮革染色及覆盖层、纹饰与附魔光效共用该网格。头盔保持刚体，袖子、胸腰和腿靴跟随对应关节；细臂仍使用原版四像素宽的盔甲袖子，肩高对齐细臂骨架。穿戴事件、第一人称头盔/手臂显隐及未播放动画的非玩家实体渲染保持各自既有规则。几何缓存随资源重载清空；不新增盔甲动画、独立骨架或材质注册表。此约定限于 Vanilla 盔甲，不承诺任意自定义装备模型；实际弯折厚度仍需游戏内验收。
 
 细臂挂点的 0.5 像素内移是零姿态位置。原版 `setArmAngle` 在手臂旋转前修正肩部位置；运行时在原版底层姿态中将偏移差值转换回挂点局部空间，后续整体、胸部、前臂和手腕动画都带动它，避免肩部绕 Y/Z 旋转后出现偏差。该修正只作用于挂点，不移动皮肤网格。
 

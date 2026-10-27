@@ -3,6 +3,6 @@
   "package": "dev.kizuna.playeranimation.mixin",
   "compatibilityLevel": "JAVA_17",
   "mixins": ["LivingEntityAccessor"],
-  "client": ["LivingEntityRendererMixin", "HeldItemFeatureRendererMixin", "HeldItemRendererMixin", "ArmorFeatureRendererMixin", "FirstPersonFeatureRendererMixin", "PlayerEntityRendererAccessor"],
+  "client": ["LivingEntityRendererMixin", "HeldItemFeatureRendererMixin", "HeldItemRendererMixin", "LivingHeldItemFeatureRendererMixin", "MobFeatureRendererMixin", "ArmorFeatureRendererMixin", "FirstPersonFeatureRendererMixin", "PlayerEntityRendererAccessor"],
   "injectors": {"defaultRequire": 1}
 }

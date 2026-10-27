@@ -1,0 +1,63 @@
+syntax = "proto3";
+
+package kizuna.playeranimation.v1;
+
+option java_package = "dev.kizuna.playeranimation.protocol.pb";
+option java_outer_classname = "EntityAnimationProtocol";
+
+// 生物附属只通过这个字节协议调用 PA；协议源只保存在本仓。
+message EntityAnimationRequest {
+  string request_id = 1;
+
+  oneof operation {
+    RegisterGeometry register_geometry = 2;
+    Play play = 3;
+    Stop stop = 4;
+    Clear clear = 5;
+  }
+}
+
+message RegisterGeometry {
+  string geometry_id = 1;
+  bytes geometry_json = 2;
+  repeated string entity_types = 3;
+  // 可选的独立外层几何，位于同一 JSON 中；共享本体的骨骼枢轴和当前姿态。
+  string overlay_geometry_id = 4;
+}
+
+message Play {
+  int32 entity_id = 1;
+  string animation_id = 2;
+  optional int64 start_tick = 3;
+  optional float normalized_progress = 4;
+  optional bool loop = 5;
+}
+
+message Stop {
+  int32 entity_id = 1;
+
+  oneof target {
+    string animation_id = 2;
+    bool all = 3;
+  }
+}
+
+message Clear {
+  int32 entity_id = 1;
+}
+
+message EntityAnimationResponse {
+  enum Code {
+    CODE_UNSPECIFIED = 0;
+    OK = 1;
+    INVALID_REQUEST = 2;
+    GEOMETRY_INVALID = 3;
+    ANIMATION_NOT_FOUND = 4;
+    ENTITY_NOT_LOADED = 5;
+    UNBOUND = 6;
+  }
+
+  string request_id = 1;
+  Code code = 2;
+  string detail = 3;
+}

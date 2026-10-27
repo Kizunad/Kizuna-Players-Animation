@@ -2,6 +2,9 @@ package dev.kizuna.playeranimation.client;
 
 import dev.kizuna.playeranimation.animation.AnimationEntry;
 import dev.kizuna.playeranimation.animation.AnimationPlayer;
+import dev.kizuna.playeranimation.animation.AnimationClip;
+import dev.kizuna.playeranimation.animation.AnimationPlayer.Handedness;
+import dev.kizuna.playeranimation.animation.AnimationPlayer.PlaybackRequest;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -10,12 +13,16 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.AbstractClientPlayerEntity;
 import net.minecraft.client.world.ClientWorld;
 import net.minecraft.entity.EquipmentSlot;
+import net.minecraft.entity.Entity;
+import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.Arm;
 
 public final class PlayerPlayback {
     private static final double TICKS_PER_SECOND = 20;
     private final Map<UUID, AnimationPlayer> players = new HashMap<>();
+    private final Map<Integer, AnimationPlayer> entities = new HashMap<>();
     private final Map<UUID, PlayerMeshRenderer.Frame> frames = new HashMap<>();
     private final Map<EquipKey, EquipVisual> equipVisuals = new HashMap<>();
     private ClientWorld world;
@@ -56,6 +63,8 @@ public final class PlayerPlayback {
 
     public AnimationPlayer player(UUID id) { return players.get(id); }
 
+    public AnimationPlayer entity(int id) { return entities.get(id); }
+
     public void play(UUID playerId, String animationId) {
         play(playerId, animationId, null, null);
     }
@@ -67,7 +76,10 @@ public final class PlayerPlayback {
         if (entry == null) {
             throw new IllegalArgumentException("未加载动画: " + animationId);
         }
-        var entity = client.world == null ? null : client.world.getPlayerByUuid(playerId);
+        PlayerEntity entity = null;
+        if (client.world != null) {
+            entity = client.world.getPlayerByUuid(playerId);
+        }
         if (!(entity instanceof AbstractClientPlayerEntity player)) {
             throw new IllegalArgumentException("客户端未加载玩家: " + playerId);
         }
@@ -77,6 +89,11 @@ public final class PlayerPlayback {
     }
 
     public void play(UUID playerId, String animationId, Long startTick, String playId) {
+        play(playerId, animationId, startTick, playId, null);
+    }
+
+    public void play(UUID playerId, String animationId, Long startTick, String playId,
+                     AnimationClip.Loop loopOverride) {
         MinecraftClient client = MinecraftClient.getInstance();
         prepareWorld(client);
         var entry = PlayerAnimationClient.ASSETS.animations().get(animationId);
@@ -84,20 +101,24 @@ public final class PlayerPlayback {
         if (entry == null) {
             throw new IllegalArgumentException("未加载动画: " + animationId);
         }
-        var entity = client.world == null ? null : client.world.getPlayerByUuid(playerId);
+        PlayerEntity entity = null;
+        if (client.world != null) {
+            entity = client.world.getPlayerByUuid(playerId);
+        }
         if (!(entity instanceof AbstractClientPlayerEntity player)) {
             throw new IllegalArgumentException("客户端未加载玩家: " + playerId);
         }
         AnimationPlayer playback = players.computeIfAbsent(playerId, ignored -> new AnimationPlayer());
         double time = now(0);
-        boolean leftHanded = player.getMainArm() == Arm.LEFT;
+        Handedness handedness = player.getMainArm() == Arm.LEFT ? Handedness.LEFT : Handedness.RIGHT;
         double elapsedSeconds;
         if (startTick == null) {
-            playback.play(entry, time, leftHanded);
+            playback.play(entry, time, new PlaybackRequest(time, handedness, null, loopOverride));
             elapsedSeconds = 0;
         } else {
             double startSeconds = startTick / TICKS_PER_SECOND;
-            if (!playback.synchronize(entry, time, startSeconds, leftHanded, playId)) {
+            PlaybackRequest request = new PlaybackRequest(startSeconds, handedness, playId, loopOverride);
+            if (!playback.synchronize(entry, time, request)) {
                 return;
             }
             elapsedSeconds = time - startSeconds;
@@ -105,11 +126,60 @@ public final class PlayerPlayback {
         restartEquip(player, entry, elapsedSeconds);
     }
 
+    public void scrubEntity(int entityId, String animationId, float normalizedProgress) {
+        EntityPlayback target = entityPlayback(entityId, animationId);
+        target.playback().scrub(target.entry(), now(0), normalizedProgress,
+                target.entity().getMainArm() == Arm.LEFT);
+    }
+
+    private record EntityPlayback(LivingEntity entity, AnimationEntry entry, AnimationPlayer playback) { }
+
+    private EntityPlayback entityPlayback(int entityId, String animationId) {
+        // scrub 和自由播放共享实体、资源校验，避免两条入口接受不同的目标。
+        MinecraftClient client = MinecraftClient.getInstance();
+        prepareWorld(client);
+        AnimationEntry entry = PlayerAnimationClient.ASSETS.animations().get(animationId);
+        if (entry == null) {
+            throw new IllegalArgumentException("未加载动画: " + animationId);
+        }
+        LivingEntity entity = null;
+        if (client.world != null) {
+            entity = living(client.world.getEntityById(entityId));
+        }
+        if (entity == null) {
+            throw new IllegalArgumentException("客户端未加载生物: " + entityId);
+        }
+        AnimationPlayer playback = entities.computeIfAbsent(entityId, ignored -> new AnimationPlayer());
+        return new EntityPlayback(entity, entry, playback);
+    }
+
+    public void playEntity(int entityId, String animationId, Long startTick, String playId,
+                           AnimationClip.Loop loopOverride) {
+        EntityPlayback target = entityPlayback(entityId, animationId);
+        AnimationPlayer playback = target.playback();
+        double time = now(0);
+        Handedness handedness = target.entity().getMainArm() == Arm.LEFT ? Handedness.LEFT : Handedness.RIGHT;
+        if (startTick == null) {
+            playback.play(target.entry(), time, new PlaybackRequest(time, handedness, null, loopOverride));
+            return;
+        }
+        double startSeconds = startTick / TICKS_PER_SECOND;
+        PlaybackRequest request = new PlaybackRequest(startSeconds, handedness, playId, loopOverride);
+        playback.synchronize(target.entry(), time, request);
+    }
+
     public void stop(UUID playerId, String animationId) {
         AnimationPlayer player = players.get(playerId);
         // 未播放的实体无需创建空控制器。
         if (player != null) {
             player.stop(animationId, now(0));
+        }
+    }
+
+    public void stopEntity(int entityId, String animationId) {
+        AnimationPlayer animation = entities.get(entityId);
+        if (animation != null) {
+            animation.stop(animationId, now(0));
         }
     }
 
@@ -122,6 +192,7 @@ public final class PlayerPlayback {
             return;
         }
         double time = now(0);
+        tickEntities(time, client.world);
         // 事件回调允许启动新动画，用当前实体快照推进，避免改变本次遍历结构。
         for (var entry : new ArrayList<>(players.entrySet())) {
             UUID id = entry.getKey();
@@ -131,16 +202,34 @@ public final class PlayerPlayback {
                 equipVisuals.keySet().removeIf(key -> key.player().equals(id));
                 continue;
             }
-            entry.getValue().advance(time, (animation, event) -> {
+            AnimationPlayer playback = entry.getValue();
+            playback.advance(time, (animation, event) -> {
                 if (event.equals("equip")) {
                     markEquip(id, animation);
                 }
                 PlayerAnimations.EVENT.invoker().onEvent(id, animation, event);
             });
             equipVisuals.entrySet().removeIf(visual -> visual.getKey().player().equals(id)
-                    && !entry.getValue().hasActive(visual.getValue().animation, time));
-            if (entry.getValue().empty()) {
+                    && !playback.hasActive(visual.getValue().animation, time));
+            if (playback.empty()) {
                 players.remove(id);
+            }
+        }
+    }
+
+    private void tickEntities(double time, ClientWorld clientWorld) {
+        for (var entry : new ArrayList<>(entities.entrySet())) {
+            int id = entry.getKey();
+            LivingEntity entity = living(clientWorld.getEntityById(id));
+            if (entity == null) {
+                entities.remove(id);
+                continue;
+            }
+            // 玩家事件监听方持有玩家装备状态，生物事件只推进播放器内部时间。
+            AnimationPlayer playback = entry.getValue();
+            playback.advance(time, (animation, event) -> { });
+            if (playback.empty()) {
+                entities.remove(id);
             }
         }
     }
@@ -157,6 +246,7 @@ public final class PlayerPlayback {
     public void clear() {
         // 断线与资源重载必须同时清理动画和用于挂载手持物的帧数据。
         players.clear();
+        entities.clear();
         frames.clear();
         equipVisuals.clear();
     }
@@ -166,6 +256,11 @@ public final class PlayerPlayback {
         players.remove(player);
         frames.remove(player);
         equipVisuals.keySet().removeIf(key -> key.player().equals(player));
+    }
+
+    public void remove(int entityId) {
+        // 实体移除后 ID 可能被复用，不能把旧动作带给新实体。
+        entities.remove(entityId);
     }
 
     private void prepareWorld(MinecraftClient client) {
@@ -179,6 +274,10 @@ public final class PlayerPlayback {
     public void beginRender(UUID id) { frames.remove(id); }
     public void frame(UUID id, PlayerMeshRenderer.Frame frame) { frames.put(id, frame); }
     public PlayerMeshRenderer.Frame frame(UUID id) { return frames.get(id); }
+
+    private static LivingEntity living(Entity entity) {
+        return entity instanceof LivingEntity value ? value : null;
+    }
 
     public boolean shouldHideArmor(UUID id, EquipmentSlot slot) {
         EquipVisual visual = equipVisuals.get(new EquipKey(id, slot));

@@ -4,6 +4,7 @@ import dev.kizuna.playeranimation.client.PlayerAnimationClient;
 import dev.kizuna.playeranimation.client.FirstPersonBody;
 import dev.kizuna.playeranimation.client.ArmorMesh;
 import dev.kizuna.playeranimation.client.PlayerMeshRenderer;
+import dev.kizuna.playeranimation.client.MobAnimationRenderer;
 import net.minecraft.client.render.VertexConsumer;
 import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.entity.feature.ArmorFeatureRenderer;
@@ -20,24 +21,38 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/** 保留原版盔甲材质及显隐，只将玩家盔甲顶点绑定到身体的同一帧骨骼。 */
+/** 保留原版盔甲材质及显隐，将盔甲顶点绑定到身体的同一帧骨骼。 */
 @Mixin(ArmorFeatureRenderer.class)
 public abstract class ArmorFeatureRendererMixin {
     @Unique
     private UUID kpa$currentPlayer;
     @Unique
     private boolean kpa$vanillaHands;
+    @Unique
+    private MobAnimationRenderer.Frame kpa$mobFrame;
 
     @Redirect(method = {"renderArmorParts", "renderTrim", "renderGlint"},
-            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/render/entity/model/BipedEntityModel;render(Lnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render/VertexConsumer;IIFFFF)V"))
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/render/entity/model/BipedEntityModel;render("
+                    + "Lnet/minecraft/client/util/math/MatrixStack;"
+                    + "Lnet/minecraft/client/render/VertexConsumer;IIFFFF)V"))
     private void kpa$drawArmor(BipedEntityModel<?> model, MatrixStack matrices, VertexConsumer vertices,
                                 int light, int overlay, float red, float green, float blue, float alpha) {
         // 材质、染色、图集 UV 包装和附魔缓冲仍由原版选择，三条通道画同一个变形网格。
-        PlayerMeshRenderer.Frame frame = kpa$currentPlayer == null ? null
-                : PlayerAnimationClient.PLAYBACK.frame(kpa$currentPlayer);
+        PlayerMeshRenderer.Frame frame = null;
+        if (kpa$currentPlayer != null) {
+            frame = PlayerAnimationClient.PLAYBACK.frame(kpa$currentPlayer);
+        }
         if (frame != null) {
             ArmorMesh mesh = ArmorMesh.cached(model, frame.model());
             PlayerMeshRenderer.draw(frame, mesh.surfaces(), matrices, vertices, light, overlay,
+                    red, green, blue, alpha, surface -> ArmorMesh.visible(model, surface));
+            return;
+        }
+        if (kpa$mobFrame != null) {
+            var body = kpa$mobFrame.model().body();
+            ArmorMesh mesh = ArmorMesh.cached(model, body);
+            PlayerMeshRenderer.Frame shared = new PlayerMeshRenderer.Frame(body, kpa$mobFrame.matrices());
+            PlayerMeshRenderer.draw(shared, mesh.surfaces(), matrices, vertices, light, overlay,
                     red, green, blue, alpha, surface -> ArmorMesh.visible(model, surface));
             return;
         }
@@ -49,6 +64,7 @@ public abstract class ArmorFeatureRendererMixin {
                                       EquipmentSlot slot, int light, BipedEntityModel<?> model, CallbackInfo callback) {
         kpa$currentPlayer = null;
         kpa$vanillaHands = false;
+        kpa$mobFrame = MobAnimationRenderer.frame(entity.getId());
         if (!(entity instanceof AbstractClientPlayerEntity player)) {
             return;
         }

@@ -11,14 +11,21 @@ import java.util.function.BiConsumer;
 public final class AnimationPlayer {
     private static final double SCRUB_RESTART_BLEND_SECONDS = 0.05;
     private static final double SCRUB_INTERPOLATION_SECONDS = 0.05;
+    private static final float SCRUB_REWIND_THRESHOLD = 0.25f;
     private static final float MINING_LOOP_SECONDS = 0.20f;
     // 循环段边界判断的归一化容差，吸收 tick 取样与浮点误差。
     private static final float LOOP_REGION_EPSILON = 0.001f;
     private final List<Playback> playing = new ArrayList<>();
     private long sequence;
 
+    public enum Handedness { RIGHT, LEFT }
+    private enum PlaybackMode { FREE, SCRUB }
+    public record PlaybackRequest(double start, Handedness handedness, String playId,
+                                  AnimationClip.Loop loopOverride) { }
+
     public void play(AnimationEntry entry, double now, boolean leftHanded) {
-        play(entry, now, now, leftHanded, null);
+        Handedness handedness = leftHanded ? Handedness.LEFT : Handedness.RIGHT;
+        play(entry, now, new PlaybackRequest(now, handedness, null, null));
     }
 
     /**
@@ -31,73 +38,54 @@ public final class AnimationPlayer {
         }
         for (Playback playback : playing) {
             if (playback.scrub && playback.entry.id().equals(entry.id()) && Double.isNaN(playback.stopped)) {
-                float previous = playback.foldedTarget();
-                boolean rewound = normalizedProgress + 0.25f < previous;
-                playback.scrubFrom = normalizedProgress;
-                playback.scrubTarget = normalizedProgress;
-                playback.scrubUpdatedAt = now;
-                float miningLoopEnd = MINING_LOOP_SECONDS / entry.clip().duration();
-                if (mining(entry.id()) && normalizedProgress < previous && previous <= miningLoopEnd) {
-                    // 从循环尾向首帧正向插值，避免 0.8 倍及急迫下的非整 tick 回绕倒放。
-                    playback.scrubFrom = previous - miningLoopEnd;
-                    playback.scrubRestartAt = Double.NaN;
-                } else if (playback.wrapOffset(previous, normalizedProgress) != 0) {
-                    // 循环段或循环资源跨接缝：目标沿最短方向越过接缝，插值不倒放整段。
-                    playback.scrubFrom = previous;
-                    playback.scrubTarget = normalizedProgress + playback.wrapOffset(previous, normalizedProgress);
-                    playback.scrubRestartAt = Double.NaN;
-                } else if (rewound && directLoopRestart(entry.id())) {
-                    // 挖掘/放置的 0.20 秒子循环首尾同姿态，回绕直接接回零点，
-                    // 连续重开不能把手臂淡回底层。
-                    playback.scrubRestartAt = Double.NaN;
-                } else {
-                    playback.scrubFrom = previous;
-                    if (rewound) {
-                        // 一次性动作重触发仍保留短交叉淡入，避免硬切预备姿态。
-                        playback.scrubRestartAt = now;
-                    }
-                }
+                playback.updateScrub(now, normalizedProgress);
                 return;
             }
         }
         // 自由播放与 scrub 不能同时占用同一动作 ID；旧实例从当前姿态淡出。
         stop(entry.id(), now);
-        Playback playback = new Playback(entry, now, leftHanded && entry.hand() != AnimationEntry.Hand.NONE,
-                sequence++, null, true);
+        Handedness handedness = leftHanded ? Handedness.LEFT : Handedness.RIGHT;
+        PlaybackRequest request = new PlaybackRequest(now, handedness, null, null);
+        Playback playback = new Playback(entry, request, sequence++, PlaybackMode.SCRUB);
         playback.scrubFrom = normalizedProgress;
         playback.scrubTarget = normalizedProgress;
         playback.scrubUpdatedAt = now;
         playing.add(playback);
-        playing.sort(Comparator.comparingInt((Playback p) -> p.entry.clip().loop() == AnimationClip.Loop.REPEAT ? 0 : 1)
+        playing.sort(Comparator.comparingInt((Playback p) -> p.loop() == AnimationClip.Loop.REPEAT ? 0 : 1)
                 .thenComparingInt(p -> p.entry.priority()).thenComparingLong(p -> p.sequence));
     }
 
     /** 返回是否处理了新的播放请求；同一实例的补发返回 false，供调用方保留附属视觉状态。 */
     public boolean synchronize(AnimationEntry entry, double now, double start, boolean leftHanded, String playId) {
+        Handedness handedness = leftHanded ? Handedness.LEFT : Handedness.RIGHT;
+        return synchronize(entry, now, new PlaybackRequest(start, handedness, playId, null));
+    }
+
+    public boolean synchronize(AnimationEntry entry, double now, PlaybackRequest request) {
         // 同一播放请求的补发不重置播放器；同 tick 的再次播放仍有不同请求 ID。
         for (Playback playback : playing) {
-            if (playback.entry.id().equals(entry.id()) && playId.equals(playback.playId) && playback.start == start
+            if (playback.entry.id().equals(entry.id()) && request.playId().equals(playback.playId)
+                    && playback.start == request.start()
                     && Double.isNaN(playback.stopped)) {
                 return false;
             }
         }
-        play(entry, now, start, leftHanded, playId);
+        play(entry, now, request);
         return true;
     }
 
-    private void play(AnimationEntry entry, double now, double start, boolean leftHanded, String playId) {
+    public void play(AnimationEntry entry, double now, PlaybackRequest request) {
         // 重播同名动画时旧实例从当前时刻淡出，新实例按指定起点取样。
         stop(entry.id(), now);
-        Playback playback = new Playback(entry, start, leftHanded && entry.hand() != AnimationEntry.Hand.NONE,
-                sequence++, playId, false);
-        if (playId != null && now > start) {
-            playback.lastEventTime = now - start;
+        Playback playback = new Playback(entry, request, sequence++, PlaybackMode.FREE);
+        if (request.playId() != null && now > request.start()) {
+            playback.lastEventTime = now - request.start();
         }
         if (playback.finished(now)) {
             return;
         }
         playing.add(playback);
-        playing.sort(Comparator.comparingInt((Playback p) -> p.entry.clip().loop() == AnimationClip.Loop.REPEAT ? 0 : 1)
+        playing.sort(Comparator.comparingInt((Playback p) -> p.loop() == AnimationClip.Loop.REPEAT ? 0 : 1)
                 .thenComparingInt(p -> p.entry.priority()).thenComparingLong(p -> p.sequence));
     }
 
@@ -149,30 +137,7 @@ public final class AnimationPlayer {
                 // 客户端世界时钟短暂落后于服务端起点时，不能提前发送零秒事件。
                 continue;
             }
-            double elapsed = Math.max(0, Math.min(now, playback.stoppedOr(now)) - playback.start);
-            AnimationClip clip = playback.entry.clip();
-            double end = playback.scrub ? playback.scrubEventTime()
-                    : clip.loop() == AnimationClip.Loop.REPEAT ? elapsed : Math.min(elapsed, clip.duration());
-            if (playback.scrub && end < playback.lastEventTime) {
-                // 原版动作可能在一次挥击结束后把进度重置到 0；新的周期应重新允许时间线事件。
-                playback.lastEventTime = -1;
-            }
-            long firstCycle = clip.loop() == AnimationClip.Loop.REPEAT
-                    ? Math.max(0, (long) Math.floor(playback.lastEventTime / clip.duration())) : 0;
-            long lastCycle = clip.loop() == AnimationClip.Loop.REPEAT ? (long) Math.floor(end / clip.duration()) : 0;
-            for (long cycle = firstCycle; cycle <= lastCycle; cycle++) {
-                for (AnimationClip.TimelineEvent event : clip.events()) {
-                    double time = cycle * (double) clip.duration() + event.seconds();
-                    if (time > playback.lastEventTime && time <= end) {
-                        String name = event.name();
-                        if (playback.mirror && name.startsWith("step_")) {
-                            name = name.equals("step_l") ? "step_r" : "step_l";
-                        }
-                        pending.add(new String[]{playback.entry.id(), name});
-                    }
-                }
-            }
-            playback.lastEventTime = Math.max(playback.lastEventTime, end);
+            playback.collectEvents(now, pending);
         }
         playing.removeIf(p -> p.finished(now));
         // 回调可能启动或停止动画，遍历结束后再交给外部调用方。
@@ -208,11 +173,11 @@ public final class AnimationPlayer {
                 Vec3 rotation = lower.rotation();
                 // Bedrock 导出值先恢复到 Blockbench，随后才做解剖左右镜像。
                 if (track.position() != null) {
-                    Vec3 raw = track.position().sample(time, entry.clip().loop() == AnimationClip.Loop.REPEAT);
+                    Vec3 raw = track.position().sample(time, playback.loop() == AnimationClip.Loop.REPEAT);
                     position = new Vec3(playback.mirror ? raw.x() : -raw.x(), raw.y(), raw.z());
                 }
                 if (track.rotation() != null) {
-                    Vec3 raw = track.rotation().sample(time, entry.clip().loop() == AnimationClip.Loop.REPEAT);
+                    Vec3 raw = track.rotation().sample(time, playback.loop() == AnimationClip.Loop.REPEAT);
                     rotation = new Vec3(-raw.x(), playback.mirror ? raw.y() : -raw.y(),
                             playback.mirror ? -raw.z() : raw.z());
                 }
@@ -285,6 +250,7 @@ public final class AnimationPlayer {
         final long sequence;
         final String playId;
         final boolean scrub;
+        final AnimationClip.Loop loopOverride;
         double stopped = Double.NaN;
         double lastEventTime = -1;
         float scrubFrom;
@@ -292,14 +258,98 @@ public final class AnimationPlayer {
         double scrubUpdatedAt;
         double scrubRestartAt = Double.NaN;
 
-        Playback(AnimationEntry entry, double start, boolean mirror, long sequence, String playId, boolean scrub) {
+        Playback(AnimationEntry entry, PlaybackRequest request, long sequence, PlaybackMode mode) {
             // 每次播放有独立时钟，多个实体和同一动画的重播互不共享状态。
             this.entry = entry;
-            this.start = start;
-            this.mirror = mirror;
+            this.start = request.start();
+            this.mirror = request.handedness() == Handedness.LEFT && entry.hand() != AnimationEntry.Hand.NONE;
             this.sequence = sequence;
-            this.playId = playId;
-            this.scrub = scrub;
+            this.playId = request.playId();
+            this.scrub = mode == PlaybackMode.SCRUB;
+            this.loopOverride = request.loopOverride();
+        }
+
+        AnimationClip.Loop loop() {
+            // 未指定覆盖时保留资源声明的循环方式。
+            if (loopOverride == null) {
+                return entry.clip().loop();
+            }
+            return loopOverride;
+        }
+
+        private void updateScrub(double now, float normalizedProgress) {
+            // 连续取样复用当前实例；循环接缝和一次性重触发保留各自的插值规则。
+            float previous = foldedTarget();
+            boolean rewound = normalizedProgress + SCRUB_REWIND_THRESHOLD < previous;
+            scrubFrom = normalizedProgress;
+            scrubTarget = normalizedProgress;
+            scrubUpdatedAt = now;
+            float miningLoopEnd = MINING_LOOP_SECONDS / entry.clip().duration();
+            float offset = wrapOffset(previous, normalizedProgress);
+            if (mining(entry.id()) && normalizedProgress < previous && previous <= miningLoopEnd) {
+                // 从循环尾向首帧正向插值，避免 0.8 倍及急迫下的非整 tick 回绕倒放。
+                scrubFrom = previous - miningLoopEnd;
+                scrubRestartAt = Double.NaN;
+            } else if (offset != 0) {
+                // 循环段或循环资源跨接缝：目标沿最短方向越过接缝，插值不倒放整段。
+                scrubFrom = previous;
+                scrubTarget = normalizedProgress + offset;
+                scrubRestartAt = Double.NaN;
+            } else if (rewound && directLoopRestart(entry.id())) {
+                // 挖掘/放置的子循环首尾同姿态，回绕直接接回零点，不淡回底层。
+                scrubRestartAt = Double.NaN;
+            } else {
+                scrubFrom = previous;
+                if (rewound) {
+                    // 一次性动作重触发仍保留短交叉淡入，避免硬切预备姿态。
+                    scrubRestartAt = now;
+                }
+            }
+        }
+
+        void collectEvents(double now, List<String[]> pending) {
+            // scrub 回绕后允许新周期事件；自由循环按绝对周期遍历跨过的时间段。
+            double end = eventEnd(now);
+            AnimationClip clip = entry.clip();
+            if (scrub && end < lastEventTime) {
+                lastEventTime = -1;
+            }
+            long firstCycle = 0;
+            long lastCycle = 0;
+            if (loop() == AnimationClip.Loop.REPEAT) {
+                firstCycle = Math.max(0, (long) Math.floor(lastEventTime / clip.duration()));
+                lastCycle = (long) Math.floor(end / clip.duration());
+            }
+            for (long cycle = firstCycle; cycle <= lastCycle; cycle++) {
+                for (AnimationClip.TimelineEvent event : clip.events()) {
+                    double time = cycle * (double) clip.duration() + event.seconds();
+                    if (time > lastEventTime && time <= end) {
+                        pending.add(new String[]{entry.id(), eventName(event)});
+                    }
+                }
+            }
+            lastEventTime = Math.max(lastEventTime, end);
+        }
+
+        private double eventEnd(double now) {
+            // 一次性动作的事件不能超出资源时长，scrub 使用权威进度。
+            if (scrub) {
+                return scrubEventTime();
+            }
+            double elapsed = Math.max(0, Math.min(now, stoppedOr(now)) - start);
+            if (loop() == AnimationClip.Loop.REPEAT) {
+                return elapsed;
+            }
+            return Math.min(elapsed, entry.clip().duration());
+        }
+
+        private String eventName(AnimationClip.TimelineEvent event) {
+            // 解剖左右镜像时，脚步事件与实际落脚侧保持一致。
+            String name = event.name();
+            if (mirror && name.startsWith("step_")) {
+                return name.equals("step_l") ? "step_r" : "step_l";
+            }
+            return name;
         }
 
         double stoppedOr(double now) {
@@ -308,9 +358,14 @@ public final class AnimationPlayer {
 
         double fadeStart() {
             // 一次性动画在长度结束后淡出；循环与保持动作只在显式停止时淡出。
-            double natural = !scrub && entry.clip().loop() == AnimationClip.Loop.ONCE
-                    ? start + entry.clip().duration() : Double.POSITIVE_INFINITY;
-            return Double.isNaN(stopped) ? natural : Math.min(natural, stopped);
+            double natural = Double.POSITIVE_INFINITY;
+            if (!scrub && loop() == AnimationClip.Loop.ONCE) {
+                natural = start + entry.clip().duration();
+            }
+            if (Double.isNaN(stopped)) {
+                return natural;
+            }
+            return Math.min(natural, stopped);
         }
 
         boolean finished(double now) {
@@ -336,8 +391,10 @@ public final class AnimationPlayer {
             }
             double elapsed = Math.max(0, stoppedOr(now) - start);
             // 非循环动画在淡出阶段保持末帧，循环动画停止后冻结停止时的局部时间。
-            return entry.clip().loop() == AnimationClip.Loop.REPEAT
-                    ? (float) (elapsed % entry.clip().duration()) : (float) Math.min(elapsed, entry.clip().duration());
+            if (loop() == AnimationClip.Loop.REPEAT) {
+                return (float) (elapsed % entry.clip().duration());
+            }
+            return (float) Math.min(elapsed, entry.clip().duration());
         }
 
         double scrubTime(double now) {
@@ -355,7 +412,7 @@ public final class AnimationPlayer {
                 double length = entry.loopRegionEnd() - start;
                 time = start + ((time - start) % length + length) % length;
             }
-            if (entry.clip().loop() == AnimationClip.Loop.REPEAT) {
+            if (loop() == AnimationClip.Loop.REPEAT) {
                 // 循环资源的回绕目标可能落在 [0,1] 之外，按剪辑长度取模回到同一周期。
                 double duration = entry.clip().duration();
                 time = (time % duration + duration) % duration;
@@ -365,7 +422,7 @@ public final class AnimationPlayer {
 
         float foldedTarget() {
             // 回绕插值会把目标暂存在接缝另一侧；对外和下次比较时折回权威区间。
-            if (entry.clip().loop() == AnimationClip.Loop.REPEAT) {
+            if (loop() == AnimationClip.Loop.REPEAT) {
                 return scrubTarget - (float) Math.floor(scrubTarget);
             }
             if (entry.loopRegionStart() != null && scrubTarget * entry.clip().duration() >= entry.loopRegionEnd()) {
@@ -376,7 +433,7 @@ public final class AnimationPlayer {
 
         float wrapOffset(float previous, float target) {
             // 只有确实跨越循环接缝才返回偏移：循环资源取最短方向，循环段只会正向回绕。
-            if (entry.clip().loop() == AnimationClip.Loop.REPEAT) {
+            if (loop() == AnimationClip.Loop.REPEAT) {
                 if (previous - target > 0.5f) {
                     return 1;
                 }
