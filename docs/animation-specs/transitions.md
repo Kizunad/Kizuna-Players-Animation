@@ -162,10 +162,10 @@
 
 | 来源 → 目标 | 淡入 / 淡出 | 触发 | 约束 |
 | --- | ---: | --- | --- |
-| stance_idle / stance_walk_forward / stance_walk_back / stance_walk_left / stance_walk_right / stance_run → dodge_forward / dodge_back / dodge_left / dodge_right | 0.05 / 0.15 | 调用方发起闪避（方向扇区） | 全身；位移由调用方负责；0.70 s 播完淡回当前架势底层；闪避中再闪避交叉淡入 0.05 s |
+| stance_idle / stance_walk_forward / stance_walk_back / stance_walk_left / stance_walk_right / stance_run → dodge_forward / dodge_back / dodge_left / dodge_right | 0.05 / 0.15 | 调用方发起闪避（方向扇区） | 全身；位移由调用方负责（剪辑先迈预备步，0.29 s 前后起跳）；0.80 s 播完淡回当前架势底层；闪避中再闪避交叉淡入 0.05 s |
 | dodge_forward / dodge_back / dodge_left / dodge_right → stance_idle / stance_walk_forward / stance_walk_back / stance_walk_left / stance_walk_right / stance_run | 0.15 / 0.15 | 闪避播完 | 回当前架势底层 |
-| stance_idle / stance_walk_forward / stance_walk_back / stance_walk_left / stance_walk_right / stance_run / jump_air → technique_dash_forward / technique_dash_back / technique_dash_left / technique_dash_right | 0.05 / 0.15 | 轻步起手开始 | 全身；腾空段按竖直速度取样；按实际落地结束（含 0.45–0.65 s 落地滑停），不在功法收势时刻停止；空中施放从 0.10 开始 |
-| technique_dash_forward / technique_dash_back / technique_dash_left / technique_dash_right → stance_idle / stance_walk_forward / stance_walk_back / stance_walk_left / stance_walk_right / stance_run | 0.15 / 0.15 | 落地滑停与收势播完 | 回当前架势底层 |
+| stance_idle / stance_walk_forward / stance_walk_back / stance_walk_left / stance_walk_right / stance_run / jump_air → technique_dash_forward / technique_dash_back / technique_dash_left / technique_dash_right | 0.05 / 0.15 | 轻步起手开始 | 全身；贴地冲刺短跑，没有腾空段，按真实时间播放 1.15 s：起手 0.28 s（第 1 步短步 + 蹬地脚蹬伸，0.28 = 冲量）→ 第 2 步驱动步 → 0.60–0.80 s 制动步 → 0.84–1.01 s 蹬地脚撤回架势；不在功法收势时刻停止；空中施放（jump_air）从 0.28 开始，跳过起手 |
+| technique_dash_forward / technique_dash_back / technique_dash_left / technique_dash_right → stance_idle / stance_walk_forward / stance_walk_back / stance_walk_left / stance_walk_right / stance_run | 0.15 / 0.15 | 制动与撤步播完（1.15 s） | 回当前架势底层 |
 | stance_idle / stance_walk_forward / stance_walk_back / stance_walk_left / stance_walk_right / stance_run → block_one_hand / block_two_hand | 0.06 / 0.15 | 调用方进入格挡 | 静止全身、移动只取上身；0.35 s 举起，`loop_region [0.35, 1.95]`；空手用 block_two_hand |
 | block_one_hand → block_one_hand_hit | 0.03 / 0.08 | `block_hit` 事件 | 叠在保持段之上（优先级 16），0.30 s 播完淡回保持段；连续受击交叉淡入 0.04 s 重播 |
 | block_two_hand → block_two_hand_hit | 0.03 / 0.08 | `block_hit` 事件 | 同上 |
