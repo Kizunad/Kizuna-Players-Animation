@@ -1,11 +1,15 @@
 package dev.kizuna.playeranimation;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 import dev.kizuna.playeranimation.api.PlayerAnimationHostImpl;
 import dev.kizuna.playeranimation.protocol.pb.EntityAnimationProtocol.Clear;
+import dev.kizuna.playeranimation.protocol.pb.EntityAnimationProtocol.Automatic;
 import dev.kizuna.playeranimation.protocol.pb.EntityAnimationProtocol.EntityAnimationRequest;
 import dev.kizuna.playeranimation.protocol.pb.EntityAnimationProtocol.EntityAnimationResponse;
 import dev.kizuna.playeranimation.protocol.pb.EntityAnimationProtocol.Play;
@@ -35,11 +39,18 @@ final class EntityProtocolContractTest {
                 .setAll(true /* all */)
                 .build();
         Clear clear = Clear.newBuilder().setEntityId(1).build();
+        Automatic automatic = Automatic.newBuilder()
+                .setEntityId(1)
+                .setBaseAnimationId("walk")
+                .setActionAnimationId("crossbow_hold")
+                .setActionProgress(1)
+                .build();
         List<EntityAnimationRequest> requests = List.of(
                 EntityAnimationRequest.newBuilder().setRegisterGeometry(geometry).build(),
                 EntityAnimationRequest.newBuilder().setPlay(play).build(),
                 EntityAnimationRequest.newBuilder().setStop(stop).build(),
-                EntityAnimationRequest.newBuilder().setClear(clear).build());
+                EntityAnimationRequest.newBuilder().setClear(clear).build(),
+                EntityAnimationRequest.newBuilder().setAutomatic(automatic).build());
         for (EntityAnimationRequest request : requests) {
             assertEquals(request, EntityAnimationRequest.parseFrom(request.toByteArray()));
         }

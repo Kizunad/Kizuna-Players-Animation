@@ -80,16 +80,18 @@
 | `blend_in` / `blend_out` | 非负秒数；一次性结束后冻结末帧并淡出，停止保持或循环动画也使用淡出 |
 | `hand` | `main`、`off`、`both`、`none`；main 模板按右主手，off 模板按左副手；none 固定解剖左右 |
 | `fpv` | 布尔，仅此标记为真的动画参与独立第一人称手臂播放；全身第一人称直接复用第三人称姿态，不受此标记限制 |
-| `impact_window` | 可选，`[开始秒, 结束秒]`，剪辑时间。只供门禁声明打击时段，运行时不读取；当前白名单为 `attack_main/off`、`mine_main/off` |
+| `impact_window` | 可选，`[开始秒, 结束秒]`，剪辑时间。只供门禁声明打击时段，运行时不读取；当前白名单为 `attack_main/off`、`mine_main/off`、`door_breaker_knock(_off)`、`door_breaker_cleave(_off)`、`door_breaker_ram(_off)` |
 | `loop_region` | 可选，`[开始秒, 结束秒]`，剪辑时间。scrub 进度到达结束点后在该区间回绕；仅用于保持类的可重复动作（例如 `spyglass`、`brush`） |
 | `layer` | 可选，只接受 `look`：加性视线层。渲染器每帧按原版视线角度取样并把旋转加到已混合姿态上，不经过播放、优先级与同步；当前为 `head_follow`、`head_follow_pitch` |
 | `phases` | 可选，阶段数组或名称到 `[开始秒, 结束秒]` 的映射；仅供门禁在每个声明阶段内按主动作方向检查峰值顺序，时间必须落在剪辑范围内 |
-| `unbalanced_windows` | 可选，`[[开始秒, 结束秒], ...]`。只供门禁声明失衡时段（窗口内不查重心投影），运行时不读取；只允许 `dodge_*`、`technique_dash_*` |
-| `burst_windows` | 可选，`[[开始秒, 结束秒]]`，至多一段且 ≤ 0.08 s。只供门禁声明蹬伸爆发时段（窗口内角速度 / 角加加速度上限放宽到 1,500°/s、6×10⁶°/s³），运行时不读取；只允许 `dodge_*`、`technique_dash_*` |
-| `slide_window` | 可选，`[开始秒, 结束秒]`。只供游戏内验收：声明该段脚底随实体在世界空间同步滑行不算穿帮，运行时不读取；当前为 `technique_dash_*` `[0.28, 1.01]`（冲刺短跑：着地脚在模型空间锁定，实体被功法推动时随之滑行） |
+| `unbalanced_windows` | 可选，`[[开始秒, 结束秒], ...]`。只供门禁声明失衡时段（窗口内不查重心投影），运行时不读取；只允许 `dodge_*`、`technique_dash_*`、`door_breaker_cleave(_off)`、`door_breaker_ram(_off)` |
+| `burst_windows` | 可选，`[[开始秒, 结束秒]]`，至多一段且 ≤ 0.08 s。只供门禁声明蹬伸爆发时段（窗口内角速度 / 角加加速度上限放宽到 1,500°/s、6×10⁶°/s³），运行时不读取；只允许 `dodge_*`、`technique_dash_*`、`door_breaker_ram(_off)` |
+| `slide_window` | 可选，`[开始秒, 结束秒]`。只供游戏内验收：声明该段脚底随实体在世界空间同步滑行不算穿帮，运行时不读取；当前为 `technique_dash_*` `[0.28, 1.01]`（冲刺短跑：着地脚在模型空间锁定，实体被功法推动时随之滑行）、`door_breaker_ram(_off)` `[1.55, 2.25]`（第一次冲量到冲量衰减；施放中 0.4 倍主动移动不属于冲量段，不要求锁脚） |
 | `reaction` | 可选，只接受 `hit`，只用于 `*_hit` 受击后坐：门禁对被动动作免查反向预备，跟随与回落照查；运行时不读取 |
 
 战斗架势（2026-10-27）：`stance_*`、`dodge_*`、`technique_dash_*`、`block_*_hand(_hit)`、`technique_breath/charge` 只交付资源与 `PlayerAnimationAction` 显式接口，触发由战斗 UI / 宿主负责。
+破门斩（2026-10-28 起）：`door_breaker_knock(_off)`（叩门，3.0 s，60 tick）、`door_breaker_cleave(_off)`（破门，6.0 s，120 tick）与 `door_breaker_ram(_off)`（撞门，5.0 s，100 tick）都是 `mask: full`、优先级 24，只交付资源与 `PlayerAnimationAction` 显式接口，宿主在功法起手时按真实时间播放；
+它们不属于下面的上层规则，任何底层上都整段生效，服务端每次打击另调的原版挥手（攻击，优先级 20）不接管任何骨。其余五式与持物手覆盖层未制作。施放期间移速 ×0.4、不锁移动；撞门冲刺段原地迈步，位移由冲量负责。
 `AnimationPlayer` 的遮罩规则：原版上层（攻击、挖掘、使用等）在任何架势底层（含静止 `stance_idle`）、闪避、轻步和格挡上都只取 `upper`；
 格挡、受击、调息、蓄力在静止 `stance_idle` 上整段生效，在移动架势底层、进出过渡、闪避、轻步或原版移动底层上只取 `upper`。
 
@@ -189,6 +191,7 @@
 | `Play` | `entity_id` 是当前客户端世界的运行时实体 ID；`animation_id` 引用已加载索引；`start_tick`、`normalized_progress`、`loop` 均使用 presence。目标须为已加载玩家，或已注册几何的已加载生物。 |
 | `Stop` | `entity_id` 加 `animation_id` / `all: true` 二选一；缺少目标、空动作名、`all: false` 返回无效请求。停止不存在的状态仍成功，不创建播放器。 |
 | `Clear` | 立即移除指定实体的客户端播放状态；用于卸载清理，不保留停止淡出。 |
+| `Automatic` | 客户端本地选择的 `base_animation_id` 循环与可选 `action_animation_id` / `action_progress`。只适用于已注册生物；进度为有限 `[0,1]`。同名底层不重启，换动作沿用资源淡入淡出。自动层从中立骨姿态取样，显式 `Play` 在其上混合，结束后自然露出自动层；`Stop` 只停止显式动作，`Clear` 同时清理两层。此操作不通过网络发送。 |
 
 `entity_types` 按 Minecraft `Identifier` 规范化；省略命名空间时使用 `minecraft`，例如 `zombie` 与 `minecraft:zombie` 绑定同一实体类型。注册会先校验全部类型，再替换绑定，失败不会留下部分映射。
 

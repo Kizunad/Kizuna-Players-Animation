@@ -174,6 +174,20 @@
 | dodge_forward / dodge_back / dodge_left / dodge_right / technique_dash_forward / technique_dash_back / technique_dash_left / technique_dash_right → technique_breath / technique_charge | 0.10 / 0.15 | 功法起手开始 | 调息/蓄力只取上身叠加 |
 | stance_idle / stance_walk_forward / stance_walk_back / stance_walk_left / stance_walk_right / stance_run / stance_enter / stance_exit → attack / mine / use_item / place_block | 0.04 / 0.14 | 原版输入 | 保留原版上层；在任何架势底层上都只取上身（包括 `stance_idle`）：原版剪辑的腿是并步零位，整段生效会把错步的脚拖回并步 |
 
+### 破门斩
+
+施放期间移速 ×0.4、不锁移动（2026-10-29 用户决定）；`mask: full`、优先级 24，任何底层上都整段生效，主动缓行时底层的走步不显示，服务端每次打击另调的原版挥手（攻击 20）不接管任何骨。
+叩门、撞门起手不能被打断，没有打断边；式与式之间的承接（前一式淡出 0.30 s、后一式从承接入口起播）要从剪辑中途起播，现有切换回归只按剪辑起点模拟，等承接接线时再加。
+
+| 来源 → 目标 | 淡入 / 淡出 | 触发 | 约束 |
+| --- | ---: | --- | --- |
+| stance_idle → door_breaker_knock / door_breaker_knock_off | 0.10 / 0.25 | 宿主在叩门起手时播放（副手出手播 `_off`） | 起止姿态等于 `stance_idle` 首帧；按真实时间播 3.0 s；撞门后承接从 0.30 s 起播 |
+| door_breaker_knock / door_breaker_knock_off → stance_idle | 0.25 / 0.25 | 3.0 s 播完 | 淡回架势底层 |
+| stance_idle → door_breaker_cleave / door_breaker_cleave_off | 0.10 / 0.25 | 宿主在破门起手时播放（副手出手播 `_off`） | 起止姿态等于 `stance_idle` 首帧；按真实时间播 6.0 s；起手被打断淡出 0.20 s；叩门、撞门后承接从 0.40 s 起播 |
+| door_breaker_cleave / door_breaker_cleave_off → stance_idle | 0.25 / 0.25 | 6.0 s 播完 | 淡回架势底层 |
+| stance_idle → door_breaker_ram / door_breaker_ram_off | 0.10 / 0.25 | 宿主在撞门起手时播放（副手出手播 `_off`） | 起止姿态等于 `stance_idle` 首帧；按真实时间播 5.0 s；冲刺段原地迈步、实体由冲量推动；掩门后承接从 0.40 s 起播 |
+| door_breaker_ram / door_breaker_ram_off → stance_idle | 0.25 / 0.25 | 5.0 s 播完 | 淡回架势底层 |
+
 功法上层（优先级 17）低于攻击（20）：施放调息/蓄力时出手，攻击接管手臂与躯干上段，功法剪辑继续计时，攻击结束后淡回功法当前时刻的姿态。
 
 ### 叠加组合回归

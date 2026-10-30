@@ -88,7 +88,19 @@ public enum PlayerAnimationAction {
     BLOCK_TWO_HAND("block_two_hand"),
     BLOCK_TWO_HAND_HIT("block_two_hand_hit", 6),
     TECHNIQUE_BREATH("technique_breath", 40),
-    TECHNIQUE_CHARGE("technique_charge", 40);
+    TECHNIQUE_CHARGE("technique_charge", 40),
+    /**
+     * 破门斩（docs/animation-specs/door_breaker_knock.md）。宿主起手时按真实时间播放，承接时用 start_tick
+     * 前推到承接入口；整段全身，优先级高于服务端每次打击另调的原版挥手。
+     */
+    DOOR_BREAKER_KNOCK("door_breaker_knock", 60),
+    DOOR_BREAKER_KNOCK_OFF("door_breaker_knock_off", 60),
+    /** 破门（docs/animation-specs/door_breaker_cleave.md）：双手右拧斜劈、嵌门晃撬，6.0 秒。 */
+    DOOR_BREAKER_CLEAVE("door_breaker_cleave", 120),
+    DOOR_BREAKER_CLEAVE_OFF("door_breaker_cleave_off", 120),
+    /** 撞门（docs/animation-specs/door_breaker_ram.md）：低身冲两步、肩撞、回身横撩，5.0 秒；冲刺段原地迈步，位移由冲量负责。 */
+    DOOR_BREAKER_RAM("door_breaker_ram", 100),
+    DOOR_BREAKER_RAM_OFF("door_breaker_ram_off", 100);
 
     private final String id;
     private final int naturalDurationTicks;

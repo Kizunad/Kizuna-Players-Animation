@@ -85,7 +85,9 @@ tasks.register('checkAnimationGates', Exec) {
             'stance_walk_left', 'stance_walk_right', 'stance_run', 'dodge_forward', 'dodge_back',
             'dodge_left', 'dodge_right', 'technique_dash_forward', 'technique_dash_back',
             'technique_dash_left', 'technique_dash_right', 'block_one_hand', 'block_one_hand_hit',
-            'block_two_hand', 'block_two_hand_hit', 'technique_breath', 'technique_charge'
+            'block_two_hand', 'block_two_hand_hit', 'technique_breath', 'technique_charge',
+            'door_breaker_knock', 'door_breaker_knock_off', 'door_breaker_cleave', 'door_breaker_cleave_off',
+            'door_breaker_ram', 'door_breaker_ram_off'
 }
 
 tasks.register('checkAnimationAntiForgery', Exec) {

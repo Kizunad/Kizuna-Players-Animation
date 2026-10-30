@@ -5,6 +5,7 @@ import com.google.gson.JsonParser;
 import dev.kizuna.playeranimation.animation.AnimationClip;
 import dev.kizuna.playeranimation.animation.AnimationEntry;
 import dev.kizuna.playeranimation.animation.AnimationPlayer;
+import dev.kizuna.playeranimation.animation.PlayerAnimationAction;
 import dev.kizuna.playeranimation.model.BoneId;
 import dev.kizuna.playeranimation.model.Pose;
 import dev.kizuna.playeranimation.model.Rig;
@@ -24,8 +25,14 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class AnimationSetContractTest {
-    private static final Path INDEX = Path.of("src/main/resources/assets/kizuna_players_animation/player_anim_index.json");
+    private static final Path INDEX = Path.of(
+            "src/main/resources/assets/kizuna_players_animation/player_anim_index.json");
     private static final String KEY_PREFIX = "animation.kizuna_players_animation.player.";
+    private static final float POSE_EPSILON = 0.0001f;
+    private static final double SWING_LEAD_SECONDS = 0.1;
+    private static final float SWING_PROGRESS = 0.3f;
+    private static final Map<String, Double> DOOR_HITS = Map.of(
+            "door_breaker_knock", 1.7, "door_breaker_cleave", 3.2, "door_breaker_ram", 2.4);
 
     @Test
     void everyRequestedActionIsIndexedAndParsesFromThePackagedResource() throws Exception {
@@ -45,9 +52,7 @@ class AnimationSetContractTest {
             clip.tracks().keySet().forEach(bone -> assertFalse(bone.socket(), id + " 写入挂点"));
             clips.put(id, clip);
         }
-        // 动作枚举保留运行时 API 和调度接线，资源重做期间不把未打包动作
-        // 当成占位资源；导出一致性由 scripts/export_bbmodel_animation.py
-        // 在 Gradle check 阶段逐个核对 .bbmodel 与 JSON。
+        // 索引只收实际打包片段；导出检查另行核对 .bbmodel 与 JSON 的全部轨道。
         assertEquals(Set.of("walk", "run", "meditate", "crouch_work", "calib_zero", "calib_axes",
                 "calib_item", "calib_mirror", "calib_layer", "attack_main", "attack_off", "jump",
                 "equip_chestplate", "equip_chestplate_off", "equip_helmet", "equip_helmet_off",
@@ -63,10 +68,11 @@ class AnimationSetContractTest {
                 "stance_walk_left", "stance_walk_right", "stance_run", "dodge_forward", "dodge_back",
                 "dodge_left", "dodge_right", "technique_dash_forward", "technique_dash_back",
                 "technique_dash_left", "technique_dash_right", "block_one_hand", "block_one_hand_hit",
-                "block_two_hand", "block_two_hand_hit", "technique_breath", "technique_charge"), ids);
+                "block_two_hand", "block_two_hand_hit", "technique_breath", "technique_charge",
+                "door_breaker_knock", "door_breaker_knock_off", "door_breaker_cleave", "door_breaker_cleave_off",
+                "door_breaker_ram", "door_breaker_ram_off"), ids);
         // 已交付标记必须与打包资源一致：调度只请求已交付动作，未打包的动作不得标为已交付。
-        for (dev.kizuna.playeranimation.animation.PlayerAnimationAction action
-                : dev.kizuna.playeranimation.animation.PlayerAnimationAction.values()) {
+        for (PlayerAnimationAction action : PlayerAnimationAction.values()) {
             assertEquals(ids.contains(action.id()), action.delivered(), action.id());
         }
     }
@@ -153,6 +159,73 @@ class AnimationSetContractTest {
             }
         }
         assertNotEquals(expected[BoneId.R_FOREARM.ordinal()], actual[BoneId.R_FOREARM.ordinal()]);
+    }
+
+    @Test
+    void doorBreakerOwnsTheWholeBodyOverStanceAndVanillaSwing() throws Exception {
+        // 原版挥手与专属动画在实际命中帧重叠时，不得接管专属动画的任何骨。
+        for (var entry : DOOR_HITS.entrySet()) {
+            for (String suffix : new String[]{"", "_off"}) {
+                assertDoorPriority(entry.getKey() + suffix, entry.getValue());
+            }
+        }
+    }
+
+    private static void assertDoorPriority(String id, double hit) throws Exception {
+        // 同时覆盖架势腿部、动作起手、命中以及后续收势，不只检查某一段上身。
+        AnimationPlayer combined = new AnimationPlayer();
+        combined.play(resource("stance_idle"), 0, false /* leftHanded */);
+        combined.play(resource(id), 0, false /* leftHanded */);
+        combined.scrub(resource("attack_main"), hit - SWING_LEAD_SECONDS,
+                SWING_PROGRESS, false /* leftHanded */);
+        AnimationPlayer alone = new AnimationPlayer();
+        alone.play(resource("stance_idle"), 0, false /* leftHanded */);
+        alone.play(resource(id), 0, false /* leftHanded */);
+        for (double time : new double[]{SWING_LEAD_SECONDS, hit, hit + SWING_LEAD_SECONDS}) {
+            Pose[] expected = alone.sample(Rig.zeroPose(), time, false /* riding */);
+            Pose[] actual = combined.sample(Rig.zeroPose(), time, false /* riding */);
+            for (BoneId bone : BoneId.ALL) {
+                assertPose(expected[bone.ordinal()], actual[bone.ordinal()], id + "@" + time + ":" + bone.key);
+            }
+        }
+        AnimationPlayer stance = new AnimationPlayer();
+        stance.play(resource("stance_idle"), 0, false /* leftHanded */);
+        assertNotEquals(stance.sample(Rig.zeroPose(), hit, false /* riding */)[BoneId.R_SHIN.ordinal()],
+                alone.sample(Rig.zeroPose(), hit, false /* riding */)[BoneId.R_SHIN.ordinal()], id);
+    }
+
+    @Test
+    void leftHandedPlayersMirrorBothDoorVariantsAtImpact() throws Exception {
+        // 主副手各自使用原资源，再由运行时交换骨与旋转方向；禁止用副手资源冒充镜像。
+        for (var entry : DOOR_HITS.entrySet()) {
+            for (String suffix : new String[]{"", "_off"}) {
+                AnimationEntry clip = resource(entry.getKey() + suffix);
+                AnimationPlayer right = new AnimationPlayer();
+                AnimationPlayer left = new AnimationPlayer();
+                right.play(clip, 0, false /* leftHanded */);
+                left.play(clip, 0, true /* leftHanded */);
+                Pose[] original = right.sample(Rig.zeroPose(), entry.getValue(), false /* riding */);
+                Pose[] mirrored = left.sample(Rig.zeroPose(), entry.getValue(), false /* riding */);
+                for (BoneId bone : BoneId.ALL) {
+                    Pose pose = original[bone.ordinal()];
+                    Vec3 position = pose.position();
+                    Vec3 rotation = pose.rotation();
+                    Pose expected = new Pose(new Vec3(-position.x(), position.y(), position.z()),
+                            new Vec3(rotation.x(), -rotation.y(), -rotation.z()));
+                    assertPose(expected, mirrored[bone.mirrored().ordinal()], clip.id() + ":" + bone.key);
+                }
+            }
+        }
+    }
+
+    private static void assertPose(Pose expected, Pose actual, String label) {
+        // 混合与镜像允许浮点舍入误差，不能放过某个旋转或位移分量。
+        assertEquals(expected.rotation().x(), actual.rotation().x(), POSE_EPSILON, label);
+        assertEquals(expected.rotation().y(), actual.rotation().y(), POSE_EPSILON, label);
+        assertEquals(expected.rotation().z(), actual.rotation().z(), POSE_EPSILON, label);
+        assertEquals(expected.position().x(), actual.position().x(), POSE_EPSILON, label);
+        assertEquals(expected.position().y(), actual.position().y(), POSE_EPSILON, label);
+        assertEquals(expected.position().z(), actual.position().z(), POSE_EPSILON, label);
     }
 
     @Test

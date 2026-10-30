@@ -62,6 +62,16 @@ KEY_TIMES = {
     "toot_horn": (0.0, 0.06, 0.12, 0.18, 0.24, 0.33, 0.60, 1.20, 1.80, 2.60),
     "brush": (0.0, 0.06, 0.12, 0.18, 0.24, 0.30, 0.425, 0.55, 0.675, 0.80),
     "use_item": (0.0, 0.05, 0.10, 0.15, 0.20, 0.24, 0.28, 0.32, 0.36, 0.40),
+    # 叩门：起止、对门、两下轻叩（举、点到、回弹）、蓄满、发力中、击中、撑住、随、收（door_breaker_knock.md 第 10 节）
+    "door_breaker_knock": (0.0, 0.30, 0.62, 0.80, 0.90, 1.02, 1.15, 1.25, 1.40, 1.52, 1.62, 1.66, 1.70, 1.75, 1.85,
+                           2.20, 2.45, 2.70, 3.0),
+    # 破门：起、调整落步、拧满、定、蓄满、发力中、击中、撑住、嵌、晃、撬出、收步、收（door_breaker_cleave.md 第 10 节）
+    "door_breaker_cleave": (0.0, 0.40, 0.55, 0.70, 0.85, 1.00, 1.50, 2.20, 2.60, 2.95, 3.06, 3.12, 3.16, 3.20, 3.25,
+                            3.40, 3.60, 3.75, 4.10, 4.50, 5.00, 5.50, 6.0),
+    # 撞门：起、沉、蓄满、定末、蹬（冲量）、高抬膝、右脚落、左脚摆、左脚落、刹、撞上、回身、发力中、击中、撑住、随、收步、绕肩、收
+    # （door_breaker_ram.md 第 10 节）
+    "door_breaker_ram": (0.0, 0.40, 0.80, 1.20, 1.50, 1.55, 1.70, 1.80, 1.93, 2.05, 2.10, 2.15, 2.25, 2.32, 2.36, 2.40,
+                         2.45, 2.80, 3.30, 3.50, 3.65, 4.10, 4.60, 5.0),
 }
 # 闪避：预备步离地、迈步中、预备步落地、下蹲、蹬伸离地、收腿、迎地、先后触地、缓冲、回架势各取一帧，
 # 接触表能看清“先迈脚再发力”的腿部动作链（共 12 帧）。
@@ -77,6 +87,9 @@ PROPS = {
     "attack_main": ({"kind": "sword", "bone": "r_item"},),
     "mine_main": ({"kind": "pickaxe", "bone": "r_item"},),
     "place_block": ({"kind": "block", "bone": "r_item"},),
+    "door_breaker_knock": ({"kind": "axe", "bone": "r_item"},),
+    "door_breaker_cleave": ({"kind": "axe", "bone": "r_item"},),
+    "door_breaker_ram": ({"kind": "axe", "bone": "r_item"},),
     # 下列道具的端点由原版物品模型的 thirdperson_righthand display 经游戏内挂点变换
     # （Rig.itemTransform：rotX(−90°)·rotY(180°)，再做 toVanilla 的 Y 反射）换算到 r_item 局部像素。
     "spyglass": ({"kind": "segments", "bone": "r_item", "parts": (
@@ -138,13 +151,25 @@ DRIVE_PREVIEW = {
 
 SWORD_POMMEL = (0.0, 2.2, 5.5)
 SWORD_TIP = (0.0, -1.2, -13.5)
+# 斧子（挂点局部像素）：原版 iron_axe.png 逐像素经 handheld 第三人称 display（rotation [0,−90,55]、
+# translation [0,4,0.5]、scale 0.85）与 Rig.itemTransform 换算。柄不在贴图对角线上，比剑的对角线
+# 偏 0.57 px、短 5 px：柄中线过 AXE_GRIP_CENTER，沿 AXE_ALONG（柄尾 → 斧头）；刃口方向 AXE_EDGE
+# 几乎沿前臂指向拳外（door_breaker_knock.md 第 8 节）。AXE_HANDLE_S 是柄两端、斧头各块是 (s, e) 范围，
+# s 沿柄、e 沿刃口方向，都相对 AXE_GRIP_CENTER。左手 display 经左手取反后与右手相同。
+AXE_GRIP_CENTER = (0.0, 1.409, -2.307)
+AXE_ALONG = (0.0, -0.1736, -0.9848)
+AXE_EDGE = (0.0, -0.985, 0.174)
+AXE_HANDLE_S = (-5.99, 7.23)
+AXE_HEAD = (((3.6, 6.0), (-2.7, 0.9), "iron"),
+            ((2.4, 7.2), (0.9, 3.3), "iron"),
+            ((2.4, 7.2), (3.3, 4.2), "iron_dark"))
 IRON = (206, 208, 212, 255)
 IRON_DARK = (150, 153, 158, 255)
 HANDLE = (110, 74, 42, 255)
 GUARD = (80, 82, 88, 255)
 DIRT = (134, 96, 67, 255)
 COPPER = (196, 120, 70, 255)
-PROP_COLORS = {"copper": COPPER, "handle": HANDLE, "iron_dark": IRON_DARK, "dirt": DIRT, "horn": (214, 200, 170, 255)}
+PROP_COLORS = {"iron": IRON, "copper": COPPER, "handle": HANDLE, "iron_dark": IRON_DARK, "dirt": DIRT, "horn": (214, 200, 170, 255)}
 
 
 def projection(point: tuple[float, float, float], yaw: float, center: tuple[float, float], scale: float) -> tuple[float, float, float]:
@@ -258,6 +283,21 @@ def prop_boxes(model: SkeletonModel, prop: dict[str, Any]) -> list[tuple[str, di
             (prop["bone"], box_corners(point(0.86), axes, (0.9, length * 0.36, 0.5)), IRON),
             (prop["bone"], box_corners(point(0.86), axes, (1.0, 1.1, 0.55)), IRON_DARK),
         ]
+    if kind == "axe":
+        # 柄与斧头各一块，按原版贴图像素范围摆放；刃口一条画深色。
+        pivot = model.origins[prop["bone"]]
+        along, edge, side = AXE_ALONG, AXE_EDGE, (1.0, 0.0, 0.0)
+        point = lambda s, e: tuple(pivot[i] + AXE_GRIP_CENTER[i] + along[i] * s + edge[i] * e for i in range(3))
+        # 柄切成约 2 px 的小段：每段单独排序深度，穿过拳的那几段才会被手指正确遮住，拳外的段照常露出。
+        low, high = AXE_HANDLE_S
+        count = math.ceil((high - low) / 2)
+        piece = (high - low) / count
+        boxes = [(prop["bone"], box_corners(point(low + piece * (k + 0.5), 0.0), (along, edge, side), (piece / 2, 0.6, 0.45)),
+                  HANDLE) for k in range(count)]
+        for (s0, s1), (e0, e1), color in AXE_HEAD:
+            boxes.append((prop["bone"], box_corners(point((s0 + s1) / 2, (e0 + e1) / 2), (along, edge, side),
+                                                    ((s1 - s0) / 2, (e1 - e0) / 2, 0.4)), PROP_COLORS[color]))
+        return boxes
     if kind == "block":
         # 手持方块按原版第三人称 0.375 倍缩放，预览画成约 5 px 立方体，中心在掌前。
         pivot = model.origins[prop["bone"]]

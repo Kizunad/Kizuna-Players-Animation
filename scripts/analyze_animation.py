@@ -67,6 +67,8 @@ FULL_BODY_IDS = {
     "dodge_forward", "dodge_back", "dodge_left", "dodge_right",
     "technique_dash_forward", "technique_dash_back", "technique_dash_left", "technique_dash_right",
     "block_two_hand", "block_two_hand_hit",
+    "door_breaker_knock", "door_breaker_knock_off", "door_breaker_cleave", "door_breaker_cleave_off",
+    "door_breaker_ram", "door_breaker_ram_off",
 }
 
 GRIP_IDS = {
@@ -76,6 +78,8 @@ GRIP_IDS = {
     "crossbow_hold_off", "brush", "brush_off", "eat", "eat_off", "drink", "drink_off",
     "block_shield", "block_shield_off", "block_one_hand", "block_one_hand_hit", "block_two_hand",
     "block_two_hand_hit", "bow_draw", "bow_draw_off", "trident_charge", "trident_charge_off",
+    "door_breaker_knock", "door_breaker_knock_off", "door_breaker_cleave", "door_breaker_cleave_off",
+    "door_breaker_ram", "door_breaker_ram_off",
 }
 
 NON_STANDING_IDS = {"meditate", "jump", "climb", "swim", "ride", "sleep", "elytra"}
@@ -87,7 +91,10 @@ GAIT_IDS = {"walk", "run", "sneak_walk", "stance_walk_forward", "stance_walk_bac
 # 侧滑步的支撑脚沿 X 后移，循环支撑检查改查 X 向速度。
 LATERAL_GAIT_IDS = {"stance_walk_left", "stance_walk_right"}
 # 失衡窗口（索引字段 unbalanced_windows）：验收规则允许闪避类写明失衡，窗口内不查重心投影。
-UNBALANCED_WINDOW_PREFIXES = ("dodge_", "technique_dash_")
+# 破门的两次前脚迈步、撞门冲刺的两步与收步是单脚支撑期（docs/animation-specs/door_breaker_cleave.md、door_breaker_ram.md 第 4 节）。
+UNBALANCED_WINDOW_PREFIXES = ("dodge_", "technique_dash_", "door_breaker_cleave", "door_breaker_ram")
+# 爆发窗口（索引字段 burst_windows）开放给闪避、轻步与撞门的后脚蹬伸（每段至多一段、≤ 0.08 s）。
+BURST_WINDOW_PREFIXES = ("dodge_", "technique_dash_", "door_breaker_ram")
 # 视线叠加层（索引 layer: look）：时间轴表示视线角度而不是时间，只对这两个 ID 使用姿势层判据。
 LOOK_LAYER_IDS = {"head_follow": ("y", 50.0), "head_follow_pitch": ("x", -90.0)}
 MIN_LOOK_LAYER_BONES = 5
@@ -97,7 +104,10 @@ SLEEP_POSE_IDS = {"sleep"}
 SLEEP_EFFECTIVE_ROTATION_DEG = 1.0
 LOOK_LAYER_SUM_TOLERANCE_DEG = 1.0
 LOOK_LAYER_SYMMETRY_TOLERANCE_DEG = 0.05
-IMPACT_WINDOW_IDS = {"attack_main", "attack_off", "mine_main", "mine_off"}
+# 破门斩各式的打击时段（每段 ≤ 0.35 s，见 docs/animation-specs/door_breaker_knock.md）与攻击、挖掘共用放宽上限。
+IMPACT_WINDOW_IDS = {"attack_main", "attack_off", "mine_main", "mine_off",
+                     "door_breaker_knock", "door_breaker_knock_off", "door_breaker_cleave", "door_breaker_cleave_off",
+                     "door_breaker_ram", "door_breaker_ram_off"}
 ARM_INTERSECTION_TOLERANCE_PX = 0.25
 MIN_PREPARATION_FOLLOW_RATIO = 0.60
 SEGMENT_MASS = {"torso": 50.0, "head": 8.0, "leg": 16.0, "arm": 5.0}
@@ -1097,8 +1107,8 @@ def main() -> int:
             index_extras.setdefault(animation_id, {})["unbalanced_windows"] = raw["unbalanced_windows"]
         if "burst_windows" in raw:
             windows = raw["burst_windows"]
-            if not animation_id.startswith(UNBALANCED_WINDOW_PREFIXES):
-                raise SystemExit(f"burst_windows 只能用于 {UNBALANCED_WINDOW_PREFIXES}: {animation_id}")
+            if not animation_id.startswith(BURST_WINDOW_PREFIXES):
+                raise SystemExit(f"burst_windows 只能用于 {BURST_WINDOW_PREFIXES}: {animation_id}")
             # 每段动作只开放一个爆发窗口，时长上限在资源边界校验一次。
             if not isinstance(windows, list) or len(windows) != 1 or len(windows[0]) != 2:
                 raise SystemExit(f"burst_windows 必须是只含一段的 [[开始, 结束]]: {animation_id}")

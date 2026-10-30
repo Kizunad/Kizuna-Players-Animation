@@ -3,6 +3,8 @@ package dev.kizuna.playeranimation.client;
 import dev.kizuna.playeranimation.animation.AnimationEntry;
 import dev.kizuna.playeranimation.animation.AnimationPlayer;
 import dev.kizuna.playeranimation.animation.AnimationClip;
+import dev.kizuna.playeranimation.animation.AutomaticAnimationPlayer;
+import dev.kizuna.playeranimation.protocol.pb.EntityAnimationProtocol.Automatic;
 import dev.kizuna.playeranimation.animation.AnimationPlayer.Handedness;
 import dev.kizuna.playeranimation.animation.AnimationPlayer.PlaybackRequest;
 import java.util.ArrayList;
@@ -23,6 +25,7 @@ public final class PlayerPlayback {
     private static final double TICKS_PER_SECOND = 20;
     private final Map<UUID, AnimationPlayer> players = new HashMap<>();
     private final Map<Integer, AnimationPlayer> entities = new HashMap<>();
+    private final Map<Integer, AutomaticAnimationPlayer> automaticEntities = new HashMap<>();
     private final Map<UUID, PlayerMeshRenderer.Frame> frames = new HashMap<>();
     private final Map<EquipKey, EquipVisual> equipVisuals = new HashMap<>();
     private ClientWorld world;
@@ -64,6 +67,26 @@ public final class PlayerPlayback {
     public AnimationPlayer player(UUID id) { return players.get(id); }
 
     public AnimationPlayer entity(int id) { return entities.get(id); }
+
+    public AnimationPlayer automaticEntity(int id) {
+        // 自动与显式动作分开取样，资源内部优先级不能反转宿主的显式请求。
+        AutomaticAnimationPlayer automatic = automaticEntities.get(id);
+        if (automatic == null) {
+            return null;
+        }
+        return automatic.playback();
+    }
+
+    public void automaticEntity(LivingEntity entity, Automatic request) {
+        // 入口已经校验资源与进度，重复请求只推进动作游标。
+        prepareWorld(MinecraftClient.getInstance());
+        var animations = PlayerAnimationClient.ASSETS.animations();
+        var base = animations.get(request.getBaseAnimationId());
+        var action = animations.get(request.getActionAnimationId());
+        var automatic = automaticEntities.computeIfAbsent(entity.getId(), ignored -> new AutomaticAnimationPlayer());
+        Handedness hand = entity.getMainArm() == Arm.LEFT ? Handedness.LEFT : Handedness.RIGHT;
+        automatic.update(base, action, request.getActionProgress(), hand, now(0));
+    }
 
     public void play(UUID playerId, String animationId) {
         play(playerId, animationId, null, null);
@@ -218,6 +241,11 @@ public final class PlayerPlayback {
     }
 
     private void tickEntities(double time, ClientWorld clientWorld) {
+        // 自动层也在逻辑时钟清理淡出实例；卸载后的实体 ID 不得继承旧姿态。
+        automaticEntities.entrySet().removeIf(entry -> clientWorld.getEntityById(entry.getKey()) == null);
+        for (var automatic : automaticEntities.values()) {
+            automatic.playback().advance(time, (animation, event) -> { });
+        }
         for (var entry : new ArrayList<>(entities.entrySet())) {
             int id = entry.getKey();
             LivingEntity entity = living(clientWorld.getEntityById(id));
@@ -247,6 +275,7 @@ public final class PlayerPlayback {
         // 断线与资源重载必须同时清理动画和用于挂载手持物的帧数据。
         players.clear();
         entities.clear();
+        automaticEntities.clear();
         frames.clear();
         equipVisuals.clear();
     }
@@ -261,6 +290,7 @@ public final class PlayerPlayback {
     public void remove(int entityId) {
         // 实体移除后 ID 可能被复用，不能把旧动作带给新实体。
         entities.remove(entityId);
+        automaticEntities.remove(entityId);
     }
 
     private void prepareWorld(MinecraftClient client) {

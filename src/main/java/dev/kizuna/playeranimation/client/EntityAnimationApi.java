@@ -30,14 +30,40 @@ public final class EntityAnimationApi {
     }
 
     private static EntityAnimationResponse handle(EntityAnimationRequest request) {
+        // 所有实体操作共享主线程与 Protobuf 边界，自动层不走玩家网络协议。
         return switch (request.getOperationCase()) {
             case REGISTER_GEOMETRY -> register(request);
             case PLAY -> play(request);
             case STOP -> stop(request);
             case CLEAR -> clear(request);
+            case AUTOMATIC -> automatic(request);
             case OPERATION_NOT_SET -> response(request.getRequestId(), EntityAnimationResponse.Code.INVALID_REQUEST,
                     "缺少操作");
         };
+    }
+
+    private static EntityAnimationResponse automatic(EntityAnimationRequest request) {
+        // 本地状态也经过同一字节边界，禁止未知资源或非法进度污染正在播放的层。
+        var automatic = request.getAutomatic();
+        LivingEntity entity = loadedEntity(automatic.getEntityId());
+        if (entity == null) {
+            return response(request.getRequestId(), EntityAnimationResponse.Code.ENTITY_NOT_LOADED, "客户端未加载目标实体");
+        }
+        if (entity instanceof AbstractClientPlayerEntity || MobAnimationRegistry.model(entity) == null) {
+            return response(request.getRequestId(), EntityAnimationResponse.Code.INVALID_REQUEST, "自动层需要已注册生物");
+        }
+        float progress = automatic.getActionProgress();
+        if (!Float.isFinite(progress) || progress < 0 || progress > 1) {
+            return response(request.getRequestId(), EntityAnimationResponse.Code.INVALID_REQUEST, "自动动作进度必须在 [0,1]");
+        }
+        var animations = PlayerAnimationClient.ASSETS.animations();
+        String action = automatic.getActionAnimationId();
+        if (!animations.containsKey(automatic.getBaseAnimationId())
+                || !action.isEmpty() && !animations.containsKey(action)) {
+            return response(request.getRequestId(), EntityAnimationResponse.Code.ANIMATION_NOT_FOUND, "客户端未加载自动动画");
+        }
+        PlayerAnimationClient.PLAYBACK.automaticEntity(entity, automatic);
+        return response(request.getRequestId(), EntityAnimationResponse.Code.OK, "");
     }
 
     private static EntityAnimationResponse register(EntityAnimationRequest request) {

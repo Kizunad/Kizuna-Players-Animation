@@ -133,12 +133,24 @@ public final class ServerPlayerAnimations implements ModInitializer {
     }
 
     public static String play(ServerPlayerEntity player, String animation) {
+        // 普通播放从当前世界 tick 开始。
+        return playFrom(player, animation, player.getWorld().getTime());
+    }
+
+    public static String playFrom(ServerPlayerEntity player, String animation, long startTick) {
         // 只登记一次起点，后续追踪者重用请求，不重启已经在播放的循环。
         requireServerThread(player);
         AnimationRequests.animationId(animation);
+        if (startTick < 0 || startTick > player.getWorld().getTime()) {
+            throw new IllegalArgumentException("起播 tick 必须位于当前世界时间以内");
+        }
         String requestId = UUID.randomUUID().toString();
-        PlayRequest request = PlayRequest.newBuilder().setRequestId(requestId).setPlayerUuid(player.getUuidAsString())
-                .setAnimationId(animation).setStartTick(player.getWorld().getTime()).build();
+        PlayRequest request = PlayRequest.newBuilder()
+                .setRequestId(requestId)
+                .setPlayerUuid(player.getUuidAsString())
+                .setAnimationId(animation)
+                .setStartTick(startTick)
+                .build();
         // 先通过载荷边界，避免发送失败却留下无法补发的登记状态。
         checkSize(request);
         STATE.play(player.getUuid(), request);

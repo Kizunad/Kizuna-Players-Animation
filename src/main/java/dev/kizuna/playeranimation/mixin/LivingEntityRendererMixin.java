@@ -4,16 +4,19 @@ import dev.kizuna.playeranimation.client.PlayerAnimationClient;
 import dev.kizuna.playeranimation.client.PlayerMeshRenderer;
 import dev.kizuna.playeranimation.client.FirstPersonBody;
 import dev.kizuna.playeranimation.client.MobAnimationRenderer;
+import dev.kizuna.playeranimation.client.MobEquipmentRenderer;
 import net.minecraft.client.network.AbstractClientPlayerEntity;
 import net.minecraft.client.render.VertexConsumer;
 import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.entity.LivingEntityRenderer;
+import net.minecraft.client.render.entity.EntityRendererFactory;
 import net.minecraft.client.render.entity.model.EntityModel;
 import net.minecraft.client.render.entity.model.PlayerEntityModel;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.LivingEntity;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.Redirect;
@@ -22,6 +25,14 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(LivingEntityRenderer.class)
 public abstract class LivingEntityRendererMixin {
     @Shadow public abstract EntityModel<?> getModel();
+    @Unique private MobEquipmentRenderer kpa$equipment;
+
+    @Inject(method = "<init>", at = @At("TAIL"))
+    private void kpa$equipmentContext(EntityRendererFactory.Context context, EntityModel<?> model,
+                                     float shadowRadius, CallbackInfo callback) {
+        // 装备上下文与 renderer 一起重建，资源重载不会保留旧的烘焙模型。
+        kpa$equipment = new MobEquipmentRenderer(context);
+    }
 
     @Inject(method = "render(Lnet/minecraft/entity/LivingEntity;FFLnet/minecraft/client/util/math/MatrixStack;"
             + "Lnet/minecraft/client/render/VertexConsumerProvider;I)V", at = @At("HEAD"))
@@ -48,6 +59,8 @@ public abstract class LivingEntityRendererMixin {
             PlayerAnimationClient.PLAYBACK.frame(player.getUuid(), frame);
         } else {
             MobAnimationRenderer.frame(entity, getModel(), delta);
+            var draw = new MobEquipmentRenderer.Draw(entity, matrices, buffers, light, delta);
+            kpa$equipment.render(draw, getModel());
         }
     }
 

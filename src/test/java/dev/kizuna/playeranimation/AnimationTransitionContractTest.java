@@ -146,8 +146,9 @@ class AnimationTransitionContractTest {
 
     @Test
     void everyExpandedTransitionUsesAnimationPlayerWithoutFrameJump() throws IOException {
+        // 对切换表每条有向边执行真实混合，检查无跳帧并最终稳定到目标姿态。
         List<Edge> edges = readEdges();
-        assertEquals(439, edges.size(), "切换表展开后的有向边数量发生变化");
+        assertEquals(451, edges.size(), "切换表展开后的有向边数量发生变化");
         Pose[] base = Rig.zeroPose();
         for (Edge edge : edges) {
             AnimationPlayer player = new AnimationPlayer();

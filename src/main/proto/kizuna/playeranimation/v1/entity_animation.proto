@@ -14,6 +14,7 @@ message EntityAnimationRequest {
     Play play = 3;
     Stop stop = 4;
     Clear clear = 5;
+    Automatic automatic = 6;
   }
 }
 
@@ -44,6 +45,14 @@ message Stop {
 
 message Clear {
   int32 entity_id = 1;
+}
+
+// 客户端状态驱动的底层；显式 Play 始终在此层之上取样。
+message Automatic {
+  int32 entity_id = 1;
+  string base_animation_id = 2;
+  string action_animation_id = 3;
+  float action_progress = 4;
 }
 
 message EntityAnimationResponse {

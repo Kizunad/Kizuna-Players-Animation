@@ -44,16 +44,28 @@ public final class MobAnimationRenderer {
     }
 
     public static void frame(LivingEntity entity, EntityModel<?> vanilla, float tickDelta) {
-        AnimationPlayer animation = PlayerAnimationClient.PLAYBACK.entity(entity.getId());
+        // 自动层完全替代原版姿态；显式动作最后混合，结束后回到持续推进的移动层。
+        int entityId = entity.getId();
+        AnimationPlayer animation = PlayerAnimationClient.PLAYBACK.entity(entityId);
+        AnimationPlayer automatic = PlayerAnimationClient.PLAYBACK.automaticEntity(entityId);
         MobAnimationRegistry.Model model = MobAnimationRegistry.model(entity);
-        if (animation == null || model == null) {
+        if (animation == null && automatic == null || model == null) {
             return;
         }
-        Pose[] base = basePose(vanilla);
         double now = PlayerPlayback.now(tickDelta);
-        Pose[] sampled = animation.sample(base, now, false /* firstPerson */, entity.isInSneakingPose());
+        boolean crouching = entity.isInSneakingPose();
+        Pose[] base;
+        if (automatic == null) {
+            base = basePose(vanilla);
+        } else {
+            base = automatic.sample(Rig.zeroPose(), now, false /* firstPerson */, crouching);
+        }
+        Pose[] sampled = base;
+        if (animation != null) {
+            sampled = animation.sample(base, now, false /* firstPerson */, crouching);
+        }
         Matrix4f[] matrices = Rig.matrices(model.body().skeleton(), sampled);
-        FRAMES.put(entity.getId(), new Frame(model, matrices));
+        FRAMES.put(entityId, new Frame(model, matrices));
     }
 
     public static Frame frame(int entityId) {
