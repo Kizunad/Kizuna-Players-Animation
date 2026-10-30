@@ -34,6 +34,9 @@ GIF 与接触表在 `build/anim-review/combat-stance/<id>/`（粗臂、细臂各
 
 合计 8116 个关键帧。门禁列是导出资源在 `scripts/analyze_animation.py` 上的实测（Gradle `checkAnimationGates` 已加入这 22 段）。
 
+追加（2026-10-30）：轻身跃步 `technique_leap`（[规格](technique_leap.md)），保持 0.40 s，全身（full，17），宿主起跳时开始、落地或中断时停止，落地缓冲由下层 `jump` 承担；24 骨 / 379 关键帧，粗、细臂全部适用项通过。不计入上面 22 段与合计。
+轻身的跃步表现现借用 `technique_dash`；Basic 目录改用 `technique_leap` 归整合会话，`technique_dash_*` 资源保留。
+
 ## 2. 架势基准
 
 细节见 [stance_idle](stance_idle.md) 第 3 节。右手为主手，左主手按主副手镜像模板整套左右互换。左（前）脚全掌；右（后）脚提踵（脚底 −35°、脚趾背伸 10°，脚趾前缘承重），踝抬到 `(−1.7, 1.72, 3.2)`；
@@ -130,6 +133,10 @@ N5 受击是被动动作，去掉“迎劲”，索引声明 `reaction: hit` 由
 - **动作中途持斧穿头**（2026-10-29 记，单独任务，之后再排，第 2 项未改）：护手位已让开，以下是动作本身的手臂轨迹或手势贴脸，要改已验收的手臂动作，主手、副手都有。数值为斧子到头盒的最小间隙（px，负值为插入），用原型 `axe_survey.py` 按真实斧子几何逐帧量：
   - 副手：`dodge_right` −0.57（0.33–0.47 s）、`technique_dash_back` −0.20（0.20–0.27 s）、`technique_dash_right` −0.54（0.20–0.28 s）、`block_two_hand` / `_hit` −1.54 / −1.36（双腕额前交叉的保持段）、`technique_breath` −0.47（按掌段）、`technique_charge` −2.80（胸前交叉段）；
   - 主手：`dodge_left` −0.34（0.33–0.43 s）、`technique_dash_forward` −0.58、`technique_dash_back` −2.25、`technique_dash_left` −2.18、`technique_dash_right` −0.96、`technique_breath` −0.65（1.15–1.68 s）、`technique_charge` −0.63（0.32–0.65 s）。
+- **`stance_idle` 架势帧持物穿头**（2026-10-30 记，破门斩持物手覆盖层审阅第 7 条，见 [door_breaker_guard](door_breaker_guard.md) 第 5.3 节末）：另一只手在架势持物位拿东西时自带的接触，与覆盖层无关。
+  - 副手版（右手持物）：盾把手插头 1.6 px，16×16 满格贴图插头 2.5 px，右前臂擦胸 / 腰约 1 px（盒心不进躯干，门禁不算）；
+  - 主手版（左手持物）：满格贴图擦头 1.0 px；
+  - 要改架势持物位，单独排。
 
 ## 8. 设计期原型脚本
 

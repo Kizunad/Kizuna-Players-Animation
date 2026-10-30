@@ -112,9 +112,10 @@ def compose(parent: Transform, local_matrix: tuple[float, ...], local_offset: Ve
     return Transform(matrix, parent.point(local_offset))
 
 
-def vec_from_json(value: Any, channel: str) -> Vec:
+def vec_from_json(value: Any, channel: str, side: str = "post") -> Vec:
+    # side 选跳变帧的哪一侧：帧左侧取 pre，到达帧及其右侧取 post；单值帧两侧相同。
     if isinstance(value, dict):
-        value = value.get("post", value.get("pre"))
+        value = value.get(side, value.get("post", value.get("pre")))
     if not isinstance(value, list) or len(value) != 3:
         raise ValueError(f"JSON {channel} 关键帧不是三元向量: {value!r}")
     values = tuple(float(number) for number in value)
@@ -137,16 +138,18 @@ class AnimationSampler:
         self.hold = self.animation.get("loop") == "hold_on_last_frame"
         self.tracks = self.animation.get("bones", {})
 
-    def _frames(self, bone: str, channel: str) -> list[tuple[float, Vec, str]]:
+    def _frames(self, bone: str, channel: str) -> list[tuple[float, Vec, str, Vec]]:
+        """(时间, post, 插值, pre)；单值帧 pre 等于 post。"""
         raw = self.tracks.get(bone, {}).get(channel)
         if raw is None:
-            return [(0.0, (0.0, 0.0, 0.0), "linear")]
+            return [(0.0, (0.0, 0.0, 0.0), "linear", (0.0, 0.0, 0.0))]
         if isinstance(raw, list):
-            return [(0.0, raw_frame_value(raw, channel), "linear")]
+            value = raw_frame_value(raw, channel)
+            return [(0.0, value, "linear", value)]
         frames = []
         for time, value in raw.items():
             mode = value.get("lerp_mode", "linear") if isinstance(value, dict) else "linear"
-            frames.append((float(time), raw_frame_value(value, channel), mode))
+            frames.append((float(time), raw_frame_value(value, channel), mode, vec_from_json(value, channel, "pre")))
         return sorted(frames)
 
     def value(self, bone: str, channel: str, time: float, wrap: bool = True) -> Vec:
@@ -161,16 +164,24 @@ class AnimationSampler:
             return frames[-1][1]
         for index in range(1, len(frames)):
             right = frames[index]
-            if time <= right[0]:
+            # 与运行时 Channel 一致：到达帧时取 post，帧左侧的区间终点取 pre。
+            if time < right[0]:
                 left = frames[index - 1]
                 amount = (time - left[0]) / (right[0] - left[0])
                 if right[2] == "catmullrom":
-                    p0 = frames[index - 2][1] if index >= 2 else (frames[-1][1] if self.loop else left[1])
-                    p3 = frames[index + 1][1] if index + 1 < len(frames) else (frames[0][1] if self.loop else right[1])
-                    return catmull(p0, left[1], right[1], p3, amount)
+                    # 跳变帧（pre ≠ post）一侧的切线端点用它自己的 post / pre，不跨过跳变取邻帧。
+                    if left[3] != left[1]:
+                        p0 = left[1]
+                    else:
+                        p0 = frames[index - 2][1] if index >= 2 else (frames[-1][1] if self.loop else left[1])
+                    if right[3] != right[1]:
+                        p3 = right[3]
+                    else:
+                        p3 = frames[index + 1][3] if index + 1 < len(frames) else (frames[0][3] if self.loop else right[3])
+                    return catmull(p0, left[1], right[3], p3, amount)
                 if right[2] == "step":
                     return left[1]
-                return lerp(left[1], right[1], amount)
+                return lerp(left[1], right[3], amount)
         return frames[-1][1]
 
     def local_pose(self, time: float, wrap: bool = True) -> dict[str, dict[str, Vec]]:

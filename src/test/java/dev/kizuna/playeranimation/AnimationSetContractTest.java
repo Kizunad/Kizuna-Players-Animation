@@ -32,7 +32,9 @@ class AnimationSetContractTest {
     private static final double SWING_LEAD_SECONDS = 0.1;
     private static final float SWING_PROGRESS = 0.3f;
     private static final Map<String, Double> DOOR_HITS = Map.of(
-            "door_breaker_knock", 1.7, "door_breaker_cleave", 3.2, "door_breaker_ram", 2.4);
+            "door_breaker_knock", 1.7, "door_breaker_cleave", 3.2, "door_breaker_ram", 2.4,
+            "door_breaker_hook", 2.05, "door_breaker_sweep", 3.7, "door_breaker_close", 2.6,
+            "door_breaker_chain", 5.0, "door_breaker_finale", 4.85);
 
     @Test
     void everyRequestedActionIsIndexedAndParsesFromThePackagedResource() throws Exception {
@@ -70,7 +72,10 @@ class AnimationSetContractTest {
                 "technique_dash_left", "technique_dash_right", "block_one_hand", "block_one_hand_hit",
                 "block_two_hand", "block_two_hand_hit", "technique_breath", "technique_charge",
                 "door_breaker_knock", "door_breaker_knock_off", "door_breaker_cleave", "door_breaker_cleave_off",
-                "door_breaker_ram", "door_breaker_ram_off"), ids);
+                "door_breaker_ram", "door_breaker_ram_off", "door_breaker_hook", "door_breaker_hook_off",
+                "door_breaker_sweep", "door_breaker_sweep_off", "door_breaker_close", "door_breaker_close_off",
+                "door_breaker_chain", "door_breaker_chain_off", "door_breaker_finale", "door_breaker_finale_off",
+                "door_breaker_guard", "door_breaker_guard_off", "technique_leap"), ids);
         // 已交付标记必须与打包资源一致：调度只请求已交付动作，未打包的动作不得标为已交付。
         for (PlayerAnimationAction action : PlayerAnimationAction.values()) {
             assertEquals(ids.contains(action.id()), action.delivered(), action.id());
@@ -162,6 +167,31 @@ class AnimationSetContractTest {
     }
 
     @Test
+    void leapKeepsItsLegsUnderUpperBodyActionsWithoutJumpBelow() throws Exception {
+        // 怪物跃步下层没有 jump：攻击（20）与蓄力（17，后起）叠上来只取上身，腿仍是跃步。
+        for (String upper : new String[]{"attack_main", "technique_charge"}) {
+            AnimationPlayer combined = new AnimationPlayer();
+            combined.play(resource("technique_leap"), 0, false);
+            if (upper.equals("attack_main")) {
+                combined.scrub(resource(upper), 0.1, 0.12f, false);
+            } else {
+                combined.play(resource(upper), 0.1, false);
+            }
+            AnimationPlayer alone = new AnimationPlayer();
+            alone.play(resource("technique_leap"), 0, false);
+            Pose[] expected = alone.sample(Rig.zeroPose(), 0.3, false);
+            Pose[] actual = combined.sample(Rig.zeroPose(), 0.3, false);
+            for (BoneId bone : BoneId.ALL) {
+                if (AnimationEntry.Mask.LOWER.includes(bone)) {
+                    assertEquals(expected[bone.ordinal()], actual[bone.ordinal()], upper + ":" + bone.key);
+                }
+            }
+            assertNotEquals(expected[BoneId.R_FOREARM.ordinal()], actual[BoneId.R_FOREARM.ordinal()], upper);
+        }
+    }
+
+
+    @Test
     void doorBreakerOwnsTheWholeBodyOverStanceAndVanillaSwing() throws Exception {
         // 原版挥手与专属动画在实际命中帧重叠时，不得接管专属动画的任何骨。
         for (var entry : DOOR_HITS.entrySet()) {
@@ -227,6 +257,41 @@ class AnimationSetContractTest {
         assertEquals(expected.position().y(), actual.position().y(), POSE_EPSILON, label);
         assertEquals(expected.position().z(), actual.position().z(), POSE_EPSILON, label);
     }
+
+    @Test
+    void doorBreakerGuardOwnsOnlyTheHoldingArm() throws Exception {
+        // 持物手覆盖层（优先级 25）叠在双手式上：收臂到位后持物臂 6 根骨等于覆盖层末帧，其余骨照该式单独播放；
+        // 左主手玩家两层一起镜像，覆盖臂落到另一侧。
+        String[][] layers = {{"door_breaker_cleave", "door_breaker_guard"}, {"door_breaker_cleave_off", "door_breaker_guard_off"}};
+        for (String[] layer : layers) {
+            AnimationEntry.Mask guardMask = resource(layer[1]).mask();
+            for (boolean leftHanded : new boolean[]{false, true}) {
+                AnimationPlayer combined = new AnimationPlayer();
+                combined.play(resource("stance_idle"), 0, leftHanded);
+                combined.play(resource(layer[0]), 0, leftHanded);
+                combined.play(resource(layer[1]), 0, leftHanded);
+                AnimationPlayer alone = new AnimationPlayer();
+                alone.play(resource("stance_idle"), 0, leftHanded);
+                alone.play(resource(layer[0]), 0, leftHanded);
+                AnimationPlayer guard = new AnimationPlayer();
+                guard.play(resource(layer[1]), 0, leftHanded);
+                for (double time : new double[]{0.5, 1.7, 3.0}) {
+                    Pose[] technique = alone.sample(Rig.zeroPose(), time, false);
+                    Pose[] held = guard.sample(Rig.zeroPose(), time, false);
+                    Pose[] actual = combined.sample(Rig.zeroPose(), time, false);
+                    for (BoneId bone : BoneId.ALL) {
+                        BoneId source = leftHanded ? bone.mirrored() : bone;
+                        Pose want = guardMask.includes(source) ? held[bone.ordinal()] : technique[bone.ordinal()];
+                        assertPose(want, actual[bone.ordinal()], layer[1] + (leftHanded ? "[左主手]@" : "@") + time + ":" + bone.key);
+                    }
+                }
+                BoneId forearm = BoneId.named((guardMask == AnimationEntry.Mask.L_ARM) != leftHanded ? "l_forearm" : "r_forearm");
+                assertNotEquals(alone.sample(Rig.zeroPose(), 1.7, false)[forearm.ordinal()],
+                        combined.sample(Rig.zeroPose(), 1.7, false)[forearm.ordinal()], layer[1]);
+            }
+        }
+    }
+
 
     @Test
     void sneakBasesKeepTheirLegsUnderToolOverlays() throws Exception {

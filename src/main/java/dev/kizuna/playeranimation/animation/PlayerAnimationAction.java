@@ -90,6 +90,11 @@ public enum PlayerAnimationAction {
     TECHNIQUE_BREATH("technique_breath", 40),
     TECHNIQUE_CHARGE("technique_charge", 40),
     /**
+     * 轻身跃步（docs/animation-specs/technique_leap.md）：0.40 s 蹬地前冲、收腿前伸后保持到落地，
+     * 宿主在落地或中断时停止；落地缓冲由下层 {@code jump} 承担。
+     */
+    TECHNIQUE_LEAP("technique_leap"),
+    /**
      * 破门斩（docs/animation-specs/door_breaker_knock.md）。宿主起手时按真实时间播放，承接时用 start_tick
      * 前推到承接入口；整段全身，优先级高于服务端每次打击另调的原版挥手。
      */
@@ -100,7 +105,29 @@ public enum PlayerAnimationAction {
     DOOR_BREAKER_CLEAVE_OFF("door_breaker_cleave_off", 120),
     /** 撞门（docs/animation-specs/door_breaker_ram.md）：低身冲两步、肩撞、回身横撩，5.0 秒；冲刺段原地迈步，位移由冲量负责。 */
     DOOR_BREAKER_RAM("door_breaker_ram", 100),
-    DOOR_BREAKER_RAM_OFF("door_breaker_ram_off", 100);
+    DOOR_BREAKER_RAM_OFF("door_breaker_ram_off", 100),
+    /** 破盾（docs/animation-specs/door_breaker_hook.md）：单手越沿一钩、撤步后坐拽回，4.5 秒；2.05 秒击中。 */
+    DOOR_BREAKER_HOOK("door_breaker_hook", 90),
+    DOOR_BREAKER_HOOK_OFF("door_breaker_hook_off", 90),
+    /** 横扫（docs/animation-specs/door_breaker_sweep.md）：单手抡斧、绕前脚原地旋身一整圈，6.0 秒；3.70 秒末击，root 3.00–4.25 秒转 360°。 */
+    DOOR_BREAKER_SWEEP("door_breaker_sweep", 120),
+    DOOR_BREAKER_SWEEP_OFF("door_breaker_sweep_off", 120),
+    /** 掩门（docs/animation-specs/door_breaker_close.md）：推掌撤两步、深蹲后坐、翻斧向前上顶撩、横斧落闩，5.0 秒；2.60 秒击中。 */
+    DOOR_BREAKER_CLOSE("door_breaker_close", 100),
+    DOOR_BREAKER_CLOSE_OFF("door_breaker_close_off", 100),
+    /** 连门（docs/animation-specs/door_breaker_chain.md）：双手叠握连斩三刀、左右来回拧，前两刀垫步、第三刀弓步横斩，8.0 秒；5.00 秒末击。 */
+    DOOR_BREAKER_CHAIN("door_breaker_chain", 160),
+    DOOR_BREAKER_CHAIN_OFF("door_breaker_chain_off", 160),
+    /** 万门一斩（docs/animation-specs/door_breaker_finale.md）：双手叠握荡斧、竖斧蹲蓄、起跳、落地竖劈、折身喘气，9.0 秒；2.30 秒前荡轻击、4.85 秒落地竖劈击中。 */
+    DOOR_BREAKER_FINALE("door_breaker_finale", 180),
+    DOOR_BREAKER_FINALE_OFF("door_breaker_finale_off", 180),
+    /**
+     * 持物手覆盖层（docs/animation-specs/door_breaker_guard.md）：破门、连门、万门一斩起手时另一只手非空，
+     * 与该式同起，只接管持物那条手臂（主手版 l_arm、副手版 r_arm），0.40 秒收到体侧后保持；
+     * 承接时不重播，宿主在该式淡完后显式停止。
+     */
+    DOOR_BREAKER_GUARD("door_breaker_guard"),
+    DOOR_BREAKER_GUARD_OFF("door_breaker_guard_off");
 
     private final String id;
     private final int naturalDurationTicks;

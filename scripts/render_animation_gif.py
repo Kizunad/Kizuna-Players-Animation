@@ -72,6 +72,26 @@ KEY_TIMES = {
     # （door_breaker_ram.md 第 10 节）
     "door_breaker_ram": (0.0, 0.40, 0.80, 1.20, 1.50, 1.55, 1.70, 1.80, 1.93, 2.05, 2.10, 2.15, 2.25, 2.32, 2.36, 2.40,
                          2.45, 2.80, 3.30, 3.50, 3.65, 4.10, 4.60, 5.0),
+    # 破盾：起、调整、外撤中、外撤落、探、探到位、定末、钩、发力中、击中、撑住、撤步中、撤步落、左拳顶出、拽到位、
+    # 拽住末、上步中、上步落、收（door_breaker_hook.md 第 10 节；撤步落地按制作结果为 2.40 s）
+    "door_breaker_hook": (0.0, 0.40, 0.65, 0.80, 1.20, 1.60, 1.80, 1.90, 1.98, 2.05, 2.10, 2.20, 2.40, 2.45, 2.60,
+                          2.90, 3.05, 3.20, 3.60, 4.00, 4.30, 4.50),
+    # 横扫：起、承接入口、外撤落、下垂、前荡到位、回拉中、蓄满、定末、右脚离地、起转、击中一、回旋、最快、击中二、
+    # 回旋、转满、落脚、收（door_breaker_sweep.md 第 10 节）
+    "door_breaker_sweep": (0.0, 0.50, 0.80, 0.95, 1.45, 2.10, 2.70, 2.90, 3.00, 3.15, 3.35, 3.50, 3.60, 3.70, 3.95,
+                           4.25, 4.30, 4.70, 5.20, 5.50, 5.80, 6.0),
+    # 掩门：起、预备、推到最远、撤步一落、前脚最高、撤步二落、回收、沉中、蓄满、翻斧中、预击、顶、击中、随、
+    # 收脚起、落脚、按上、落闩末、收中、斧到位、末帧（door_breaker_close.md 第 10 节）
+    "door_breaker_close": (0.0, 0.50, 0.78, 0.95, 1.18, 1.30, 1.60, 2.00, 2.30, 2.40, 2.50, 2.55, 2.60, 3.00,
+                           3.20, 3.45, 3.50, 3.90, 4.30, 4.70, 5.0),
+    # 连门：起、预备、蓄一中、蓄一、定一、发一、击一、低一、借力一、蓄二、发二、击二、低二、借力二、蓄三、定三颤、
+    # 弓步中、击三、随、随末、收脚起、收脚落、斧经胸前、左手离柄、回护位、末帧（door_breaker_chain.md 第 10 节）
+    "door_breaker_chain": (0.0, 0.30, 0.60, 1.00, 1.30, 1.60, 1.70, 1.95, 2.40, 2.80, 3.10, 3.20, 3.45, 3.90,
+                           4.40, 4.60, 4.90, 5.00, 5.40, 6.00, 6.20, 6.35, 6.80, 7.00, 7.50, 8.0),
+    # 万门一斩：起、握柄、预备、前迈中、回摆、前荡、提斧中、斧竖肩旁、定、深蹲、颤、蹬、蹬直、收腿、最高、迎地起、触地、
+    # 劈下中、击中、压低、静、拄斧、收脚中、收脚落、提起前、提起、左手离柄、回持物中、回架势、末帧（door_breaker_finale.md 第 10 节）
+    "door_breaker_finale": (0.0, 0.75, 1.50, 1.70, 1.90, 2.30, 2.55, 2.80, 3.20, 3.60, 3.90, 4.02, 4.08, 4.25, 4.40,
+                            4.55, 4.70, 4.79, 4.85, 4.95, 5.40, 6.00, 6.40, 6.80, 7.40, 7.80, 8.00, 8.40, 8.80, 9.0),
 }
 # 闪避：预备步离地、迈步中、预备步落地、下蹲、蹬伸离地、收腿、迎地、先后触地、缓冲、回架势各取一帧，
 # 接触表能看清“先迈脚再发力”的腿部动作链（共 12 帧）。
@@ -80,6 +100,8 @@ KEY_TIMES = {
 for _direction in ("forward", "back", "left", "right"):
     KEY_TIMES[f"dodge_{_direction}"] = (0.0, 0.03, 0.085, 0.14, 0.25, 0.32, 0.42, 0.48, 0.52, 0.56, 0.65, 0.80)
     KEY_TIMES[f"technique_dash_{_direction}"] = (0.0, 0.12, 0.22, 0.30, 0.32, 0.45, 0.59, 0.61, 0.80, 0.88, 1.01, 1.15)
+# 跃步：负载、蹬伸、离地、收腿起、收腿深、胯最高、前伸、着地姿势、末帧保持（technique_leap.md 第 9 节）。
+KEY_TIMES["technique_leap"] = (0.0, 0.05, 0.10, 0.15, 0.20, 0.24, 0.30, 0.35, 0.40)
 
 # 手持与穿戴道具。剑刃方向由原版 handheld 第三人称 display 推算（见 conventions.md），
 # 胸甲在手中显示到“胸甲上身”时刻，之后改画穿在身上的盔甲层。
@@ -90,6 +112,11 @@ PROPS = {
     "door_breaker_knock": ({"kind": "axe", "bone": "r_item"},),
     "door_breaker_cleave": ({"kind": "axe", "bone": "r_item"},),
     "door_breaker_ram": ({"kind": "axe", "bone": "r_item"},),
+    "door_breaker_hook": ({"kind": "axe", "bone": "r_item"},),
+    "door_breaker_sweep": ({"kind": "axe", "bone": "r_item"},),
+    "door_breaker_close": ({"kind": "axe", "bone": "r_item"},),
+    "door_breaker_chain": ({"kind": "axe", "bone": "r_item"},),
+    "door_breaker_finale": ({"kind": "axe", "bone": "r_item"},),
     # 下列道具的端点由原版物品模型的 thirdperson_righthand display 经游戏内挂点变换
     # （Rig.itemTransform：rotX(−90°)·rotY(180°)，再做 toVanilla 的 Y 反射）换算到 r_item 局部像素。
     "spyglass": ({"kind": "segments", "bone": "r_item", "parts": (
@@ -127,18 +154,26 @@ PROPS["crossbow_hold"] = PROPS["crossbow_charge"]
 VANILLA_JUMP_Y = (0, 0.42, 0.7532, 1.0013, 1.166, 1.249, 1.252, 1.1766, 1.024, 0.796, 0.4943, 0.12, 0.0)
 
 
-def jump_lift_px(time: float) -> float:
-    if time >= 0.60:
-        return 0.0
+# 跃步平地 6 格（10 tick，起跳竖直速度 0.366 格/tick）的实体高度，按现行求解器逐 tick 积分；0.50 s 落地后归零。
+LEAP_FLAT6_Y = (0, 0.3659, 0.646, 0.8421, 0.956, 0.9891, 0.9432, 0.8198, 0.6204, 0.3467, 0.0)
+
+
+def tick_lift_px(heights: tuple[float, ...], time: float) -> float:
     ticks = time * 20
+    if ticks >= len(heights) - 1:
+        return 0.0
     index = int(ticks)
     amount = ticks - index
-    low = VANILLA_JUMP_Y[index]
-    high = VANILLA_JUMP_Y[min(index + 1, len(VANILLA_JUMP_Y) - 1)]
+    low = heights[index]
+    high = heights[index + 1]
     return (low + (high - low) * amount) * 16
 
 
-ROOT_PREVIEW = {"jump": jump_lift_px}
+def jump_lift_px(time: float) -> float:
+    return tick_lift_px(VANILLA_JUMP_Y, time)
+
+
+ROOT_PREVIEW = {"jump": jump_lift_px, "technique_leap": lambda time: tick_lift_px(LEAP_FLAT6_Y, time)}
 
 # 原版驱动预览：按调度规则把剪辑时间拼成一段（起点, 终点, 重复次数），以慢放输出。
 # mine：连续挖掘时原版每 4 tick 重开挥动，剪辑在 0–0.20 s 回绕；停手后再播一次完整挥动与收势。

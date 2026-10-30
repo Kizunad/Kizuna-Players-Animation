@@ -52,12 +52,18 @@ def loop_value(value: str) -> bool | str:
     return False
 
 
-def channel_value(keyframe: dict[str, Any], channel: str) -> list[int | float]:
+def channel_value(keyframe: dict[str, Any], channel: str) -> tuple[list[int | float] | None, list[int | float]]:
+    """返回 (pre, post)；单值帧 pre 为 None。
+
+    Blockbench 的跳变帧有两个 data_point：[0] 是帧左侧的前值（pre），[1] 是到达帧及其右侧的后值（post），
+    导出为 Bedrock 的 pre / post。两个值与单值同样换号。
+    """
     points = keyframe.get("data_points")
-    if not isinstance(points, list) or len(points) != 1 or not isinstance(points[0], dict):
-        raise ValueError(f"{channel} 关键帧必须只有一个 data_point: {keyframe}")
+    if not isinstance(points, list) or len(points) not in (1, 2) or not all(isinstance(point, dict) for point in points):
+        raise ValueError(f"{channel} 关键帧必须有一个或两个 data_point: {keyframe}")
     signs = ROTATION_SIGN if channel == "rotation" else POSITION_SIGN
-    return vector(points[0], signs)
+    values = [vector(point, signs) for point in points]
+    return (values[0] if len(values) == 2 else None), values[-1]
 
 
 def export_channel(keyframes: list[dict[str, Any]], channel: str) -> list[int | float] | dict[str, Any]:
@@ -65,18 +71,25 @@ def export_channel(keyframes: list[dict[str, Any]], channel: str) -> list[int | 
         raise ValueError(f"空动画通道: {channel}")
     frames = sorted(keyframes, key=lambda frame: number(frame["time"]))
     if len(frames) == 1 and number(frames[0]["time"]) == 0:
-        return channel_value(frames[0], channel)
+        pre, value = channel_value(frames[0], channel)
+        if pre is not None:
+            raise ValueError(f"{channel} 常量通道不能是跳变帧: {frames[0]}")
+        return value
 
     result: dict[str, Any] = {}
     for frame in frames:
         mode = frame.get("interpolation", "linear")
-        value = channel_value(frame, channel)
-        # Blockbench 的 Bedrock 导出器对 linear 关键帧直接写向量；只有
-        # catmullrom/step 等需要插值语义的帧才写 pre/post 对象。
-        if mode == "linear" and "pre" not in frame and "post" not in frame:
+        pre, value = channel_value(frame, channel)
+        # Blockbench 的 Bedrock 导出器对 linear 单值关键帧直接写向量；
+        # catmullrom/step 等需要插值语义的帧和跳变帧才写 pre/post 对象。
+        if mode == "linear" and pre is None and "pre" not in frame and "post" not in frame:
             result[time_key(number(frame["time"]))] = value
             continue
-        entry: dict[str, Any] = {"post": value, "lerp_mode": mode}
+        entry: dict[str, Any] = {}
+        if pre is not None:
+            entry["pre"] = pre
+        entry["post"] = value
+        entry["lerp_mode"] = mode
         # Blockbench 的 step 导出可能携带显式 pre/post；保留它们而不猜测。
         if "pre" in frame:
             entry["pre"] = frame["pre"]

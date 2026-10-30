@@ -158,7 +158,7 @@
 
 ### 架势上的一次性 / 保持动作
 
-“静止全身”指底层是 `stance_idle` 时整段生效（这些剪辑的腿锁在同一组架势踝位）；底层是移动架势、进出过渡、闪避或轻步时只取上身——`AnimationPlayer` 已按此实现。
+“静止全身”指底层是 `stance_idle` 时整段生效（这些剪辑的腿锁在同一组架势踝位）；底层是移动架势、进出过渡、闪避、轻步或跃步时只取上身——`AnimationPlayer` 已按此实现。
 
 | 来源 → 目标 | 淡入 / 淡出 | 触发 | 约束 |
 | --- | ---: | --- | --- |
@@ -187,11 +187,35 @@
 | door_breaker_cleave / door_breaker_cleave_off → stance_idle | 0.25 / 0.25 | 6.0 s 播完 | 淡回架势底层 |
 | stance_idle → door_breaker_ram / door_breaker_ram_off | 0.10 / 0.25 | 宿主在撞门起手时播放（副手出手播 `_off`） | 起止姿态等于 `stance_idle` 首帧；按真实时间播 5.0 s；冲刺段原地迈步、实体由冲量推动；掩门后承接从 0.40 s 起播 |
 | door_breaker_ram / door_breaker_ram_off → stance_idle | 0.25 / 0.25 | 5.0 s 播完 | 淡回架势底层 |
+| stance_idle → door_breaker_hook / door_breaker_hook_off | 0.10 / 0.25 | 宿主在破盾起手时播放（副手出手播 `_off`） | 起止姿态等于 `stance_idle` 首帧；按真实时间播 4.5 s；施放期间 0.4 倍移速走动时仍整段接管；叩门后承接从 0.40 s 起播 |
+| door_breaker_hook / door_breaker_hook_off → stance_idle | 0.25 / 0.25 | 4.5 s 播完 | 淡回架势底层 |
+| stance_idle → door_breaker_sweep / door_breaker_sweep_off | 0.10 / 0.25 | 宿主在横扫起手时播放（副手出手播 `_off`） | 起止姿态等于 `stance_idle` 首帧；按真实时间播 6.0 s；`root` 3.00–4.25 s 绕前脚原地转一整圈；起手被伤害打断淡出 0.20 s（3.00–3.35 s 打断时已转的 `root` 角会倒转回去）；叩门后承接从 0.50 s 起播 |
+| door_breaker_sweep / door_breaker_sweep_off → stance_idle | 0.25 / 0.25 | 6.0 s 播完 | 淡回架势底层；末帧 `root` 为 0，淡出不倒转 |
+| stance_idle → door_breaker_close / door_breaker_close_off | 0.10 / 0.25 | 宿主在掩门起手时播放（副手出手播 `_off`） | 起止姿态等于 `stance_idle` 首帧；按真实时间播 5.0 s；两次撤步原地迈步、实体由冲量推动（方向由目录给） |
+| door_breaker_close / door_breaker_close_off → stance_idle | 0.25 / 0.25 | 5.0 s 播完 | 淡回架势底层 |
+| stance_idle → door_breaker_chain / door_breaker_chain_off | 0.10 / 0.25 | 宿主在连门起手时播放（副手出手播 `_off`） | 起止姿态等于 `stance_idle` 首帧；按真实时间播 8.0 s；两次垫步、弓步原地做，实体由三次冲量推动（方向由目录给）；起手 0–1.55 s 被伤害打断淡出 0.20 s；万门一斩从 6.50 s 起承接，承接边等承接接线时再加 |
+| door_breaker_chain / door_breaker_chain_off → stance_idle | 0.25 / 0.25 | 8.0 s 播完 | 淡回架势底层 |
+| stance_idle → door_breaker_finale / door_breaker_finale_off | 0.10 / 0.25 | 宿主在万门一斩起手时播放（副手出手播 `_off`） | 起止姿态等于 `stance_idle` 首帧；按真实时间播 9.0 s，游戏里总作后式从 1.50 s 起播（承接接线与 `start_tick` 归整合会话）；起跳腾空由两次冲量推动；起手 0–4.05 s 被伤害打断淡出 0.20 s；破门、连门 → 万门一斩的承接边等承接接线时再加 |
+| door_breaker_finale / door_breaker_finale_off → stance_idle | 0.25 / 0.25 | 9.0 s 播完 | 淡回架势底层 |
+| door_breaker_cleave / door_breaker_chain / door_breaker_finale → door_breaker_guard | 0.10 / 0.25 | 双手式起手时另一只手非空，宿主同 tick 叠播 | 只接管左臂（左主手玩家镜像到右臂），其余骨照该式；承接时保持不重播 |
+| door_breaker_cleave_off / door_breaker_chain_off / door_breaker_finale_off → door_breaker_guard_off | 0.10 / 0.25 | 同上（副手出手） | 只接管右臂 |
+| door_breaker_guard / door_breaker_guard_off → stance_idle | 0.25 / 0.25 | 宿主在该式淡完后显式停止（[door_breaker_guard](door_breaker_guard.md) 第 9 节第 4 条） | 淡回架势持物位 |
 
 功法上层（优先级 17）低于攻击（20）：施放调息/蓄力时出手，攻击接管手臂与躯干上段，功法剪辑继续计时，攻击结束后淡回功法当前时刻的姿态。
 
 ### 叠加组合回归
 
 `AnimationSetContractTest` 用真实资源验证：`stance_idle` / `stance_walk_left` / `stance_run` + `attack_main`（腿保持架势底层）、`stance_idle` + `block_one_hand`（整段生效）、
-`stance_walk_forward` + `technique_charge`（只取上身）。其余组合（`block_two_hand+block_two_hand_hit`、`dodge_left+technique_charge`、`technique_dash_forward+attack_main`、
+`stance_walk_forward` + `technique_charge`（只取上身）、`stance_idle` + `door_breaker_cleave` + `door_breaker_guard`（覆盖层只接管左臂，左主手玩家镜像到右臂）。其余组合（`block_two_hand+block_two_hand_hit`、`dodge_left+technique_charge`、`technique_dash_forward+attack_main`、
 `stance_enter+attack_main`、格挡中闪避）随调用方接线时补充。
+
+## 轻身跃步（2026-10-30 已交付资源）
+
+规格见 [technique_leap](technique_leap.md)。基础功法「轻步」状态「轻身」中跳跃键改为一次定点跃步；本仓库只交付资源、ID 和播放层次，**起跳、落地与中断时的 `START` / `STOP` 由宿主负责**，原版调度不会请求这段。
+`mask: full`、优先级 17：盖住玩家下层的 `jump`（16），落地 `STOP` 后露出 `jump` 落地段 6 tick 作缓冲；怪物下层没有 `jump`，落地直接淡回底层。
+`technique_leap` 在 `AnimationPlayer` 的移动底层集合里：攻击、穿戴、调息、蓄力等上身动作叠在跃步上只取上身，腿仍是跃步（玩家、怪物相同）。
+
+| 来源 → 目标 | 淡入 / 淡出 | 触发 | 约束 |
+| --- | ---: | --- | --- |
+| stand / walk / run / jump_land / stance_idle / stance_walk_forward / stance_walk_back / stance_walk_left / stance_walk_right / stance_run → technique_leap | 0.05 / 0.10 | 跃步起跳（服务端 `START`） | 全身；0.40 s 蹬地前冲、收腿前伸后保持到落地；连跳时从 `jump` 落地段淡入首帧负载姿势 |
+| technique_leap → jump_land / stand / stance_idle / swim / ride | 0.05 / 0.10 | 落地或中断（服务端 `STOP`） | 冻结后淡出 0.10 s；玩家落地露出 `jump` 落地段 6 tick；落水、上坐骑转 `swim` / `ride`；丢失 `STOP` 时一直保持末帧，不加兜底时长 |
