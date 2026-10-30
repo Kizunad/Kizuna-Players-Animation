@@ -34,10 +34,13 @@ GIF 与接触表在 `build/anim-review/combat-stance/<id>/`（粗臂、细臂各
 
 合计 8116 个关键帧。门禁列是导出资源在 `scripts/analyze_animation.py` 上的实测（Gradle `checkAnimationGates` 已加入这 22 段）。
 
+追加（2026-10-30）：轻身跃步 `technique_leap`（[规格](technique_leap.md)），保持 0.40 s，全身（full，17），宿主起跳时开始、落地或中断时停止，落地缓冲由下层 `jump` 承担；24 骨 / 379 关键帧，粗、细臂全部适用项通过。不计入上面 22 段与合计。
+轻身的跃步表现现借用 `technique_dash`；Basic 目录改用 `technique_leap` 归整合会话，`technique_dash_*` 资源保留。
+
 ## 2. 架势基准
 
 细节见 [stance_idle](stance_idle.md) 第 3 节。右手为主手，左主手按主副手镜像模板整套左右互换。左（前）脚全掌；右（后）脚提踵（脚底 −35°、脚趾背伸 10°，脚趾前缘承重），踝抬到 `(−1.7, 1.72, 3.2)`；
-胯 `(0.15, −1.8, 0.6)` / `(−6, 12, 0)`，双膝屈 58° / 75°；前拳在左肩前方下巴高、拳峰朝前，后拳护右下颌侧前方、肘下沉贴肋，两拳不重叠；头收下巴。
+胯 `(0.15, −1.8, 0.6)` / `(−6, 12, 0)`，双膝屈 58° / 75°；前拳在左肩前方下巴高、拳峰朝前（2026-10-29 起腕旋后 35°，副手持斧不穿头，见第 6 节），后拳护右下颌侧前方、肘下沉贴肋，两拳不重叠；头收下巴。
 
 ## 3. 审阅决定
 
@@ -84,11 +87,57 @@ N5 受击是被动动作，去掉“迎劲”，索引声明 `reaction: hit` 由
   生成器改为 `d_dash.py` 自带的 `SprintFoot`（每只脚多段“着地锁定 / 摆动”），仍用 `chain.build_chain` 求解（σ = 1.2 帧平滑）；`chain.py` 与 `d_dodge.py` 未改。
   接触表 12 帧改为起手、每一步的离地与着地、高抬膝、制动、撤步、回架势。只重装这 4 段，其余 18 段（含闪避 4 段，与验收备份逐字比对）的 `.bbmodel` 动画数据、导出 JSON、索引条目逐字未变。
 
-## 6. 仍待解决
+## 6. 架势左护手位让头（2026-10-29，破门斩第 2 项）
+
+**原因**：副手拿斧子时（叩门副手版的首尾帧就是架势），原左护手位下斧柄向内、向后倒，斧头插进头盒。22 段都从同一基准派生，全部受影响：
+按真实斧子几何逐帧量，副手斧子到头盒的最小间隙在 22 段里都是负值，即插进头里 −0.9～−2.8 px。
+
+**改动**（原型 `base.py`）：
+- 左腕 `L_HAND` `(6, −4, −18)` → `(6, −35, −18)`：多旋后 31°，柄改为竖直略外倾；
+- 左拳 `L_TARGET` `(3.8, 23.6, −10.2)` → `(4.3, 23.6, −10.2)`：外移 0.5 px。只改腕时肘被带向内 0.27 px，`stance_enter` 单脚撑那一帧（0.30 s）的重心横向余量会从 0.037 px 掉到 −0.023 px；外移后回到 +0.005 px。
+- 新护手位：左上臂 `(58.6, −20.3, 19.8)`、肘 64.6°。右手、躯干、腿不变。
+
+**离开护位的左手手势保持原样**（调息托掌 / 按掌、蓄力交叉与拉拳、双手格挡握持）：这些帧的左手朝向和手臂 IK 起点仍按原护手位给（`GESTURE_L_HAND`、`GESTURE_L_TARGET`、`gesture_l_arm()`），与验收版逐字相同；
+只有起止回到护位的帧变。`block_two_hand_hit` 完全没变。
+
+**重新生成**：22 段全部用同一原型重装，只有 `l_upper_arm` / `l_forearm` / `l_hand` 三条轨道变（上臂 ≤ 8.6°、肘 ≤ 13.3°、腕 31°～34°），关键帧时刻、骨数、关键帧数都不变；索引条目原位不动。设计稿的门禁行和附表左臂三行已按新实测刷新。
+
+**衔接复查**（各段首末帧对 `stance_idle` 首帧、进入末帧、退出首帧、保持帧对受击首帧，逐骨最大角度差，改前 / 改后）：
+- 除一条外全部相同：架势本身变了，各段起止也跟着变，相对差值不变。
+- 例外是 `block_two_hand` 保持帧回到 `stance_idle`（淡出 0.15 s）：左上臂差 32.6° → 40.4°。原因是格挡手势保持原样，而护手位变了。
+- 状态切换回归（`AnimationTransitionContractTest`）用合成夹具，不读真实资源，这项靠上面的逐对比对。
+
+**副手斧子到头盒的间隙**（最小值，px；负值为插入）：
+- 架势、进出、四向步法、疾跑、单手格挡及受击：全段让开（`stance_idle` 2.57、步法 2.59～2.72、`stance_exit` 1.26、疾跑 1.51、`block_one_hand` 1.15）。
+- 闪避：前 1.25、后 1.75、左 1.82；轻步：前 0.75、左 0.39。
+- 仍插入（动作中途左臂摆动或手势本身贴脸，不是护手位造成）：
+  - `dodge_right` −0.57（0.33–0.47 s）；
+  - `technique_dash_back` −0.20（0.20–0.27 s）、`technique_dash_right` −0.54（0.20–0.28 s）；
+  - `block_two_hand` / `_hit` −1.54 / −1.36（双腕额前交叉的保持段）；
+  - `technique_breath` −0.47（按掌段）、`technique_charge` −2.80（胸前交叉段）。
+- 主手斧子未改，原本就有的插入：`dodge_left` −0.34、`technique_dash_*` −0.58～−2.25、`technique_breath` −0.65、`technique_charge` −0.63。
+
+**门禁**：
+- 74 段已交付动作（不含校准）粗臂、细臂 148 份报告全部通过；
+- `./gradlew test checkAnimationGates checkAnimationAssets checkAnimationAntiForgery` 通过（测试 91 个；导出一致性 79 段）。
+
+**接触表与 GIF**：在 worktree 的 `build/anim-review/combat-stance/<id>/`（粗臂、细臂，12 fps，同验收版）；副手持斧前后对照在 `build/anim-review/combat-stance/guard-off-axe/off-axe-before-after.png`。
+
+**原型**：改动版原型在 `~/Code/Kizuna-remote-session/handoff/kpa-stance-guard-proto/`（`kpa-combat-stance-proto` 的副本，指向破门斩 worktree）。
+另有 `axe_survey.py`（逐段斧子间隙）、`guard_probe.py` / `guard_search.py`（护手位搜索）和 `doc_refresh.py`（刷新设计稿数据）。
+
+## 7. 仍待解决
 
 - 游戏内 Windows Native 录制、双客户端一致性、`slide_window` 段的世界空间滑行观感，需要触发方接线后才能做。
 - 架势状态同步、方向扇区调度、受击事件等调度在战斗 UI / 宿主侧实现。轻步按真实时间播完 1.15 s；功法的水平冲量需要覆盖冲刺段（约 0.28–0.80 s），单次 6 m/s 冲量在地面摩擦下约 0.2 s 就停，会出现“脚还在跑、人已停下”，待基础功法按冲刺重定数值时一并调整。
+- **动作中途持斧穿头**（2026-10-29 记，单独任务，之后再排，第 2 项未改）：护手位已让开，以下是动作本身的手臂轨迹或手势贴脸，要改已验收的手臂动作，主手、副手都有。数值为斧子到头盒的最小间隙（px，负值为插入），用原型 `axe_survey.py` 按真实斧子几何逐帧量：
+  - 副手：`dodge_right` −0.57（0.33–0.47 s）、`technique_dash_back` −0.20（0.20–0.27 s）、`technique_dash_right` −0.54（0.20–0.28 s）、`block_two_hand` / `_hit` −1.54 / −1.36（双腕额前交叉的保持段）、`technique_breath` −0.47（按掌段）、`technique_charge` −2.80（胸前交叉段）；
+  - 主手：`dodge_left` −0.34（0.33–0.43 s）、`technique_dash_forward` −0.58、`technique_dash_back` −2.25、`technique_dash_left` −2.18、`technique_dash_right` −0.96、`technique_breath` −0.65（1.15–1.68 s）、`technique_charge` −0.63（0.32–0.65 s）。
+- **`stance_idle` 架势帧持物穿头**（2026-10-30 记，破门斩持物手覆盖层审阅第 7 条，见 [door_breaker_guard](door_breaker_guard.md) 第 5.3 节末）：另一只手在架势持物位拿东西时自带的接触，与覆盖层无关。
+  - 副手版（右手持物）：盾把手插头 1.6 px，16×16 满格贴图插头 2.5 px，右前臂擦胸 / 腰约 1 px（盒心不进躯干，门禁不算）；
+  - 主手版（左手持物）：满格贴图擦头 1.0 px；
+  - 要改架势持物位，单独排。
 
-## 7. 设计期原型脚本
+## 8. 设计期原型脚本
 
 `~/Code/Kizuna-remote-session/handoff/kpa-combat-stance-proto/`：`d_*.py` 生成各段，`install.py` 写入 `.bbmodel` 并调用仓库导出脚本、登记索引，`summary.py` 汇总门禁与关键帧表，`w_*.py` 生成本目录的设计稿；`chain.py` 是闪避 / 轻步的腿部动作链生成器，`install.py <id...>` 可只重装指定动作。

@@ -63,7 +63,12 @@ class AnimationSetContractTest {
                 "stance_walk_left", "stance_walk_right", "stance_run", "dodge_forward", "dodge_back",
                 "dodge_left", "dodge_right", "technique_dash_forward", "technique_dash_back",
                 "technique_dash_left", "technique_dash_right", "block_one_hand", "block_one_hand_hit",
-                "block_two_hand", "block_two_hand_hit", "technique_breath", "technique_charge"), ids);
+                "block_two_hand", "block_two_hand_hit", "technique_breath", "technique_charge",
+                "door_breaker_knock", "door_breaker_knock_off", "door_breaker_cleave", "door_breaker_cleave_off",
+                "door_breaker_ram", "door_breaker_ram_off", "door_breaker_hook", "door_breaker_hook_off",
+                "door_breaker_sweep", "door_breaker_sweep_off", "door_breaker_close", "door_breaker_close_off",
+                "door_breaker_chain", "door_breaker_chain_off", "door_breaker_finale", "door_breaker_finale_off",
+                "door_breaker_guard", "door_breaker_guard_off", "technique_leap"), ids);
         // 已交付标记必须与打包资源一致：调度只请求已交付动作，未打包的动作不得标为已交付。
         for (dev.kizuna.playeranimation.animation.PlayerAnimationAction action
                 : dev.kizuna.playeranimation.animation.PlayerAnimationAction.values()) {
@@ -156,6 +161,101 @@ class AnimationSetContractTest {
     }
 
     @Test
+    void leapKeepsItsLegsUnderUpperBodyActionsWithoutJumpBelow() throws Exception {
+        // 怪物跃步下层没有 jump：攻击（20）与蓄力（17，后起）叠上来只取上身，腿仍是跃步。
+        for (String upper : new String[]{"attack_main", "technique_charge"}) {
+            AnimationPlayer combined = new AnimationPlayer();
+            combined.play(resource("technique_leap"), 0, false);
+            if (upper.equals("attack_main")) {
+                combined.scrub(resource(upper), 0.1, 0.12f, false);
+            } else {
+                combined.play(resource(upper), 0.1, false);
+            }
+            AnimationPlayer alone = new AnimationPlayer();
+            alone.play(resource("technique_leap"), 0, false);
+            Pose[] expected = alone.sample(Rig.zeroPose(), 0.3, false);
+            Pose[] actual = combined.sample(Rig.zeroPose(), 0.3, false);
+            for (BoneId bone : BoneId.ALL) {
+                if (AnimationEntry.Mask.LOWER.includes(bone)) {
+                    assertEquals(expected[bone.ordinal()], actual[bone.ordinal()], upper + ":" + bone.key);
+                }
+            }
+            assertNotEquals(expected[BoneId.R_FOREARM.ordinal()], actual[BoneId.R_FOREARM.ordinal()], upper);
+        }
+    }
+
+    @Test
+    void doorBreakerOwnsTheWholeBodyOverStanceAndVanillaSwing() throws Exception {
+        // 破门斩整段全身生效；服务端每次打击另调的原版挥手（attack_main，优先级 20）不接管任何骨。
+        for (String id : new String[]{"door_breaker_knock", "door_breaker_knock_off", "door_breaker_cleave", "door_breaker_cleave_off",
+                "door_breaker_ram", "door_breaker_ram_off", "door_breaker_hook", "door_breaker_hook_off",
+                "door_breaker_sweep", "door_breaker_sweep_off", "door_breaker_close", "door_breaker_close_off",
+                "door_breaker_chain", "door_breaker_chain_off", "door_breaker_finale", "door_breaker_finale_off"}) {
+            AnimationPlayer combined = new AnimationPlayer();
+            combined.play(resource("stance_idle"), 0, false);
+            combined.play(resource(id), 0, false);
+            combined.scrub(resource("attack_main"), 1.6, 0.3f, false);
+            AnimationPlayer alone = new AnimationPlayer();
+            alone.play(resource("stance_idle"), 0, false);
+            alone.play(resource(id), 0, false);
+            for (double time : new double[]{0.5, 1.7, 1.75}) {
+                Pose[] expected = alone.sample(Rig.zeroPose(), time, false);
+                Pose[] actual = combined.sample(Rig.zeroPose(), time, false);
+                for (BoneId bone : BoneId.ALL) {
+                    // 被压住的挥手仍参与同骨混合（权重为 0），只允许浮点舍入差。
+                    Pose want = expected[bone.ordinal()];
+                    Pose got = actual[bone.ordinal()];
+                    String label = id + "@" + time + ":" + bone.key;
+                    assertEquals(want.rotation().x(), got.rotation().x(), 1e-4f, label);
+                    assertEquals(want.rotation().y(), got.rotation().y(), 1e-4f, label);
+                    assertEquals(want.rotation().z(), got.rotation().z(), 1e-4f, label);
+                    assertEquals(want.position().x(), got.position().x(), 1e-4f, label);
+                    assertEquals(want.position().y(), got.position().y(), 1e-4f, label);
+                    assertEquals(want.position().z(), got.position().z(), 1e-4f, label);
+                }
+            }
+            AnimationPlayer stance = new AnimationPlayer();
+            stance.play(resource("stance_idle"), 0, false);
+            assertNotEquals(stance.sample(Rig.zeroPose(), 1.7, false)[BoneId.R_SHIN.ordinal()],
+                    alone.sample(Rig.zeroPose(), 1.7, false)[BoneId.R_SHIN.ordinal()], id);
+        }
+    }
+
+    @Test
+    void doorBreakerGuardOwnsOnlyTheHoldingArm() throws Exception {
+        // 持物手覆盖层（优先级 25）叠在双手式上：收臂到位后持物臂 6 根骨等于覆盖层末帧，其余骨照该式单独播放；
+        // 左主手玩家两层一起镜像，覆盖臂落到另一侧。
+        String[][] layers = {{"door_breaker_cleave", "door_breaker_guard"}, {"door_breaker_cleave_off", "door_breaker_guard_off"}};
+        for (String[] layer : layers) {
+            AnimationEntry.Mask guardMask = resource(layer[1]).mask();
+            for (boolean leftHanded : new boolean[]{false, true}) {
+                AnimationPlayer combined = new AnimationPlayer();
+                combined.play(resource("stance_idle"), 0, leftHanded);
+                combined.play(resource(layer[0]), 0, leftHanded);
+                combined.play(resource(layer[1]), 0, leftHanded);
+                AnimationPlayer alone = new AnimationPlayer();
+                alone.play(resource("stance_idle"), 0, leftHanded);
+                alone.play(resource(layer[0]), 0, leftHanded);
+                AnimationPlayer guard = new AnimationPlayer();
+                guard.play(resource(layer[1]), 0, leftHanded);
+                for (double time : new double[]{0.5, 1.7, 3.0}) {
+                    Pose[] technique = alone.sample(Rig.zeroPose(), time, false);
+                    Pose[] held = guard.sample(Rig.zeroPose(), time, false);
+                    Pose[] actual = combined.sample(Rig.zeroPose(), time, false);
+                    for (BoneId bone : BoneId.ALL) {
+                        BoneId source = leftHanded ? bone.mirrored() : bone;
+                        Pose want = guardMask.includes(source) ? held[bone.ordinal()] : technique[bone.ordinal()];
+                        assertSamePose(want, actual[bone.ordinal()], layer[1] + (leftHanded ? "[左主手]@" : "@") + time + ":" + bone.key);
+                    }
+                }
+                BoneId forearm = BoneId.named((guardMask == AnimationEntry.Mask.L_ARM) != leftHanded ? "l_forearm" : "r_forearm");
+                assertNotEquals(alone.sample(Rig.zeroPose(), 1.7, false)[forearm.ordinal()],
+                        combined.sample(Rig.zeroPose(), 1.7, false)[forearm.ordinal()], layer[1]);
+            }
+        }
+    }
+
+    @Test
     void sneakBasesKeepTheirLegsUnderToolOverlays() throws Exception {
         // 潜行与骑乘是移动/支撑底层：叠加挖掘时腿与胯仍取底层资源，工具只接管上身。
         for (String base : new String[]{"sneak", "sneak_walk", "ride"}) {
@@ -230,6 +330,16 @@ class AnimationSetContractTest {
             }
         }
         assertNotEquals(expected[BoneId.R_FOREARM.ordinal()], actual[BoneId.R_FOREARM.ordinal()]);
+    }
+
+    private static void assertSamePose(Pose want, Pose got, String label) {
+        // 上层权重为 1 时混合结果只允许浮点舍入差。
+        assertEquals(want.rotation().x(), got.rotation().x(), 1e-4f, label);
+        assertEquals(want.rotation().y(), got.rotation().y(), 1e-4f, label);
+        assertEquals(want.rotation().z(), got.rotation().z(), 1e-4f, label);
+        assertEquals(want.position().x(), got.position().x(), 1e-4f, label);
+        assertEquals(want.position().y(), got.position().y(), 1e-4f, label);
+        assertEquals(want.position().z(), got.position().z(), 1e-4f, label);
     }
 
     private static AnimationEntry resource(String id) throws Exception {

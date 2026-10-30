@@ -65,8 +65,12 @@ FULL_BODY_IDS = {
     "attack", "attack_main", "attack_off", "mine", "mine_main", "mine_off",
     "climb", "swim", "ride", "sleep", "elytra",
     "dodge_forward", "dodge_back", "dodge_left", "dodge_right",
-    "technique_dash_forward", "technique_dash_back", "technique_dash_left", "technique_dash_right",
+    "technique_dash_forward", "technique_dash_back", "technique_dash_left", "technique_dash_right", "technique_leap",
     "block_two_hand", "block_two_hand_hit",
+    "door_breaker_knock", "door_breaker_knock_off", "door_breaker_cleave", "door_breaker_cleave_off",
+    "door_breaker_ram", "door_breaker_ram_off", "door_breaker_hook", "door_breaker_hook_off",
+    "door_breaker_sweep", "door_breaker_sweep_off", "door_breaker_close", "door_breaker_close_off",
+    "door_breaker_chain", "door_breaker_chain_off", "door_breaker_finale", "door_breaker_finale_off",
 }
 
 GRIP_IDS = {
@@ -76,9 +80,14 @@ GRIP_IDS = {
     "crossbow_hold_off", "brush", "brush_off", "eat", "eat_off", "drink", "drink_off",
     "block_shield", "block_shield_off", "block_one_hand", "block_one_hand_hit", "block_two_hand",
     "block_two_hand_hit", "bow_draw", "bow_draw_off", "trident_charge", "trident_charge_off",
+    "door_breaker_knock", "door_breaker_knock_off", "door_breaker_cleave", "door_breaker_cleave_off",
+    "door_breaker_ram", "door_breaker_ram_off", "door_breaker_hook", "door_breaker_hook_off",
+    "door_breaker_sweep", "door_breaker_sweep_off", "door_breaker_close", "door_breaker_close_off",
+    "door_breaker_chain", "door_breaker_chain_off", "door_breaker_finale", "door_breaker_finale_off",
 }
 
-NON_STANDING_IDS = {"meditate", "jump", "climb", "swim", "ride", "sleep", "elytra"}
+# 跃步与 jump 同类：整段在空中，着地口径由原型自查的脚底高度代替（docs/animation-specs/technique_leap.md 第 9 节）。
+NON_STANDING_IDS = {"meditate", "jump", "technique_leap", "climb", "swim", "ride", "sleep", "elytra"}
 # 站立循环：静止潜行双脚全程锁定，循环动作也要检查脚底、滑动与重心。
 STANDING_LOOP_IDS = {"sneak", "stance_idle"}
 # 原地循环步态：支撑脚相对 root 匀速后移，使用 walk/run 的循环支撑检查。
@@ -87,7 +96,14 @@ GAIT_IDS = {"walk", "run", "sneak_walk", "stance_walk_forward", "stance_walk_bac
 # 侧滑步的支撑脚沿 X 后移，循环支撑检查改查 X 向速度。
 LATERAL_GAIT_IDS = {"stance_walk_left", "stance_walk_right"}
 # 失衡窗口（索引字段 unbalanced_windows）：验收规则允许闪避类写明失衡，窗口内不查重心投影。
-UNBALANCED_WINDOW_PREFIXES = ("dodge_", "technique_dash_")
+# 破门的两次前脚迈步、撞门冲刺的两步与收步、破盾后脚的三次迈步、横扫的外撤步与单脚回旋、掩门的两次撤步与收脚、
+# 连门的两次垫步、弓步与收脚、万门一斩的前迈、起跳落地与收脚是单脚支撑或腾空期
+# （docs/animation-specs/door_breaker_cleave.md、door_breaker_ram.md、door_breaker_hook.md、door_breaker_sweep.md、door_breaker_close.md、
+# door_breaker_chain.md、door_breaker_finale.md 第 4 节）。
+UNBALANCED_WINDOW_PREFIXES = ("dodge_", "technique_dash_", "door_breaker_cleave", "door_breaker_ram", "door_breaker_hook",
+                              "door_breaker_sweep", "door_breaker_close", "door_breaker_chain", "door_breaker_finale")
+# 爆发窗口（索引字段 burst_windows）开放给闪避、轻步与撞门的后脚蹬伸（每段至多一段、≤ 0.08 s）。
+BURST_WINDOW_PREFIXES = ("dodge_", "technique_dash_", "door_breaker_ram")
 # 视线叠加层（索引 layer: look）：时间轴表示视线角度而不是时间，只对这两个 ID 使用姿势层判据。
 LOOK_LAYER_IDS = {"head_follow": ("y", 50.0), "head_follow_pitch": ("x", -90.0)}
 MIN_LOOK_LAYER_BONES = 5
@@ -97,10 +113,32 @@ SLEEP_POSE_IDS = {"sleep"}
 SLEEP_EFFECTIVE_ROTATION_DEG = 1.0
 LOOK_LAYER_SUM_TOLERANCE_DEG = 1.0
 LOOK_LAYER_SYMMETRY_TOLERANCE_DEG = 0.05
-IMPACT_WINDOW_IDS = {"attack_main", "attack_off", "mine_main", "mine_off"}
+# 破门斩各式的打击时段（每段 ≤ 0.35 s，见 docs/animation-specs/door_breaker_knock.md）与攻击、挖掘共用放宽上限。
+IMPACT_WINDOW_IDS = {"attack_main", "attack_off", "mine_main", "mine_off",
+                     "door_breaker_knock", "door_breaker_knock_off", "door_breaker_cleave", "door_breaker_cleave_off",
+                     "door_breaker_ram", "door_breaker_ram_off", "door_breaker_hook", "door_breaker_hook_off",
+                     "door_breaker_close", "door_breaker_close_off", "door_breaker_chain", "door_breaker_chain_off",
+                     "door_breaker_finale", "door_breaker_finale_off"}
+# 单臂覆盖层（遮罩只含一条手臂，叠在双手式上，见 docs/animation-specs/door_breaker_guard.md 第 10 节）：
+# 值为覆盖臂一侧。躯干、腿、预备跟随、主链峰值、着地重心归下层的式；有效运动按覆盖臂三骨计，错峰链改为覆盖臂。
+ARM_OVERLAY_IDS = {"door_breaker_guard": "l", "door_breaker_guard_off": "r"}
+MIN_ARM_OVERLAY_BONES = 3
 ARM_INTERSECTION_TOLERANCE_PX = 0.25
 MIN_PREPARATION_FOLLOW_RATIO = 0.60
 SEGMENT_MASS = {"torso": 50.0, "head": 8.0, "leg": 16.0, "arm": 5.0}
+
+
+def wrap_degrees(value: float) -> float:
+    """角度差折回 (−180°, 180°]。"""
+    return value - 360.0 * math.ceil((value - 180.0) / 360.0)
+
+
+def unwrap_degrees(values: list[float]) -> list[float]:
+    """逐帧累加折回后的角度差，把 pre / post 换回 0° 造成的整圈跳变展开成连续曲线。"""
+    result = [values[0]]
+    for index in range(1, len(values)):
+        result.append(result[-1] + wrap_degrees(values[index] - values[index - 1]))
+    return result
 
 
 def vec_range(values: list[tuple[float, float, float]]) -> tuple[float, float, float]:
@@ -292,7 +330,8 @@ def velocity_gates(sampler: AnimationSampler, times: list[float], impact_window:
     max_jerk_burst = 0.0
     values = {bone: [sampler.value(bone, "rotation", time) for time in times] for bone in sampler.model.bones}
     for bone, frames in values.items():
-        speeds = [max(abs(frames[i][axis] - frames[i - 1][axis]) for axis in range(3)) / dt
+        # 角度差折回后再求速度：root 转满一圈后用 pre / post 由 ±360° 换回 0°，那一帧不是转动。
+        speeds = [max(abs(wrap_degrees(frames[i][axis] - frames[i - 1][axis])) for axis in range(3)) / dt
                   for i in range(1, len(frames))]
         for index, speed in enumerate(speeds):
             at = times[index + 1]
@@ -603,9 +642,9 @@ def cycle_gates(sampler: AnimationSampler) -> dict[str, Any]:
             "limits": {"position_px": MAX_SEAM_POSITION_PX, "speed_gap_px_s": seam_speed_limit}}
 
 
-def overlap_gates(sampler: AnimationSampler, times: list[float]) -> dict[str, Any]:
-    # 对循环基线只报告峰值错开；一次性动作再启用 pre/follow 判定。
-    chains = ["waist", "chest", "r_upper_arm", "r_forearm", "r_hand"]
+def overlap_gates(sampler: AnimationSampler, times: list[float], chains: list[str] | None = None) -> dict[str, Any]:
+    # 对循环基线只报告峰值错开；一次性动作再启用 pre/follow 判定。单臂覆盖层由调用方传入覆盖臂链。
+    chains = chains or ["waist", "chest", "r_upper_arm", "r_forearm", "r_hand"]
     peak_times = {}
     for bone in chains:
         values = [max(abs(value) for value in sampler.value(bone, "rotation", time)) for time in times]
@@ -741,7 +780,8 @@ def _motion_series(sampler: AnimationSampler, bone: str, times: list[float],
     position_ranges = vec_range(positions)
     if max(rotation_ranges, default=0.0) >= rotation_threshold:
         axis = max(range(3), key=lambda index: rotation_ranges[index])
-        values = [frame[axis] for frame in rotations]
+        # 先展开角度：root 换回 0° 的整圈跳变不能进入相关性和峰值判定。
+        values = unwrap_degrees([frame[axis] for frame in rotations])
         channel = f"rotation_{'xyz'[axis]}"
     elif max(position_ranges, default=0.0) >= EFFECTIVE_POSITION_PX:
         axis = max(range(3), key=lambda index: position_ranges[index])
@@ -1027,6 +1067,27 @@ def report(sampler: AnimationSampler, impact_window: tuple[float, float] | None 
         look_layer = look_layer_gates(sampler, times)
         effective_pass = len(active) >= MIN_LOOK_LAYER_BONES
         torso_pass = all(torso[bone] for bone in ("waist", "chest", "head"))
+    effective_minimum = 10
+    effective_reason = "一次性/保持动作至少 10 根骨骼；三段基线循环按实测数量单独报告"
+    torso_applicable = True
+    torso_reason = "一次性/保持动作必须有胯腰胸头；循环基线记录实际参与部位"
+    if animation_id in ARM_OVERLAY_IDS:
+        # 单臂覆盖层只接管一条手臂：手指恒定、挂点随手走，有效运动只数覆盖臂上臂、前臂、手。
+        side = ARM_OVERLAY_IDS[animation_id]
+        chain = [f"{side}_upper_arm", f"{side}_forearm", f"{side}_hand"]
+        effective_minimum = MIN_ARM_OVERLAY_BONES
+        effective_reason = "单臂覆盖层按覆盖臂上臂、前臂、手计数"
+        effective_pass = sum(bone in active for bone in chain) >= MIN_ARM_OVERLAY_BONES
+        torso_applicable = False
+        torso_reason = "单臂覆盖层的遮罩不含躯干与头"
+        torso_pass = True
+        overlap = overlap_gates(sampler, times, chain)
+        overlap["reason"] = "单臂覆盖层检查覆盖臂肩→肘→腕错峰"
+        reason = "单臂覆盖层：遮罩外的躯干与腿归下层的式，收臂到位后保持，没有主动作峰值"
+        for item in (preparation, peak_order, ground):
+            item.update({"pass": True, "applicable": False, "reason": reason})
+        grip.update({"pass": True, "applicable": False,
+                     "reason": "单臂覆盖层手指恒为下层双手式 0 s 握拳，由原型自查核对"})
     # 总结果必须包含角速度/抽搐检查，不能只在明细中报告失败却返回成功。
     gate_pass = all((item.get("pass", True) or not item.get("applicable", True))
                     for item in (angle, preparation, overlap, arm_intersection, grip, ground, cycle,
@@ -1038,11 +1099,11 @@ def report(sampler: AnimationSampler, impact_window: tuple[float, float] | None 
         "loop": sampler.loop,
         "sample_hz": 60,
         "effective_motion": {"pass": effective_pass, "applicable": True,
-                              "reason": "一次性/保持动作至少 10 根骨骼；三段基线循环按实测数量单独报告",
+                              "reason": effective_reason,
                               "count": len(active), "bones": sorted(active), "ranges": ranges,
-                              "minimum": 10, "loop_baseline_exemption": sampler.loop},
-        "torso_and_head": {"pass": torso_pass, "applicable": True, "participating": torso,
-                            "reason": "一次性/保持动作必须有胯腰胸头；循环基线记录实际参与部位",
+                              "minimum": effective_minimum, "loop_baseline_exemption": sampler.loop},
+        "torso_and_head": {"pass": torso_pass, "applicable": torso_applicable, "participating": torso,
+                            "reason": torso_reason,
                             "loop_baseline_exemption": sampler.loop and animation_id in {"walk", "run", "meditate"}},
         "both_arms_and_legs": {"pass": all_body_pass, "applicable": full_body,
                                 "reason": "跳跃、闪避、攀爬、游泳、骑乘、睡觉、鞘翅、穿戴、攻击/挖掘和双手格挡要求双臂双腿",
@@ -1097,8 +1158,8 @@ def main() -> int:
             index_extras.setdefault(animation_id, {})["unbalanced_windows"] = raw["unbalanced_windows"]
         if "burst_windows" in raw:
             windows = raw["burst_windows"]
-            if not animation_id.startswith(UNBALANCED_WINDOW_PREFIXES):
-                raise SystemExit(f"burst_windows 只能用于 {UNBALANCED_WINDOW_PREFIXES}: {animation_id}")
+            if not animation_id.startswith(BURST_WINDOW_PREFIXES):
+                raise SystemExit(f"burst_windows 只能用于 {BURST_WINDOW_PREFIXES}: {animation_id}")
             # 每段动作只开放一个爆发窗口，时长上限在资源边界校验一次。
             if not isinstance(windows, list) or len(windows) != 1 or len(windows[0]) != 2:
                 raise SystemExit(f"burst_windows 必须是只含一段的 [[开始, 结束]]: {animation_id}")

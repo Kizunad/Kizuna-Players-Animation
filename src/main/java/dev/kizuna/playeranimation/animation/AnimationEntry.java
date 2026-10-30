@@ -72,8 +72,15 @@ public record AnimationEntry(String id, String file, Mask mask, int priority, fl
                     || impactStart < 0 || impactStart >= impactEnd || impactEnd > clip.duration()) {
                 throw new IllegalArgumentException("impact_window 超出动画时长");
             }
-            if (!Set.of("attack_main", "attack_off", "mine_main", "mine_off").contains(id)) {
-                throw new IllegalArgumentException("impact_window 只能用于攻击或挖掘动作");
+            if (!Set.of("attack_main", "attack_off", "mine_main", "mine_off",
+                    "door_breaker_knock", "door_breaker_knock_off",
+                    "door_breaker_cleave", "door_breaker_cleave_off",
+                    "door_breaker_ram", "door_breaker_ram_off",
+                    "door_breaker_hook", "door_breaker_hook_off",
+                    "door_breaker_close", "door_breaker_close_off",
+                    "door_breaker_chain", "door_breaker_chain_off",
+                    "door_breaker_finale", "door_breaker_finale_off").contains(id)) {
+                throw new IllegalArgumentException("impact_window 只能用于攻击、挖掘或破门斩动作");
             }
         }
         Float loopStart = null;

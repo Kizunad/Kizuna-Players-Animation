@@ -224,7 +224,7 @@ public final class AnimationPlayer {
 
     private AnimationEntry.Mask effectiveMask(Playback playback, double now, boolean crouching) {
         if (playback.entry.mask() == AnimationEntry.Mask.FULL && stanceOverlay(playback.entry.id())) {
-            // 格挡、受击、调息、蓄力的腿锁在架势踝位：静止架势上整段生效，移动底层、闪避和轻步上只取上身。
+            // 格挡、受击、调息、蓄力的腿锁在架势踝位：静止架势上整段生效，移动底层、闪避、轻步和跃步上只取上身。
             boolean moving = crouching || playing.stream().anyMatch(lower -> !lower.finished(now) && lower.weight(now) > 0
                     && (lowerBase(lower.entry.id()) || movingStance(lower.entry.id())));
             return moving ? AnimationEntry.Mask.UPPER : AnimationEntry.Mask.FULL;
@@ -262,8 +262,10 @@ public final class AnimationPlayer {
     }
 
     private static boolean movingStance(String id) {
+        // 跃步在列：怪物下层没有 jump，跃步中出上身动作时腿仍须是跃步。
         return id.startsWith("stance_walk_") || id.equals("stance_run") || id.equals("stance_enter")
-                || id.equals("stance_exit") || id.startsWith("dodge_") || id.startsWith("technique_dash_");
+                || id.equals("stance_exit") || id.startsWith("dodge_") || id.startsWith("technique_dash_")
+                || id.equals("technique_leap");
     }
 
     private static boolean singleArmWhileClimbing(String id) {

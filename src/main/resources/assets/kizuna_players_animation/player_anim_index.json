@@ -1217,6 +1217,658 @@
           2.0
         ]
       ]
+    },
+    {
+      "id": "door_breaker_knock",
+      "file": "animations/door_breaker_knock.animation.json",
+      "mask": "full",
+      "priority": 24,
+      "blend_in": 0.1,
+      "blend_out": 0.25,
+      "hand": "main",
+      "fpv": false,
+      "impact_window": [
+        1.55,
+        1.75
+      ],
+      "phases": [
+        [
+          0.76,
+          0.9
+        ],
+        [
+          1.11,
+          1.25
+        ],
+        [
+          1.5,
+          1.75
+        ]
+      ]
+    },
+    {
+      "id": "door_breaker_knock_off",
+      "file": "animations/door_breaker_knock_off.animation.json",
+      "mask": "full",
+      "priority": 24,
+      "blend_in": 0.1,
+      "blend_out": 0.25,
+      "hand": "off",
+      "fpv": false,
+      "impact_window": [
+        1.55,
+        1.75
+      ],
+      "phases": [
+        [
+          0.76,
+          0.9
+        ],
+        [
+          1.11,
+          1.25
+        ],
+        [
+          1.5,
+          1.75
+        ]
+      ]
+    },
+    {
+      "id": "door_breaker_cleave",
+      "file": "animations/door_breaker_cleave.animation.json",
+      "mask": "full",
+      "priority": 24,
+      "blend_in": 0.1,
+      "blend_out": 0.25,
+      "hand": "main",
+      "fpv": false,
+      "impact_window": [
+        3.0,
+        3.25
+      ],
+      "unbalanced_windows": [
+        [
+          0.6,
+          0.8
+        ],
+        [
+          4.22,
+          4.45
+        ]
+      ],
+      "phases": [
+        [
+          2.95,
+          3.3
+        ]
+      ]
+    },
+    {
+      "id": "door_breaker_cleave_off",
+      "file": "animations/door_breaker_cleave_off.animation.json",
+      "mask": "full",
+      "priority": 24,
+      "blend_in": 0.1,
+      "blend_out": 0.25,
+      "hand": "off",
+      "fpv": false,
+      "impact_window": [
+        3.0,
+        3.25
+      ],
+      "unbalanced_windows": [
+        [
+          0.6,
+          0.8
+        ],
+        [
+          4.22,
+          4.45
+        ]
+      ],
+      "phases": [
+        [
+          2.95,
+          3.3
+        ]
+      ]
+    },
+    {
+      "id": "door_breaker_ram",
+      "file": "animations/door_breaker_ram.animation.json",
+      "mask": "full",
+      "priority": 24,
+      "blend_in": 0.1,
+      "blend_out": 0.25,
+      "hand": "main",
+      "fpv": false,
+      "impact_window": [
+        2.25,
+        2.45
+      ],
+      "burst_windows": [
+        [
+          1.5,
+          1.58
+        ]
+      ],
+      "unbalanced_windows": [
+        [
+          1.6,
+          1.78
+        ],
+        [
+          1.83,
+          2.03
+        ]
+      ],
+      "slide_window": [
+        1.55,
+        2.25
+      ],
+      "phases": [
+        [
+          1.45,
+          1.65
+        ],
+        [
+          2.2,
+          2.5
+        ]
+      ]
+    },
+    {
+      "id": "door_breaker_ram_off",
+      "file": "animations/door_breaker_ram_off.animation.json",
+      "mask": "full",
+      "priority": 24,
+      "blend_in": 0.1,
+      "blend_out": 0.25,
+      "hand": "off",
+      "fpv": false,
+      "impact_window": [
+        2.25,
+        2.45
+      ],
+      "burst_windows": [
+        [
+          1.5,
+          1.58
+        ]
+      ],
+      "unbalanced_windows": [
+        [
+          1.83,
+          2.03
+        ],
+        [
+          3.33,
+          3.6
+        ]
+      ],
+      "slide_window": [
+        1.55,
+        2.25
+      ],
+      "phases": [
+        [
+          1.45,
+          1.65
+        ],
+        [
+          2.2,
+          2.5
+        ]
+      ]
+    },
+    {
+      "id": "door_breaker_hook",
+      "file": "animations/door_breaker_hook.animation.json",
+      "mask": "full",
+      "priority": 24,
+      "blend_in": 0.1,
+      "blend_out": 0.25,
+      "hand": "main",
+      "fpv": false,
+      "impact_window": [
+        1.85,
+        2.05
+      ],
+      "unbalanced_windows": [
+        [
+          0.6,
+          0.75
+        ],
+        [
+          2.21,
+          2.35
+        ],
+        [
+          3.03,
+          3.15
+        ]
+      ],
+      "phases": [
+        [
+          1.8,
+          2.1
+        ],
+        [
+          2.05,
+          2.6
+        ]
+      ]
+    },
+    {
+      "id": "door_breaker_hook_off",
+      "file": "animations/door_breaker_hook_off.animation.json",
+      "mask": "full",
+      "priority": 24,
+      "blend_in": 0.1,
+      "blend_out": 0.25,
+      "hand": "off",
+      "fpv": false,
+      "impact_window": [
+        1.85,
+        2.05
+      ],
+      "unbalanced_windows": [
+        [
+          0.6,
+          0.75
+        ],
+        [
+          2.21,
+          2.35
+        ],
+        [
+          3.03,
+          3.15
+        ]
+      ],
+      "phases": [
+        [
+          1.8,
+          2.1
+        ],
+        [
+          2.05,
+          2.6
+        ]
+      ]
+    },
+    {
+      "id": "door_breaker_sweep",
+      "file": "animations/door_breaker_sweep.animation.json",
+      "mask": "full",
+      "priority": 24,
+      "blend_in": 0.1,
+      "blend_out": 0.25,
+      "hand": "main",
+      "fpv": false,
+      "unbalanced_windows": [
+        [
+          0.6,
+          0.77
+        ],
+        [
+          3.05,
+          3.39
+        ],
+        [
+          3.45,
+          3.57
+        ],
+        [
+          3.63,
+          3.72
+        ],
+        [
+          3.81,
+          3.92
+        ],
+        [
+          4.2,
+          4.25
+        ]
+      ],
+      "phases": [
+        [
+          2.9,
+          3.4
+        ]
+      ]
+    },
+    {
+      "id": "door_breaker_sweep_off",
+      "file": "animations/door_breaker_sweep_off.animation.json",
+      "mask": "full",
+      "priority": 24,
+      "blend_in": 0.1,
+      "blend_out": 0.25,
+      "hand": "off",
+      "fpv": false,
+      "unbalanced_windows": [
+        [
+          0.6,
+          0.77
+        ],
+        [
+          3.05,
+          3.09
+        ],
+        [
+          3.27,
+          3.37
+        ],
+        [
+          3.48,
+          3.54
+        ],
+        [
+          4.13,
+          4.25
+        ]
+      ],
+      "phases": [
+        [
+          2.9,
+          3.4
+        ]
+      ]
+    },
+    {
+      "id": "door_breaker_close",
+      "file": "animations/door_breaker_close.animation.json",
+      "mask": "full",
+      "priority": 24,
+      "blend_in": 0.1,
+      "blend_out": 0.25,
+      "hand": "main",
+      "fpv": false,
+      "impact_window": [
+        2.31,
+        2.65
+      ],
+      "unbalanced_windows": [
+        [
+          0.83,
+          0.93
+        ],
+        [
+          1.05,
+          1.27
+        ]
+      ],
+      "slide_window": [
+        0.75,
+        1.4
+      ],
+      "phases": [
+        [
+          2.45,
+          2.65
+        ]
+      ]
+    },
+    {
+      "id": "door_breaker_close_off",
+      "file": "animations/door_breaker_close_off.animation.json",
+      "mask": "full",
+      "priority": 24,
+      "blend_in": 0.1,
+      "blend_out": 0.25,
+      "hand": "off",
+      "fpv": false,
+      "impact_window": [
+        2.31,
+        2.65
+      ],
+      "unbalanced_windows": [
+        [
+          0.83,
+          0.93
+        ],
+        [
+          1.05,
+          1.27
+        ],
+        [
+          3.27,
+          3.4
+        ]
+      ],
+      "slide_window": [
+        0.75,
+        1.4
+      ],
+      "phases": [
+        [
+          2.45,
+          2.65
+        ]
+      ]
+    },
+    {
+      "id": "door_breaker_chain",
+      "file": "animations/door_breaker_chain.animation.json",
+      "mask": "full",
+      "priority": 24,
+      "blend_in": 0.1,
+      "blend_out": 0.25,
+      "hand": "main",
+      "fpv": false,
+      "impact_window": [
+        4.78,
+        5.12
+      ],
+      "unbalanced_windows": [
+        [
+          1.57,
+          1.67
+        ],
+        [
+          3.07,
+          3.17
+        ],
+        [
+          4.83,
+          4.93
+        ],
+        [
+          6.05,
+          6.3
+        ]
+      ],
+      "slide_window": [
+        1.55,
+        5.1
+      ],
+      "phases": [
+        [
+          1.5,
+          1.75
+        ],
+        [
+          3.0,
+          3.25
+        ],
+        [
+          4.8,
+          5.05
+        ]
+      ]
+    },
+    {
+      "id": "door_breaker_chain_off",
+      "file": "animations/door_breaker_chain_off.animation.json",
+      "mask": "full",
+      "priority": 24,
+      "blend_in": 0.1,
+      "blend_out": 0.25,
+      "hand": "off",
+      "fpv": false,
+      "impact_window": [
+        4.78,
+        5.12
+      ],
+      "unbalanced_windows": [
+        [
+          1.57,
+          1.67
+        ],
+        [
+          3.07,
+          3.17
+        ],
+        [
+          4.83,
+          4.93
+        ],
+        [
+          6.05,
+          6.3
+        ]
+      ],
+      "slide_window": [
+        1.55,
+        5.1
+      ],
+      "phases": [
+        [
+          1.5,
+          1.75
+        ],
+        [
+          3.0,
+          3.25
+        ],
+        [
+          4.8,
+          5.05
+        ]
+      ]
+    },
+    {
+      "id": "door_breaker_finale",
+      "file": "animations/door_breaker_finale.animation.json",
+      "mask": "full",
+      "priority": 24,
+      "blend_in": 0.1,
+      "blend_out": 0.25,
+      "hand": "main",
+      "fpv": false,
+      "impact_window": [
+        4.7,
+        4.95
+      ],
+      "unbalanced_windows": [
+        [
+          1.6,
+          1.82
+        ],
+        [
+          4.63,
+          4.67
+        ],
+        [
+          6.25,
+          6.5
+        ]
+      ],
+      "slide_window": [
+        4.05,
+        4.85
+      ],
+      "phases": [
+        [
+          3.95,
+          4.1
+        ],
+        [
+          4.65,
+          5.0
+        ]
+      ]
+    },
+    {
+      "id": "door_breaker_finale_off",
+      "file": "animations/door_breaker_finale_off.animation.json",
+      "mask": "full",
+      "priority": 24,
+      "blend_in": 0.1,
+      "blend_out": 0.25,
+      "hand": "off",
+      "fpv": false,
+      "impact_window": [
+        4.7,
+        4.95
+      ],
+      "unbalanced_windows": [
+        [
+          1.6,
+          1.82
+        ],
+        [
+          4.63,
+          4.67
+        ],
+        [
+          6.25,
+          6.5
+        ]
+      ],
+      "slide_window": [
+        4.05,
+        4.85
+      ],
+      "phases": [
+        [
+          3.95,
+          4.1
+        ],
+        [
+          4.65,
+          5.0
+        ]
+      ]
+    },
+    {
+      "id": "door_breaker_guard",
+      "file": "animations/door_breaker_guard.animation.json",
+      "mask": "l_arm",
+      "priority": 25,
+      "blend_in": 0.1,
+      "blend_out": 0.25,
+      "hand": "main",
+      "fpv": false
+    },
+    {
+      "id": "door_breaker_guard_off",
+      "file": "animations/door_breaker_guard_off.animation.json",
+      "mask": "r_arm",
+      "priority": 25,
+      "blend_in": 0.1,
+      "blend_out": 0.25,
+      "hand": "off",
+      "fpv": false
+    },
+    {
+      "id": "technique_leap",
+      "file": "animations/technique_leap.animation.json",
+      "mask": "full",
+      "priority": 17,
+      "blend_in": 0.05,
+      "blend_out": 0.1,
+      "hand": "main",
+      "fpv": false,
+      "phases": [
+        [
+          0.0,
+          0.14
+        ]
+      ]
     }
   ]
 }

@@ -62,6 +62,36 @@ KEY_TIMES = {
     "toot_horn": (0.0, 0.06, 0.12, 0.18, 0.24, 0.33, 0.60, 1.20, 1.80, 2.60),
     "brush": (0.0, 0.06, 0.12, 0.18, 0.24, 0.30, 0.425, 0.55, 0.675, 0.80),
     "use_item": (0.0, 0.05, 0.10, 0.15, 0.20, 0.24, 0.28, 0.32, 0.36, 0.40),
+    # 叩门：起止、对门、两下轻叩（举、点到、回弹）、蓄满、发力中、击中、撑住、随、收（door_breaker_knock.md 第 10 节）
+    "door_breaker_knock": (0.0, 0.30, 0.62, 0.80, 0.90, 1.02, 1.15, 1.25, 1.40, 1.52, 1.62, 1.66, 1.70, 1.75, 1.85,
+                           2.20, 2.45, 2.70, 3.0),
+    # 破门：起、调整落步、拧满、定、蓄满、发力中、击中、撑住、嵌、晃、撬出、收步、收（door_breaker_cleave.md 第 10 节）
+    "door_breaker_cleave": (0.0, 0.40, 0.55, 0.70, 0.85, 1.00, 1.50, 2.20, 2.60, 2.95, 3.06, 3.12, 3.16, 3.20, 3.25,
+                            3.40, 3.60, 3.75, 4.10, 4.50, 5.00, 5.50, 6.0),
+    # 撞门：起、沉、蓄满、定末、蹬（冲量）、高抬膝、右脚落、左脚摆、左脚落、刹、撞上、回身、发力中、击中、撑住、随、收步、绕肩、收
+    # （door_breaker_ram.md 第 10 节）
+    "door_breaker_ram": (0.0, 0.40, 0.80, 1.20, 1.50, 1.55, 1.70, 1.80, 1.93, 2.05, 2.10, 2.15, 2.25, 2.32, 2.36, 2.40,
+                         2.45, 2.80, 3.30, 3.50, 3.65, 4.10, 4.60, 5.0),
+    # 破盾：起、调整、外撤中、外撤落、探、探到位、定末、钩、发力中、击中、撑住、撤步中、撤步落、左拳顶出、拽到位、
+    # 拽住末、上步中、上步落、收（door_breaker_hook.md 第 10 节；撤步落地按制作结果为 2.40 s）
+    "door_breaker_hook": (0.0, 0.40, 0.65, 0.80, 1.20, 1.60, 1.80, 1.90, 1.98, 2.05, 2.10, 2.20, 2.40, 2.45, 2.60,
+                          2.90, 3.05, 3.20, 3.60, 4.00, 4.30, 4.50),
+    # 横扫：起、承接入口、外撤落、下垂、前荡到位、回拉中、蓄满、定末、右脚离地、起转、击中一、回旋、最快、击中二、
+    # 回旋、转满、落脚、收（door_breaker_sweep.md 第 10 节）
+    "door_breaker_sweep": (0.0, 0.50, 0.80, 0.95, 1.45, 2.10, 2.70, 2.90, 3.00, 3.15, 3.35, 3.50, 3.60, 3.70, 3.95,
+                           4.25, 4.30, 4.70, 5.20, 5.50, 5.80, 6.0),
+    # 掩门：起、预备、推到最远、撤步一落、前脚最高、撤步二落、回收、沉中、蓄满、翻斧中、预击、顶、击中、随、
+    # 收脚起、落脚、按上、落闩末、收中、斧到位、末帧（door_breaker_close.md 第 10 节）
+    "door_breaker_close": (0.0, 0.50, 0.78, 0.95, 1.18, 1.30, 1.60, 2.00, 2.30, 2.40, 2.50, 2.55, 2.60, 3.00,
+                           3.20, 3.45, 3.50, 3.90, 4.30, 4.70, 5.0),
+    # 连门：起、预备、蓄一中、蓄一、定一、发一、击一、低一、借力一、蓄二、发二、击二、低二、借力二、蓄三、定三颤、
+    # 弓步中、击三、随、随末、收脚起、收脚落、斧经胸前、左手离柄、回护位、末帧（door_breaker_chain.md 第 10 节）
+    "door_breaker_chain": (0.0, 0.30, 0.60, 1.00, 1.30, 1.60, 1.70, 1.95, 2.40, 2.80, 3.10, 3.20, 3.45, 3.90,
+                           4.40, 4.60, 4.90, 5.00, 5.40, 6.00, 6.20, 6.35, 6.80, 7.00, 7.50, 8.0),
+    # 万门一斩：起、握柄、预备、前迈中、回摆、前荡、提斧中、斧竖肩旁、定、深蹲、颤、蹬、蹬直、收腿、最高、迎地起、触地、
+    # 劈下中、击中、压低、静、拄斧、收脚中、收脚落、提起前、提起、左手离柄、回持物中、回架势、末帧（door_breaker_finale.md 第 10 节）
+    "door_breaker_finale": (0.0, 0.75, 1.50, 1.70, 1.90, 2.30, 2.55, 2.80, 3.20, 3.60, 3.90, 4.02, 4.08, 4.25, 4.40,
+                            4.55, 4.70, 4.79, 4.85, 4.95, 5.40, 6.00, 6.40, 6.80, 7.40, 7.80, 8.00, 8.40, 8.80, 9.0),
 }
 # 闪避：预备步离地、迈步中、预备步落地、下蹲、蹬伸离地、收腿、迎地、先后触地、缓冲、回架势各取一帧，
 # 接触表能看清“先迈脚再发力”的腿部动作链（共 12 帧）。
@@ -70,6 +100,8 @@ KEY_TIMES = {
 for _direction in ("forward", "back", "left", "right"):
     KEY_TIMES[f"dodge_{_direction}"] = (0.0, 0.03, 0.085, 0.14, 0.25, 0.32, 0.42, 0.48, 0.52, 0.56, 0.65, 0.80)
     KEY_TIMES[f"technique_dash_{_direction}"] = (0.0, 0.12, 0.22, 0.30, 0.32, 0.45, 0.59, 0.61, 0.80, 0.88, 1.01, 1.15)
+# 跃步：负载、蹬伸、离地、收腿起、收腿深、胯最高、前伸、着地姿势、末帧保持（technique_leap.md 第 9 节）。
+KEY_TIMES["technique_leap"] = (0.0, 0.05, 0.10, 0.15, 0.20, 0.24, 0.30, 0.35, 0.40)
 
 # 手持与穿戴道具。剑刃方向由原版 handheld 第三人称 display 推算（见 conventions.md），
 # 胸甲在手中显示到“胸甲上身”时刻，之后改画穿在身上的盔甲层。
@@ -77,6 +109,14 @@ PROPS = {
     "attack_main": ({"kind": "sword", "bone": "r_item"},),
     "mine_main": ({"kind": "pickaxe", "bone": "r_item"},),
     "place_block": ({"kind": "block", "bone": "r_item"},),
+    "door_breaker_knock": ({"kind": "axe", "bone": "r_item"},),
+    "door_breaker_cleave": ({"kind": "axe", "bone": "r_item"},),
+    "door_breaker_ram": ({"kind": "axe", "bone": "r_item"},),
+    "door_breaker_hook": ({"kind": "axe", "bone": "r_item"},),
+    "door_breaker_sweep": ({"kind": "axe", "bone": "r_item"},),
+    "door_breaker_close": ({"kind": "axe", "bone": "r_item"},),
+    "door_breaker_chain": ({"kind": "axe", "bone": "r_item"},),
+    "door_breaker_finale": ({"kind": "axe", "bone": "r_item"},),
     # 下列道具的端点由原版物品模型的 thirdperson_righthand display 经游戏内挂点变换
     # （Rig.itemTransform：rotX(−90°)·rotY(180°)，再做 toVanilla 的 Y 反射）换算到 r_item 局部像素。
     "spyglass": ({"kind": "segments", "bone": "r_item", "parts": (
@@ -114,18 +154,26 @@ PROPS["crossbow_hold"] = PROPS["crossbow_charge"]
 VANILLA_JUMP_Y = (0, 0.42, 0.7532, 1.0013, 1.166, 1.249, 1.252, 1.1766, 1.024, 0.796, 0.4943, 0.12, 0.0)
 
 
-def jump_lift_px(time: float) -> float:
-    if time >= 0.60:
-        return 0.0
+# 跃步平地 6 格（10 tick，起跳竖直速度 0.366 格/tick）的实体高度，按现行求解器逐 tick 积分；0.50 s 落地后归零。
+LEAP_FLAT6_Y = (0, 0.3659, 0.646, 0.8421, 0.956, 0.9891, 0.9432, 0.8198, 0.6204, 0.3467, 0.0)
+
+
+def tick_lift_px(heights: tuple[float, ...], time: float) -> float:
     ticks = time * 20
+    if ticks >= len(heights) - 1:
+        return 0.0
     index = int(ticks)
     amount = ticks - index
-    low = VANILLA_JUMP_Y[index]
-    high = VANILLA_JUMP_Y[min(index + 1, len(VANILLA_JUMP_Y) - 1)]
+    low = heights[index]
+    high = heights[index + 1]
     return (low + (high - low) * amount) * 16
 
 
-ROOT_PREVIEW = {"jump": jump_lift_px}
+def jump_lift_px(time: float) -> float:
+    return tick_lift_px(VANILLA_JUMP_Y, time)
+
+
+ROOT_PREVIEW = {"jump": jump_lift_px, "technique_leap": lambda time: tick_lift_px(LEAP_FLAT6_Y, time)}
 
 # 原版驱动预览：按调度规则把剪辑时间拼成一段（起点, 终点, 重复次数），以慢放输出。
 # mine：连续挖掘时原版每 4 tick 重开挥动，剪辑在 0–0.20 s 回绕；停手后再播一次完整挥动与收势。
@@ -138,13 +186,25 @@ DRIVE_PREVIEW = {
 
 SWORD_POMMEL = (0.0, 2.2, 5.5)
 SWORD_TIP = (0.0, -1.2, -13.5)
+# 斧子（挂点局部像素）：原版 iron_axe.png 逐像素经 handheld 第三人称 display（rotation [0,−90,55]、
+# translation [0,4,0.5]、scale 0.85）与 Rig.itemTransform 换算。柄不在贴图对角线上，比剑的对角线
+# 偏 0.57 px、短 5 px：柄中线过 AXE_GRIP_CENTER，沿 AXE_ALONG（柄尾 → 斧头）；刃口方向 AXE_EDGE
+# 几乎沿前臂指向拳外（door_breaker_knock.md 第 8 节）。AXE_HANDLE_S 是柄两端、斧头各块是 (s, e) 范围，
+# s 沿柄、e 沿刃口方向，都相对 AXE_GRIP_CENTER。左手 display 经左手取反后与右手相同。
+AXE_GRIP_CENTER = (0.0, 1.409, -2.307)
+AXE_ALONG = (0.0, -0.1736, -0.9848)
+AXE_EDGE = (0.0, -0.985, 0.174)
+AXE_HANDLE_S = (-5.99, 7.23)
+AXE_HEAD = (((3.6, 6.0), (-2.7, 0.9), "iron"),
+            ((2.4, 7.2), (0.9, 3.3), "iron"),
+            ((2.4, 7.2), (3.3, 4.2), "iron_dark"))
 IRON = (206, 208, 212, 255)
 IRON_DARK = (150, 153, 158, 255)
 HANDLE = (110, 74, 42, 255)
 GUARD = (80, 82, 88, 255)
 DIRT = (134, 96, 67, 255)
 COPPER = (196, 120, 70, 255)
-PROP_COLORS = {"copper": COPPER, "handle": HANDLE, "iron_dark": IRON_DARK, "dirt": DIRT, "horn": (214, 200, 170, 255)}
+PROP_COLORS = {"iron": IRON, "copper": COPPER, "handle": HANDLE, "iron_dark": IRON_DARK, "dirt": DIRT, "horn": (214, 200, 170, 255)}
 
 
 def projection(point: tuple[float, float, float], yaw: float, center: tuple[float, float], scale: float) -> tuple[float, float, float]:
@@ -258,6 +318,21 @@ def prop_boxes(model: SkeletonModel, prop: dict[str, Any]) -> list[tuple[str, di
             (prop["bone"], box_corners(point(0.86), axes, (0.9, length * 0.36, 0.5)), IRON),
             (prop["bone"], box_corners(point(0.86), axes, (1.0, 1.1, 0.55)), IRON_DARK),
         ]
+    if kind == "axe":
+        # 柄与斧头各一块，按原版贴图像素范围摆放；刃口一条画深色。
+        pivot = model.origins[prop["bone"]]
+        along, edge, side = AXE_ALONG, AXE_EDGE, (1.0, 0.0, 0.0)
+        point = lambda s, e: tuple(pivot[i] + AXE_GRIP_CENTER[i] + along[i] * s + edge[i] * e for i in range(3))
+        # 柄切成约 2 px 的小段：每段单独排序深度，穿过拳的那几段才会被手指正确遮住，拳外的段照常露出。
+        low, high = AXE_HANDLE_S
+        count = math.ceil((high - low) / 2)
+        piece = (high - low) / count
+        boxes = [(prop["bone"], box_corners(point(low + piece * (k + 0.5), 0.0), (along, edge, side), (piece / 2, 0.6, 0.45)),
+                  HANDLE) for k in range(count)]
+        for (s0, s1), (e0, e1), color in AXE_HEAD:
+            boxes.append((prop["bone"], box_corners(point((s0 + s1) / 2, (e0 + e1) / 2), (along, edge, side),
+                                                    ((s1 - s0) / 2, (e1 - e0) / 2, 0.4)), PROP_COLORS[color]))
+        return boxes
     if kind == "block":
         # 手持方块按原版第三人称 0.375 倍缩放，预览画成约 5 px 立方体，中心在掌前。
         pivot = model.origins[prop["bone"]]
