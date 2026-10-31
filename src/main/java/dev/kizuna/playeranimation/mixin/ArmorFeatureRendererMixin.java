@@ -2,18 +2,18 @@ package dev.kizuna.playeranimation.mixin;
 
 import dev.kizuna.playeranimation.client.PlayerAnimationClient;
 import dev.kizuna.playeranimation.client.FirstPersonBody;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
 import dev.kizuna.playeranimation.client.ArmorMesh;
 import dev.kizuna.playeranimation.client.PlayerMeshRenderer;
 import dev.kizuna.playeranimation.client.MobAnimationRenderer;
-import net.minecraft.client.render.VertexConsumer;
-import net.minecraft.client.render.VertexConsumerProvider;
-import net.minecraft.client.render.entity.feature.ArmorFeatureRenderer;
-import net.minecraft.client.render.entity.model.BipedEntityModel;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.entity.EquipmentSlot;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.client.network.AbstractClientPlayerEntity;
 import java.util.UUID;
+import net.minecraft.client.model.HumanoidModel;
+import net.minecraft.client.player.AbstractClientPlayer;
+import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.entity.layers.HumanoidArmorLayer;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.LivingEntity;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
@@ -22,7 +22,7 @@ import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /** 保留原版盔甲材质及显隐，将盔甲顶点绑定到身体的同一帧骨骼。 */
-@Mixin(ArmorFeatureRenderer.class)
+@Mixin(HumanoidArmorLayer.class)
 public abstract class ArmorFeatureRendererMixin {
     @Unique
     private UUID kpa$currentPlayer;
@@ -31,11 +31,10 @@ public abstract class ArmorFeatureRendererMixin {
     @Unique
     private MobAnimationRenderer.Frame kpa$mobFrame;
 
-    @Redirect(method = {"renderArmorParts", "renderTrim", "renderGlint"},
-            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/render/entity/model/BipedEntityModel;render("
-                    + "Lnet/minecraft/client/util/math/MatrixStack;"
-                    + "Lnet/minecraft/client/render/VertexConsumer;IIFFFF)V"))
-    private void kpa$drawArmor(BipedEntityModel<?> model, MatrixStack matrices, VertexConsumer vertices,
+    @Redirect(method = {"renderModel", "renderTrim", "renderGlint"},
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/model/HumanoidModel;renderToBuffer("
+                    + "Lcom/mojang/blaze3d/vertex/PoseStack;Lcom/mojang/blaze3d/vertex/VertexConsumer;IIFFFF)V"))
+    private void kpa$drawArmor(HumanoidModel<?> model, PoseStack matrices, VertexConsumer vertices,
                                 int light, int overlay, float red, float green, float blue, float alpha) {
         // 材质、染色、图集 UV 包装和附魔缓冲仍由原版选择，三条通道画同一个变形网格。
         PlayerMeshRenderer.Frame frame = null;
@@ -56,32 +55,32 @@ public abstract class ArmorFeatureRendererMixin {
                     red, green, blue, alpha, surface -> ArmorMesh.visible(model, surface));
             return;
         }
-        model.render(matrices, vertices, light, overlay, red, green, blue, alpha);
+        model.renderToBuffer(matrices, vertices, light, overlay, red, green, blue, alpha);
     }
 
-    @Inject(method = "renderArmor", at = @At("HEAD"), cancellable = true)
-    private void kpa$hideBeforeEquip(MatrixStack matrices, VertexConsumerProvider buffers, LivingEntity entity,
-                                      EquipmentSlot slot, int light, BipedEntityModel<?> model, CallbackInfo callback) {
+    @Inject(method = "renderArmorPiece", at = @At("HEAD"), cancellable = true)
+    private void kpa$hideBeforeEquip(PoseStack matrices, MultiBufferSource buffers, LivingEntity entity,
+                                      EquipmentSlot slot, int light, HumanoidModel<?> model, CallbackInfo callback) {
         kpa$currentPlayer = null;
         kpa$vanillaHands = false;
         kpa$mobFrame = MobAnimationRenderer.frame(entity.getId());
-        if (!(entity instanceof AbstractClientPlayerEntity player)) {
+        if (!(entity instanceof AbstractClientPlayer player)) {
             return;
         }
-        kpa$currentPlayer = player.getUuid();
+        kpa$currentPlayer = player.getUUID();
         kpa$vanillaHands = FirstPersonBody.rendering(player) && FirstPersonBody.vanillaHands(player);
         if (FirstPersonBody.rendering(player) && slot == EquipmentSlot.HEAD) {
             callback.cancel();
             return;
         }
         // 非靴子盔甲整层隐藏；靴子允许右、左腿在不同 equip 阶段恢复。
-        if (PlayerAnimationClient.PLAYBACK.shouldHideArmor(player.getUuid(), slot)) {
+        if (PlayerAnimationClient.PLAYBACK.shouldHideArmor(player.getUUID(), slot)) {
             callback.cancel();
         }
     }
 
-    @Inject(method = "setVisible", at = @At("TAIL"))
-    private void kpa$hideBootLeg(BipedEntityModel<?> model, EquipmentSlot slot, CallbackInfo callback) {
+    @Inject(method = "setPartVisibility", at = @At("TAIL"))
+    private void kpa$hideBootLeg(HumanoidModel<?> model, EquipmentSlot slot, CallbackInfo callback) {
         if (kpa$vanillaHands) {
             model.leftArm.visible = false;
             model.rightArm.visible = false;

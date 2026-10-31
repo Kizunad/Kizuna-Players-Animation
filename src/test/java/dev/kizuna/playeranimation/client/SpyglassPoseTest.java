@@ -12,7 +12,7 @@ import dev.kizuna.playeranimation.model.Skeleton;
 import dev.kizuna.playeranimation.model.Vec3;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import net.minecraft.util.Arm;
+import net.minecraft.world.entity.HumanoidArm;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
 import org.junit.jupiter.api.Test;
@@ -42,13 +42,13 @@ class SpyglassPoseTest {
             AnimationEntry entry = AnimationEntry.parse(raw, clip);
             for (String model : new String[]{"classic", "slim"}) {
                 Skeleton skeleton = Skeleton.parse(geometry, "geometry.player." + model);
-                for (Arm mainArm : Arm.values()) {
-                    boolean rightHolds = id.equals("spyglass") == (mainArm == Arm.RIGHT);
+                for (HumanoidArm mainArm : HumanoidArm.values()) {
+                    boolean rightHolds = id.equals("spyglass") == (mainArm == HumanoidArm.RIGHT);
                     BoneId forearm = rightHolds ? BoneId.R_FOREARM : BoneId.L_FOREARM;
                     BoneId support = rightHolds ? BoneId.L_HAND : BoneId.R_HAND;
                     for (float time : new float[]{0.5f, 1.35f, 2.3f}) {
                         AnimationPlayer animation = new AnimationPlayer();
-                        animation.scrub(entry, 0, time / clip.duration(), mainArm == Arm.LEFT);
+                        animation.scrub(entry, 0, time / clip.duration(), mainArm == HumanoidArm.LEFT);
                         Pose[] base = animation.sample(Rig.zeroPose(), 1, false);
                         Matrix4f[] before = Rig.matrices(skeleton, base);
                         Matrix4f contact = new Matrix4f(before[forearm.ordinal()]).invert().mul(before[support.ordinal()]);

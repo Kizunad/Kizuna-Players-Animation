@@ -50,11 +50,11 @@
 | sneak | sneak_walk / crouch_work / stand / walk / jump_takeoff | 0.2 / 0.2 | 否 | 开始移动 / 开始工具动作 / 松开潜行 / 离地 |
 | sneak_walk | sneak / walk / run / jump_takeoff | 0.2 / 0.2 | 否 | 停步 / 松开潜行 / 离地 |
 | crouch_work | sneak / sneak_walk | 0.18 / 0.18 | 否 | 工具动作结束 / 开始移动 |
-| stand / walk / jump_air | climb | 0.15 / 0.15 | 否 | `isClimbing()` 且未站稳；按竖直位移 scrub |
+| stand / walk / jump_air | climb | 0.15 / 0.15 | 否 | `onClimbable()` 且未站稳；按竖直位移 scrub |
 | climb | stand / walk / jump_air | 0.15 / 0.15 | 否 | 离开可攀爬方块或着地 |
 | walk / run | swim | 0.3 / 0.3 | 否 | 进入泳姿；与原版 `leaningPitch` 放倒同步 |
 | swim | stand / walk | 0.3 / 0.3 | 否 | 离开泳姿 |
-| stand / walk / jump_air | ride | 0.25 / 0.25 | 否 | `hasVehicle()`（原版坐骑均为坐姿） |
+| stand / walk / jump_air | ride | 0.25 / 0.25 | 否 | `isPassenger()`（原版坐骑均为坐姿） |
 | ride | stand | 0.25 / 0.25 | 否 | 下坐骑 |
 | stand | sleep | 0.3 / 0.3 | 否 | 入睡；原版矩阵同时放倒身体 |
 | sleep | stand | 0.3 / 0.3 | 否 | 醒来 |
@@ -76,7 +76,7 @@
 
 ## 原版 ArmPose 使用动作
 
-调度按原版 `PlayerEntityRenderer.getArmPose` 的语义选 ID：`UseAction.SPYGLASS → spyglass`、
+调度按原版 `PlayerRenderer.getArmPose` 的语义选 ID：`UseAnim.SPYGLASS → spyglass`、
 `TOOT_HORN → toot_horn`、`EAT → eat`、`DRINK → drink`、`BLOCK → block_shield`、`BOW → bow_draw`、`SPEAR → trident_charge`、使用中的弩 `→ crossbow_charge`、持已上弦且未使用的弩 `→ crossbow_hold`、
 `BRUSH → brush`；其余持续使用 `→ use_item`。
 物品在副手时选对应 `*_off`。驱动方式（已使用时长、装填进度、循环段）见各设计稿第 1 节。
@@ -105,7 +105,7 @@
 
 | 来源 → 目标 | 淡入 / 淡出 | 触发 | 约束 |
 | --- | ---: | --- | --- |
-| stand / walk / run / sneak / sneak_walk / crouch_work / ride / jump_air → bow_draw | 0.08 / 0.15 | 开始拉弓 | 按 `BowItem.getPullProgress` scrub；满弓在 1.0–1.6 回绕 |
+| stand / walk / run / sneak / sneak_walk / crouch_work / ride / jump_air → bow_draw | 0.08 / 0.15 | 开始拉弓 | 按 `BowItem.getPowerForTime` scrub；满弓在 1.0–1.6 回绕 |
 
 
 | 来源 → 目标 | 淡入 / 淡出 | 触发 | 约束 |

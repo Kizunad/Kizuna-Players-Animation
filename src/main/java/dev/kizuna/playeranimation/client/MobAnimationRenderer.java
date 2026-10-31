@@ -1,5 +1,7 @@
 package dev.kizuna.playeranimation.client;
 
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
 import dev.kizuna.playeranimation.animation.AnimationPlayer;
 import dev.kizuna.playeranimation.model.BoneId;
 import dev.kizuna.playeranimation.model.Pose;
@@ -8,19 +10,17 @@ import dev.kizuna.playeranimation.model.SkinnedMesh;
 import dev.kizuna.playeranimation.model.Vec3;
 import java.util.HashMap;
 import java.util.Map;
-import net.minecraft.client.model.ModelPart;
-import net.minecraft.client.render.VertexConsumer;
-import net.minecraft.client.render.VertexConsumerProvider;
-import net.minecraft.client.render.entity.model.BipedEntityModel;
-import net.minecraft.client.render.entity.model.EntityModel;
-import net.minecraft.client.render.entity.model.IllagerEntityModel;
-import net.minecraft.client.render.entity.model.VillagerResemblingModel;
-import net.minecraft.client.render.item.HeldItemRenderer;
-import net.minecraft.client.render.model.json.ModelTransformationMode;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.Arm;
+import net.minecraft.client.model.EntityModel;
+import net.minecraft.client.model.HumanoidModel;
+import net.minecraft.client.model.IllagerModel;
+import net.minecraft.client.model.VillagerModel;
+import net.minecraft.client.model.geom.ModelPart;
+import net.minecraft.client.renderer.ItemInHandRenderer;
+import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.world.entity.HumanoidArm;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.item.ItemDisplayContext;
+import net.minecraft.world.item.ItemStack;
 import org.joml.Matrix4f;
 import org.joml.Matrix3f;
 
@@ -53,7 +53,7 @@ public final class MobAnimationRenderer {
             return;
         }
         double now = PlayerPlayback.now(tickDelta);
-        boolean crouching = entity.isInSneakingPose();
+        boolean crouching = entity.isCrouching();
         Pose[] base;
         if (automatic == null) {
             base = basePose(vanilla);
@@ -72,30 +72,30 @@ public final class MobAnimationRenderer {
         return FRAMES.get(entityId);
     }
 
-    public record ItemDraw(ItemStack item, ModelTransformationMode mode, Arm arm, MatrixStack matrices,
-                           VertexConsumerProvider buffers, int light) { }
+    public record ItemDraw(ItemStack item, ItemDisplayContext mode, HumanoidArm arm, PoseStack matrices,
+                           MultiBufferSource buffers, int light) { }
 
-    public static boolean item(LivingEntity entity, ItemDraw draw, HeldItemRenderer renderer) {
+    public static boolean item(LivingEntity entity, ItemDraw draw, ItemInHandRenderer renderer) {
         Frame frame = FRAMES.get(entity.getId());
         ItemStack item = draw.item();
         if (frame == null || item.isEmpty()) {
             return false;
         }
         // 物品在原版实体变换之内，再应用同帧手骨变换。
-        Arm arm = draw.arm();
-        BoneId socket = arm == Arm.RIGHT ? BoneId.R_ITEM : BoneId.L_ITEM;
+        HumanoidArm arm = draw.arm();
+        BoneId socket = arm == HumanoidArm.RIGHT ? BoneId.R_ITEM : BoneId.L_ITEM;
         Matrix4f transform = Rig.itemTransform(frame.model().body().skeleton(), frame.matrices(), socket);
-        MatrixStack matrices = draw.matrices();
-        matrices.push();
-        matrices.peek().getPositionMatrix().mul(transform);
-        matrices.peek().getNormalMatrix().mul(new Matrix3f(transform));
-        renderer.renderItem(entity, item, draw.mode(), arm == Arm.LEFT,
+        PoseStack matrices = draw.matrices();
+        matrices.pushPose();
+        matrices.last().pose().mul(transform);
+        matrices.last().normal().mul(new Matrix3f(transform));
+        renderer.renderItem(entity, item, draw.mode(), arm == HumanoidArm.LEFT,
                 matrices, draw.buffers(), draw.light());
-        matrices.pop();
+        matrices.popPose();
         return true;
     }
 
-    public record Draw(MatrixStack matrices, VertexConsumer vertices, int light, int overlay,
+    public record Draw(PoseStack matrices, VertexConsumer vertices, int light, int overlay,
                        float red, float green, float blue, float alpha) { }
 
     public static void draw(Frame frame, Draw draw, EntityModel<?> vanilla) {
@@ -116,23 +116,23 @@ public final class MobAnimationRenderer {
 
     private static boolean visible(EntityModel<?> model, SkinnedMesh.Surface surface) {
         String path = surface.part();
-        if (model instanceof VillagerResemblingModel<?> villager) {
-            return visible(villager.getPart(), path);
+        if (model instanceof VillagerModel<?> villager) {
+            return visible(villager.root(), path);
         }
-        if (model instanceof IllagerEntityModel<?> illager) {
+        if (model instanceof IllagerModel<?> illager) {
             // 播放时双臂由独立骨驱动，不受原版交叉臂模式的隐藏开关限制。
             if (path.endsWith("_arm")) {
                 return true;
             }
-            return visible(illager.getPart(), path);
+            return visible(illager.root(), path);
         }
-        if (model instanceof BipedEntityModel<?> biped) {
+        if (model instanceof HumanoidModel<?> biped) {
             return visible(biped, path);
         }
         return true;
     }
 
-    private static boolean visible(BipedEntityModel<?> biped, String path) {
+    private static boolean visible(HumanoidModel<?> biped, String path) {
         String[] children = path.split("/");
         ModelPart part = switch (children[0]) {
             case "head" -> biped.head;
@@ -147,12 +147,12 @@ public final class MobAnimationRenderer {
         if (part != null) {
             // 子部件必须继承祖先显隐，例如猪灵耳朵与僵尸村民帽沿。
             for (int i = 1; i < children.length; i++) {
-                if (!part.visible || part.hidden) {
+                if (!part.visible || part.skipDraw) {
                     return false;
                 }
                 part = part.getChild(children[i]);
             }
-            return part.visible && !part.hidden;
+            return part.visible && !part.skipDraw;
         }
         return true;
     }
@@ -160,7 +160,7 @@ public final class MobAnimationRenderer {
     private static boolean visible(ModelPart root, String path) {
         ModelPart part = root;
         for (String name : path.split("/")) {
-            if (!part.visible || part.hidden) {
+            if (!part.visible || part.skipDraw) {
                 return false;
             }
             // 村民动画展开的手臂来自 arms 的纹理，没有原版独立节点。
@@ -169,12 +169,12 @@ public final class MobAnimationRenderer {
             }
             part = part.getChild(name);
         }
-        return part.visible && !part.hidden;
+        return part.visible && !part.skipDraw;
     }
 
     private static Pose[] basePose(EntityModel<?> model) {
         Pose[] pose = Rig.zeroPose();
-        if (model instanceof BipedEntityModel<?> biped) {
+        if (model instanceof HumanoidModel<?> biped) {
             setRotation(pose, BoneId.CHEST, biped.body);
             setRotation(pose, BoneId.HEAD, biped.head);
             setRotation(pose, BoneId.R_UPPER_ARM, biped.rightArm);
@@ -183,7 +183,7 @@ public final class MobAnimationRenderer {
             setRotation(pose, BoneId.L_THIGH, biped.leftLeg);
             return pose;
         }
-        if (model instanceof VillagerResemblingModel<?> villager) {
+        if (model instanceof VillagerModel<?> villager) {
             ModelPartAccess parts = ModelPartAccess.villager(villager);
             setRotation(pose, BoneId.CHEST, parts.body());
             setRotation(pose, BoneId.HEAD, parts.head());
@@ -192,7 +192,7 @@ public final class MobAnimationRenderer {
             crossArms(pose);
             return pose;
         }
-        if (model instanceof IllagerEntityModel<?> illager) {
+        if (model instanceof IllagerModel<?> illager) {
             ModelPartAccess parts = ModelPartAccess.illager(illager);
             setRotation(pose, BoneId.CHEST, parts.body());
             setRotation(pose, BoneId.HEAD, parts.head());
@@ -218,8 +218,8 @@ public final class MobAnimationRenderer {
             return;
         }
         pose[bone.ordinal()] = new Pose(Vec3.ZERO,
-                new Vec3(-part.pitch / RADIANS_PER_DEGREE, part.yaw / RADIANS_PER_DEGREE,
-                        -part.roll / RADIANS_PER_DEGREE));
+                new Vec3(-part.xRot / RADIANS_PER_DEGREE, part.yRot / RADIANS_PER_DEGREE,
+                        -part.zRot / RADIANS_PER_DEGREE));
     }
 
     private record ModelPartAccess(ModelPart body,
@@ -228,14 +228,14 @@ public final class MobAnimationRenderer {
                                    ModelPart leftArm,
                                    ModelPart rightLeg,
                                    ModelPart leftLeg) {
-        static ModelPartAccess villager(VillagerResemblingModel<?> model) {
-            ModelPart root = model.getPart();
+        static ModelPartAccess villager(VillagerModel<?> model) {
+            ModelPart root = model.root();
             return new ModelPartAccess(root.getChild("body"), root.getChild("head"), null, null,
                     root.getChild("right_leg"), root.getChild("left_leg"));
         }
 
-        static ModelPartAccess illager(IllagerEntityModel<?> model) {
-            ModelPart root = model.getPart();
+        static ModelPartAccess illager(IllagerModel<?> model) {
+            ModelPart root = model.root();
             return new ModelPartAccess(root.getChild("body"), root.getChild("head"), root.getChild("right_arm"),
                     root.getChild("left_arm"), root.getChild("right_leg"), root.getChild("left_leg"));
         }

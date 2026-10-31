@@ -1,5 +1,7 @@
 package dev.kizuna.playeranimation.client;
 
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
 import dev.kizuna.playeranimation.model.BoneId;
 import dev.kizuna.playeranimation.model.Pose;
 import dev.kizuna.playeranimation.model.Rig;
@@ -10,21 +12,19 @@ import java.util.EnumMap;
 import java.util.Map;
 import java.util.List;
 import java.util.function.Predicate;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.model.ModelPart;
-import net.minecraft.client.model.ModelTransform;
-import net.minecraft.client.network.AbstractClientPlayerEntity;
-import net.minecraft.client.render.OverlayTexture;
-import net.minecraft.client.render.RenderLayer;
-import net.minecraft.client.render.VertexConsumer;
-import net.minecraft.client.render.VertexConsumerProvider;
-import net.minecraft.client.render.entity.PlayerEntityRenderer;
-import net.minecraft.client.render.entity.model.PlayerEntityModel;
-import net.minecraft.client.render.item.HeldItemRenderer;
-import net.minecraft.client.render.model.json.ModelTransformationMode;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.Arm;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.model.PlayerModel;
+import net.minecraft.client.model.geom.ModelPart;
+import net.minecraft.client.model.geom.PartPose;
+import net.minecraft.client.player.AbstractClientPlayer;
+import net.minecraft.client.renderer.ItemInHandRenderer;
+import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.entity.player.PlayerRenderer;
+import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.world.entity.HumanoidArm;
+import net.minecraft.world.item.ItemDisplayContext;
+import net.minecraft.world.item.ItemStack;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
 
@@ -37,35 +37,35 @@ public final class PlayerMeshRenderer {
     public record Frame(PlayerAssets.Model model, Matrix4f[] matrices) { }
     private PlayerMeshRenderer() { }
 
-    public static Frame frame(AbstractClientPlayerEntity player, PlayerEntityModel<?> vanilla, float tickDelta, boolean firstPerson) {
-        PlayerAssets.Model model = PlayerAnimationClient.ASSETS.model("slim".equals(player.getModel()));
+    public static Frame frame(AbstractClientPlayer player, PlayerModel<?> vanilla, float tickDelta, boolean firstPerson) {
+        PlayerAssets.Model model = PlayerAnimationClient.ASSETS.model("slim".equals(player.getModelName()));
         if (model == null) {
             return null;
         }
         // 先还原原版姿态，再按实际存在的轨道覆盖，未写的腿仍保持原版走路。
         // 视线层启用时底层去掉原版头部偏航/俯仰，最后由视线层统一加回，避免动作头轨道吞掉视线或重复计算。
         LookLayer.Clips look = lookEnabled(player, firstPerson) ? LookLayer.clips(PlayerAnimationClient.ASSETS.animations()) : null;
-        Pose[] base = basePose(model.skeleton(), vanilla, firstPerson, "slim".equals(player.getModel()), look != null);
-        var animation = PlayerAnimationClient.PLAYBACK.player(player.getUuid());
+        Pose[] base = basePose(model.skeleton(), vanilla, firstPerson, "slim".equals(player.getModelName()), look != null);
+        var animation = PlayerAnimationClient.PLAYBACK.player(player.getUUID());
         double now = PlayerPlayback.now(tickDelta);
         Pose[] pose = animation == null ? base
-                : animation.sample(base, now, firstPerson, vanilla.sneaking);
+                : animation.sample(base, now, firstPerson, vanilla.crouching);
         if (animation != null) {
-            applyArmPosePitch(pose, model.skeleton(), animation, now, player.getPitch(tickDelta),
+            applyArmPosePitch(pose, model.skeleton(), animation, now, player.getViewXRot(tickDelta),
                     player.getMainArm());
         }
         if (look != null) {
-            float yaw = (float) Math.toDegrees(vanilla.head.yaw);
-            float pitch = (float) Math.toDegrees(vanilla.head.pitch);
+            float yaw = (float) Math.toDegrees(vanilla.head.yRot);
+            float pitch = (float) Math.toDegrees(vanilla.head.xRot);
             LookLayer.apply(pose, look, yaw, pitch, lookPitchWeight(animation, now));
         }
         return new Frame(model, Rig.matrices(model.skeleton(), pose));
     }
 
-    private static boolean lookEnabled(AbstractClientPlayerEntity player, boolean firstPerson) {
+    private static boolean lookEnabled(AbstractClientPlayer player, boolean firstPerson) {
         // 睡眠、泳姿/爬行过渡、鞘翅、激流和死亡时原版头部有专用姿态，视线层不接管；独立手臂入口不画头。
-        return !firstPerson && !player.isSleeping() && !player.isInSwimmingPose() && !player.isFallFlying()
-                && !player.isUsingRiptide() && player.deathTime == 0 && player.getLeaningPitch(0) == 0;
+        return !firstPerson && !player.isSleeping() && !player.isVisuallySwimming() && !player.isFallFlying()
+                && !player.isAutoSpinAttack() && player.deathTime == 0 && player.getSwimAmount(0) == 0;
     }
 
     static float lookPitchWeight(dev.kizuna.playeranimation.animation.AnimationPlayer animation, double now) {
@@ -87,7 +87,7 @@ public final class PlayerMeshRenderer {
 
     static void applyArmPosePitch(Pose[] pose, Skeleton skeleton,
                                   dev.kizuna.playeranimation.animation.AnimationPlayer animation,
-                                  double now, float pitch, Arm mainArm) {
+                                  double now, float pitch, HumanoidArm mainArm) {
         // 望远镜、号角和弩资源按平视制作；把原版视线俯仰叠到头与瞄准上臂，
         // 保持镜筒/吹口/弩托沿视线而不是固定在世界水平面。
         String active = null;
@@ -130,8 +130,8 @@ public final class PlayerMeshRenderer {
             pose[BoneId.L_UPPER_ARM.ordinal()] = withPitch(pose[BoneId.L_UPPER_ARM.ordinal()], modelPitch);
             return;
         }
-        Arm actionArm = active.endsWith("_off") ? mainArm.getOpposite() : mainArm;
-        BoneId upper = actionArm == Arm.RIGHT ? BoneId.R_UPPER_ARM : BoneId.L_UPPER_ARM;
+        HumanoidArm actionArm = active.endsWith("_off") ? mainArm.getOpposite() : mainArm;
+        BoneId upper = actionArm == HumanoidArm.RIGHT ? BoneId.R_UPPER_ARM : BoneId.L_UPPER_ARM;
         pose[upper.ordinal()] = withPitch(pose[upper.ordinal()], modelPitch);
     }
 
@@ -140,11 +140,11 @@ public final class PlayerMeshRenderer {
         return new Pose(pose.position(), new Vec3(rotation.x() + delta, rotation.y(), rotation.z()));
     }
 
-    public static Pose[] basePose(Skeleton skeleton, PlayerEntityModel<?> model, boolean firstPerson, boolean slim) {
+    public static Pose[] basePose(Skeleton skeleton, PlayerModel<?> model, boolean firstPerson, boolean slim) {
         return basePose(skeleton, model, firstPerson, slim, false);
     }
 
-    public static Pose[] basePose(Skeleton skeleton, PlayerEntityModel<?> model, boolean firstPerson, boolean slim,
+    public static Pose[] basePose(Skeleton skeleton, PlayerModel<?> model, boolean firstPerson, boolean slim,
                                   boolean stripLook) {
         Map<BoneId, Matrix4f> absolute = new EnumMap<>(BoneId.class);
         Pose[] pose = Rig.zeroPose();
@@ -171,16 +171,16 @@ public final class PlayerMeshRenderer {
     }
 
     private static Matrix4f vanillaTransform(ModelPart part, boolean lookless) {
-        ModelTransform bind = part.getDefaultTransform();
-        float yaw = lookless ? 0 : part.yaw;
-        float pitch = lookless ? 0 : part.pitch;
+        PartPose bind = part.getInitialPose();
+        float yaw = lookless ? 0 : part.yRot;
+        float pitch = lookless ? 0 : part.xRot;
         // Y 轴反射使 X/Z 旋转反号；每节矩阵最终仍作用于全局像素位置。
-        return new Matrix4f().translate(part.pivotX, Rig.MODEL_ORIGIN_HEIGHT - part.pivotY, part.pivotZ)
-                .rotateZYX(-part.roll, yaw, -pitch)
-                .translate(-bind.pivotX, bind.pivotY - Rig.MODEL_ORIGIN_HEIGHT, -bind.pivotZ);
+        return new Matrix4f().translate(part.x, Rig.MODEL_ORIGIN_HEIGHT - part.y, part.z)
+                .rotateZYX(-part.zRot, yaw, -pitch)
+                .translate(-bind.x, bind.y - Rig.MODEL_ORIGIN_HEIGHT, -bind.z);
     }
 
-    public static ModelPart part(PlayerEntityModel<?> model, BoneId bone, boolean outer) {
+    public static ModelPart part(PlayerModel<?> model, BoneId bone, boolean outer) {
         // 原版部件可见性保留皮肤设置、旁观者状态等原版渲染行为。
         return switch (bone.skinPart()) {
             case "head" -> outer ? model.hat : model.head;
@@ -193,15 +193,15 @@ public final class PlayerMeshRenderer {
         };
     }
 
-    public static void draw(Frame frame, MatrixStack stack, VertexConsumer buffer, int light, int overlay,
+    public static void draw(Frame frame, PoseStack stack, VertexConsumer buffer, int light, int overlay,
                             float red, float green, float blue, float alpha, Predicate<SkinnedMesh.Surface> visible) {
         draw(frame, frame.model.mesh().surfaces(), stack, buffer, light, overlay, red, green, blue, alpha, visible);
     }
 
-    public static void draw(Frame frame, List<SkinnedMesh.Surface> surfaces, MatrixStack stack,
+    public static void draw(Frame frame, List<SkinnedMesh.Surface> surfaces, PoseStack stack,
                             VertexConsumer buffer, int light, int overlay, float red, float green, float blue,
                             float alpha, Predicate<SkinnedMesh.Surface> visible) {
-        MatrixStack.Entry entry = stack.peek();
+        PoseStack.Pose entry = stack.last();
         Vector3f position = new Vector3f();
         Vector3f normal = new Vector3f();
         // 皮肤和盔甲复用同一帧骨骼与顶点提交路径，各自保留原始 UV。
@@ -214,9 +214,9 @@ public final class PlayerMeshRenderer {
                 SkinnedMesh.deform(vertex.normal(), vertex.weights(), frame.matrices, true, normal);
                 position.set(position.x / Rig.PIXELS_PER_BLOCK,
                         (Rig.MODEL_ORIGIN_HEIGHT - position.y) / Rig.PIXELS_PER_BLOCK, position.z / Rig.PIXELS_PER_BLOCK);
-                entry.getPositionMatrix().transformPosition(position);
+                entry.pose().transformPosition(position);
                 normal.y = -normal.y;
-                entry.getNormalMatrix().transform(normal);
+                entry.normal().transform(normal);
                 // 完整顶点交给原包装器；纹饰的单属性调用返回底层缓冲，链式调用会丢失图集 UV 转换。
                 buffer.vertex(position.x, position.y, position.z, red, green, blue, alpha,
                         vertex.u(), vertex.v(), overlay, light, normal.x, normal.y, normal.z);
@@ -224,58 +224,58 @@ public final class PlayerMeshRenderer {
         }
     }
 
-    public static void item(Frame frame, AbstractClientPlayerEntity player, Arm arm, ItemStack item,
-                            MatrixStack stack, VertexConsumerProvider buffers, int light, HeldItemRenderer renderer) {
+    public static void item(Frame frame, AbstractClientPlayer player, HumanoidArm arm, ItemStack item,
+                            PoseStack stack, MultiBufferSource buffers, int light, ItemInHandRenderer renderer) {
         double now = PlayerPlayback.now(0);
         // 穿戴动作需要暂时用装备物品替换当前手持物；装备来自物品栏时原手也可能并非空手。
-        ItemStack equip = PlayerAnimationClient.PLAYBACK.equipItem(player.getUuid(), arm, now);
+        ItemStack equip = PlayerAnimationClient.PLAYBACK.equipItem(player.getUUID(), arm, now);
         ItemStack rendered = equip.isEmpty() ? item : equip;
-        boolean twoHanded = PlayerAnimationClient.PLAYBACK.twoHandedItem(player.getUuid(), arm, now);
+        boolean twoHanded = PlayerAnimationClient.PLAYBACK.twoHandedItem(player.getUUID(), arm, now);
         if (twoHanded && arm != player.getMainArm()) {
             return;
         }
         if (rendered.isEmpty()) {
             return;
         }
-        BoneId socket = arm == Arm.RIGHT ? BoneId.R_ITEM : BoneId.L_ITEM;
-        stack.push();
+        BoneId socket = arm == HumanoidArm.RIGHT ? BoneId.R_ITEM : BoneId.L_ITEM;
+        stack.pushPose();
         // 挂点先跟随手掌矩阵，再叠原版物品坐标方向与 display 变换。
         Matrix4f transform = twoHanded
                 ? Rig.itemTransformMidpoint(frame.model.skeleton(), frame.matrices)
                 : Rig.itemTransform(frame.model.skeleton(), frame.matrices, socket);
-        stack.peek().getPositionMatrix().mul(transform);
-        stack.peek().getNormalMatrix().mul(new org.joml.Matrix3f(transform));
-        renderer.renderItem(player, rendered, arm == Arm.RIGHT ? ModelTransformationMode.THIRD_PERSON_RIGHT_HAND
-                : ModelTransformationMode.THIRD_PERSON_LEFT_HAND, arm == Arm.LEFT, stack, buffers, light);
-        stack.pop();
+        stack.last().pose().mul(transform);
+        stack.last().normal().mul(new org.joml.Matrix3f(transform));
+        renderer.renderItem(player, rendered, arm == HumanoidArm.RIGHT ? ItemDisplayContext.THIRD_PERSON_RIGHT_HAND
+                : ItemDisplayContext.THIRD_PERSON_LEFT_HAND, arm == HumanoidArm.LEFT, stack, buffers, light);
+        stack.popPose();
     }
 
-    public static boolean firstPerson(AbstractClientPlayerEntity player, float tickDelta, MatrixStack stack,
-                                       VertexConsumerProvider buffers, int light, HeldItemRenderer items) {
-        var animation = PlayerAnimationClient.PLAYBACK.player(player.getUuid());
+    public static boolean firstPerson(AbstractClientPlayer player, float tickDelta, PoseStack stack,
+                                       MultiBufferSource buffers, int light, ItemInHandRenderer items) {
+        var animation = PlayerAnimationClient.PLAYBACK.player(player.getUUID());
         if (animation == null || !animation.hasFirstPerson(PlayerPlayback.now(tickDelta))
-                || PlayerAnimationClient.ASSETS.model("slim".equals(player.getModel())) == null) {
+                || PlayerAnimationClient.ASSETS.model("slim".equals(player.getModelName())) == null) {
             return false;
         }
-        PlayerEntityRenderer renderer = (PlayerEntityRenderer) MinecraftClient.getInstance().getEntityRenderDispatcher().getRenderer(player);
+        PlayerRenderer renderer = (PlayerRenderer) Minecraft.getInstance().getEntityRenderDispatcher().getRenderer(player);
         ((dev.kizuna.playeranimation.mixin.PlayerEntityRendererAccessor) renderer).kpa$setModelPose(player);
-        PlayerEntityModel<AbstractClientPlayerEntity> model = renderer.getModel();
-        model.animateModel(player, 0, 0, tickDelta);
-        model.setAngles(player, 0, 0, player.age + tickDelta, 0, player.getPitch(tickDelta));
+        PlayerModel<AbstractClientPlayer> model = renderer.getModel();
+        model.prepareMobModel(player, 0, 0, tickDelta);
+        model.setupAnim(player, 0, 0, player.tickCount + tickDelta, 0, player.getViewXRot(tickDelta));
         Frame frame = frame(player, model, tickDelta, true);
-        stack.push();
+        stack.pushPose();
         // 第一人称在眼睛坐标绘制实际手臂，只采样 fpv 骨；身体骨动画不进入相机。
         stack.translate(0, Rig.MODEL_ORIGIN_HEIGHT / Rig.PIXELS_PER_BLOCK - player.getEyeHeight(player.getPose()), 0);
         stack.scale(-1, -1, 1);
         if (!player.isInvisible()) {
-            draw(frame, stack, buffers.getBuffer(RenderLayer.getEntityTranslucent(player.getSkinTexture())), light,
-                    OverlayTexture.DEFAULT_UV, 1, 1, 1, 1,
+            draw(frame, stack, buffers.getBuffer(RenderType.entityTranslucent(player.getSkinTextureLocation())), light,
+                    OverlayTexture.NO_OVERLAY, 1, 1, 1, 1,
                     surface -> surface.bone().arm() && part(model, surface.bone(), surface.outer()).visible);
         }
-        Arm main = player.getMainArm();
-        item(frame, player, main, player.getMainHandStack(), stack, buffers, light, items);
-        item(frame, player, main.getOpposite(), player.getOffHandStack(), stack, buffers, light, items);
-        stack.pop();
+        HumanoidArm main = player.getMainArm();
+        item(frame, player, main, player.getMainHandItem(), stack, buffers, light, items);
+        item(frame, player, main.getOpposite(), player.getOffhandItem(), stack, buffers, light, items);
+        stack.popPose();
         return true;
     }
 }

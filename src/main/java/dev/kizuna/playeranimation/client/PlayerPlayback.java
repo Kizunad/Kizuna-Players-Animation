@@ -11,15 +11,15 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.AbstractClientPlayerEntity;
-import net.minecraft.client.world.ClientWorld;
-import net.minecraft.entity.EquipmentSlot;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.Arm;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.player.AbstractClientPlayer;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.HumanoidArm;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 
 public final class PlayerPlayback {
     private static final double TICKS_PER_SECOND = 20;
@@ -28,19 +28,19 @@ public final class PlayerPlayback {
     private final Map<Integer, AutomaticAnimationPlayer> automaticEntities = new HashMap<>();
     private final Map<UUID, PlayerMeshRenderer.Frame> frames = new HashMap<>();
     private final Map<EquipKey, EquipVisual> equipVisuals = new HashMap<>();
-    private ClientWorld world;
+    private ClientLevel world;
 
     private static final class EquipVisual {
         final String animation;
         final EquipmentSlot slot;
         final ItemStack item;
-        final Arm firstBootSide;
+        final HumanoidArm firstBootSide;
         boolean equipped;
         boolean rightBootEquipped;
         boolean leftBootEquipped;
         int equipEvents;
 
-        EquipVisual(String animation, EquipmentSlot slot, ItemStack item, Arm firstBootSide) {
+        EquipVisual(String animation, EquipmentSlot slot, ItemStack item, HumanoidArm firstBootSide) {
             this.animation = animation;
             this.slot = slot;
             this.item = item;
@@ -53,8 +53,8 @@ public final class PlayerPlayback {
             if (slot != EquipmentSlot.FEET) {
                 equipped = true;
             } else if (equipEvents == 1) {
-                rightBootEquipped = firstBootSide == Arm.RIGHT;
-                leftBootEquipped = firstBootSide == Arm.LEFT;
+                rightBootEquipped = firstBootSide == HumanoidArm.RIGHT;
+                leftBootEquipped = firstBootSide == HumanoidArm.LEFT;
             } else if (equipEvents == 2) {
                 rightBootEquipped = true;
                 leftBootEquipped = true;
@@ -79,12 +79,12 @@ public final class PlayerPlayback {
 
     public void automaticEntity(LivingEntity entity, Automatic request) {
         // 入口已经校验资源与进度，重复请求只推进动作游标。
-        prepareWorld(MinecraftClient.getInstance());
+        prepareWorld(Minecraft.getInstance());
         var animations = PlayerAnimationClient.ASSETS.animations();
         var base = animations.get(request.getBaseAnimationId());
         var action = animations.get(request.getActionAnimationId());
         var automatic = automaticEntities.computeIfAbsent(entity.getId(), ignored -> new AutomaticAnimationPlayer());
-        Handedness hand = entity.getMainArm() == Arm.LEFT ? Handedness.LEFT : Handedness.RIGHT;
+        Handedness hand = entity.getMainArm() == HumanoidArm.LEFT ? Handedness.LEFT : Handedness.RIGHT;
         automatic.update(base, action, request.getActionProgress(), hand, now(0));
     }
 
@@ -93,22 +93,22 @@ public final class PlayerPlayback {
     }
 
     public void scrub(UUID playerId, String animationId, float normalizedProgress) {
-        MinecraftClient client = MinecraftClient.getInstance();
+        Minecraft client = Minecraft.getInstance();
         prepareWorld(client);
         var entry = PlayerAnimationClient.ASSETS.animations().get(animationId);
         if (entry == null) {
             throw new IllegalArgumentException("未加载动画: " + animationId);
         }
-        PlayerEntity entity = null;
-        if (client.world != null) {
-            entity = client.world.getPlayerByUuid(playerId);
+        Player entity = null;
+        if (client.level != null) {
+            entity = client.level.getPlayerByUUID(playerId);
         }
-        if (!(entity instanceof AbstractClientPlayerEntity player)) {
+        if (!(entity instanceof AbstractClientPlayer player)) {
             throw new IllegalArgumentException("客户端未加载玩家: " + playerId);
         }
         AnimationPlayer playback = players.computeIfAbsent(playerId, ignored -> new AnimationPlayer());
         beginEquip(player, entry);
-        playback.scrub(entry, now(0), normalizedProgress, player.getMainArm() == Arm.LEFT);
+        playback.scrub(entry, now(0), normalizedProgress, player.getMainArm() == HumanoidArm.LEFT);
     }
 
     public void play(UUID playerId, String animationId, Long startTick, String playId) {
@@ -117,23 +117,23 @@ public final class PlayerPlayback {
 
     public void play(UUID playerId, String animationId, Long startTick, String playId,
                      AnimationClip.Loop loopOverride) {
-        MinecraftClient client = MinecraftClient.getInstance();
+        Minecraft client = Minecraft.getInstance();
         prepareWorld(client);
         var entry = PlayerAnimationClient.ASSETS.animations().get(animationId);
         // 公共入口只处理已加载实体与已加载动作，错误直接返回调用方。
         if (entry == null) {
             throw new IllegalArgumentException("未加载动画: " + animationId);
         }
-        PlayerEntity entity = null;
-        if (client.world != null) {
-            entity = client.world.getPlayerByUuid(playerId);
+        Player entity = null;
+        if (client.level != null) {
+            entity = client.level.getPlayerByUUID(playerId);
         }
-        if (!(entity instanceof AbstractClientPlayerEntity player)) {
+        if (!(entity instanceof AbstractClientPlayer player)) {
             throw new IllegalArgumentException("客户端未加载玩家: " + playerId);
         }
         AnimationPlayer playback = players.computeIfAbsent(playerId, ignored -> new AnimationPlayer());
         double time = now(0);
-        Handedness handedness = player.getMainArm() == Arm.LEFT ? Handedness.LEFT : Handedness.RIGHT;
+        Handedness handedness = player.getMainArm() == HumanoidArm.LEFT ? Handedness.LEFT : Handedness.RIGHT;
         double elapsedSeconds;
         if (startTick == null) {
             playback.play(entry, time, new PlaybackRequest(time, handedness, null, loopOverride));
@@ -152,22 +152,22 @@ public final class PlayerPlayback {
     public void scrubEntity(int entityId, String animationId, float normalizedProgress) {
         EntityPlayback target = entityPlayback(entityId, animationId);
         target.playback().scrub(target.entry(), now(0), normalizedProgress,
-                target.entity().getMainArm() == Arm.LEFT);
+                target.entity().getMainArm() == HumanoidArm.LEFT);
     }
 
     private record EntityPlayback(LivingEntity entity, AnimationEntry entry, AnimationPlayer playback) { }
 
     private EntityPlayback entityPlayback(int entityId, String animationId) {
         // scrub 和自由播放共享实体、资源校验，避免两条入口接受不同的目标。
-        MinecraftClient client = MinecraftClient.getInstance();
+        Minecraft client = Minecraft.getInstance();
         prepareWorld(client);
         AnimationEntry entry = PlayerAnimationClient.ASSETS.animations().get(animationId);
         if (entry == null) {
             throw new IllegalArgumentException("未加载动画: " + animationId);
         }
         LivingEntity entity = null;
-        if (client.world != null) {
-            entity = living(client.world.getEntityById(entityId));
+        if (client.level != null) {
+            entity = living(client.level.getEntity(entityId));
         }
         if (entity == null) {
             throw new IllegalArgumentException("客户端未加载生物: " + entityId);
@@ -181,7 +181,7 @@ public final class PlayerPlayback {
         EntityPlayback target = entityPlayback(entityId, animationId);
         AnimationPlayer playback = target.playback();
         double time = now(0);
-        Handedness handedness = target.entity().getMainArm() == Arm.LEFT ? Handedness.LEFT : Handedness.RIGHT;
+        Handedness handedness = target.entity().getMainArm() == HumanoidArm.LEFT ? Handedness.LEFT : Handedness.RIGHT;
         if (startTick == null) {
             playback.play(target.entry(), time, new PlaybackRequest(time, handedness, null, loopOverride));
             return;
@@ -206,20 +206,20 @@ public final class PlayerPlayback {
         }
     }
 
-    public void tick(MinecraftClient client) {
+    public void tick(Minecraft client) {
         prepareWorld(client);
         // 渲染帧只在同一次本体与物品绘制之间共享，不持有离开视野的实体。
         frames.clear();
-        if (client.world == null) {
+        if (client.level == null) {
             clear();
             return;
         }
         double time = now(0);
-        tickEntities(time, client.world);
+        tickEntities(time, client.level);
         // 事件回调允许启动新动画，用当前实体快照推进，避免改变本次遍历结构。
         for (var entry : new ArrayList<>(players.entrySet())) {
             UUID id = entry.getKey();
-            if (client.world.getPlayerByUuid(id) == null) {
+            if (client.level.getPlayerByUUID(id) == null) {
                 players.remove(id);
                 frames.remove(id);
                 equipVisuals.keySet().removeIf(key -> key.player().equals(id));
@@ -240,15 +240,15 @@ public final class PlayerPlayback {
         }
     }
 
-    private void tickEntities(double time, ClientWorld clientWorld) {
+    private void tickEntities(double time, ClientLevel clientWorld) {
         // 自动层也在逻辑时钟清理淡出实例；卸载后的实体 ID 不得继承旧姿态。
-        automaticEntities.entrySet().removeIf(entry -> clientWorld.getEntityById(entry.getKey()) == null);
+        automaticEntities.entrySet().removeIf(entry -> clientWorld.getEntity(entry.getKey()) == null);
         for (var automatic : automaticEntities.values()) {
             automatic.playback().advance(time, (animation, event) -> { });
         }
         for (var entry : new ArrayList<>(entities.entrySet())) {
             int id = entry.getKey();
-            LivingEntity entity = living(clientWorld.getEntityById(id));
+            LivingEntity entity = living(clientWorld.getEntity(id));
             if (entity == null) {
                 entities.remove(id);
                 continue;
@@ -264,11 +264,11 @@ public final class PlayerPlayback {
 
     public static double now(float tickDelta) {
         // 世界总 tick 不受 /time set 昼夜时间影响，暂停时也不会继续推进动画。
-        var world = MinecraftClient.getInstance().world;
+        var world = Minecraft.getInstance().level;
         if (world == null) {
             return 0;
         }
-        return (world.getTime() + tickDelta) / TICKS_PER_SECOND;
+        return (world.getGameTime() + tickDelta) / TICKS_PER_SECOND;
     }
 
     public void clear() {
@@ -293,11 +293,11 @@ public final class PlayerPlayback {
         automaticEntities.remove(entityId);
     }
 
-    private void prepareWorld(MinecraftClient client) {
+    private void prepareWorld(Minecraft client) {
         // 换维度时 UUID 仍相同，但时间和实体集合已改变。
-        if (world != client.world) {
+        if (world != client.level) {
             clear();
-            world = client.world;
+            world = client.level;
         }
     }
 
@@ -337,7 +337,7 @@ public final class PlayerPlayback {
         return visual == null || visual.equipped ? ItemStack.EMPTY : visual.item;
     }
 
-    public ItemStack equipItem(UUID id, Arm arm, double now) {
+    public ItemStack equipItem(UUID id, HumanoidArm arm, double now) {
         EquipVisual visual = equipVisuals.entrySet().stream()
                 .filter(entry -> entry.getKey().player().equals(id) && !entry.getValue().equipped)
                 .map(Map.Entry::getValue)
@@ -347,11 +347,11 @@ public final class PlayerPlayback {
         }
         String idValue = visual.animation.endsWith("_off") ? visual.animation.substring(0, visual.animation.length() - 4)
                 : visual.animation;
-        var entity = world == null ? null : world.getPlayerByUuid(id);
-        if (!(entity instanceof AbstractClientPlayerEntity player)) {
+        var entity = world == null ? null : world.getPlayerByUUID(id);
+        if (!(entity instanceof AbstractClientPlayer player)) {
             return ItemStack.EMPTY;
         }
-        Arm actionArm = visual.animation.endsWith("_off") ? player.getMainArm().getOpposite() : player.getMainArm();
+        HumanoidArm actionArm = visual.animation.endsWith("_off") ? player.getMainArm().getOpposite() : player.getMainArm();
         float progress = progress(id, visual.animation, now);
         EquipTiming timing = timing(idValue);
         float duration = PlayerAnimationClient.ASSETS.animations().get(visual.animation).clip().duration();
@@ -384,7 +384,7 @@ public final class PlayerPlayback {
                 && progress(id, visual.animation, now) >= timing.singleHandSeconds / entry.clip().duration();
     }
 
-    public boolean twoHandedItem(UUID id, Arm arm, double now) {
+    public boolean twoHandedItem(UUID id, HumanoidArm arm, double now) {
         AnimationPlayer animation = players.get(id);
         if (animation == null) {
             return false;
@@ -395,39 +395,39 @@ public final class PlayerPlayback {
         if (!animation.hasTwoHandedAction(now)) {
             return false;
         }
-        var entity = world == null ? null : world.getPlayerByUuid(id);
-        return entity instanceof AbstractClientPlayerEntity client && arm == client.getMainArm();
+        var entity = world == null ? null : world.getPlayerByUUID(id);
+        return entity instanceof AbstractClientPlayer client && arm == client.getMainArm();
     }
 
-    private void beginEquip(AbstractClientPlayerEntity player, AnimationEntry entry) {
+    private void beginEquip(AbstractClientPlayer player, AnimationEntry entry) {
         // 连续 scrub 沿用已有穿戴状态，自由播放则由播放器决定是否重启。
         String animationId = entry.id();
         EquipmentSlot slot = equipSlot(animationId);
         if (slot == null) {
             return;
         }
-        EquipVisual current = equipVisuals.get(new EquipKey(player.getUuid(), slot));
+        EquipVisual current = equipVisuals.get(new EquipKey(player.getUUID(), slot));
         if (current != null && current.animation.equals(animationId)) {
             return;
         }
         restartEquip(player, entry, 0);
     }
 
-    private void restartEquip(AbstractClientPlayerEntity player, AnimationEntry entry, double elapsedSeconds) {
+    private void restartEquip(AbstractClientPlayer player, AnimationEntry entry, double elapsedSeconds) {
         String animationId = entry.id();
         EquipmentSlot slot = equipSlot(animationId);
         if (slot == null) {
             return;
         }
-        Arm mainArm = player.getMainArm();
-        Arm firstBootSide;
+        HumanoidArm mainArm = player.getMainArm();
+        HumanoidArm firstBootSide;
         if (animationId.endsWith("_off")) {
             firstBootSide = mainArm.getOpposite();
         } else {
             firstBootSide = mainArm;
         }
-        EquipVisual visual = new EquipVisual(animationId, slot, player.getEquippedStack(slot).copy(), firstBootSide);
-        equipVisuals.put(new EquipKey(player.getUuid(), slot), visual);
+        EquipVisual visual = new EquipVisual(animationId, slot, player.getItemBySlot(slot).copy(), firstBootSide);
+        equipVisuals.put(new EquipKey(player.getUUID(), slot), visual);
         // 同步播放器已跳过历史事件，只恢复内部显隐；起点的零秒事件仍留给正常 tick。
         if (elapsedSeconds <= 0) {
             return;

@@ -1,5 +1,7 @@
 package dev.kizuna.playeranimation.client;
 
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
 import dev.kizuna.playeranimation.model.BoneId;
 import dev.kizuna.playeranimation.model.Rig;
 import dev.kizuna.playeranimation.model.Skeleton;
@@ -9,23 +11,21 @@ import java.util.ArrayList;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
-import net.minecraft.client.model.ModelPart;
-import net.minecraft.client.model.ModelTransform;
-import net.minecraft.client.render.VertexConsumer;
-import net.minecraft.client.render.entity.model.BipedEntityModel;
-import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.client.model.HumanoidModel;
+import net.minecraft.client.model.geom.ModelPart;
+import net.minecraft.client.model.geom.PartPose;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
 
 /** 从原版盔甲绑定几何烘焙网格，复用玩家权重与骨骼，不复制材质或动画。 */
 public final class ArmorMesh {
-    private static final Map<BipedEntityModel<?>, Cached> CACHE = new IdentityHashMap<>();
+    private static final Map<HumanoidModel<?>, Cached> CACHE = new IdentityHashMap<>();
     private record Cached(Skeleton skeleton, ArmorMesh mesh) { }
     private record Binding(BoneId bone, Skeleton.Cube cube) { }
     record Corner(Vec3 position, Vec3 normal, float u, float v) { }
     private final List<SkinnedMesh.Surface> surfaces;
 
-    public ArmorMesh(BipedEntityModel<?> armor, PlayerAssets.Model player) {
+    public ArmorMesh(HumanoidModel<?> armor, PlayerAssets.Model player) {
         List<SkinnedMesh.Surface> result = new ArrayList<>();
         // 原版盔甲内外层都是六部件几何；hat 与 head 保留各自 UV 和显隐。
         for (BoneId region : new BoneId[]{BoneId.HEAD, BoneId.PELVIS, BoneId.R_UPPER_ARM,
@@ -38,7 +38,7 @@ public final class ArmorMesh {
 
     public static void clearCache() { CACHE.clear(); }
 
-    public static ArmorMesh cached(BipedEntityModel<?> armor, PlayerAssets.Model player) {
+    public static ArmorMesh cached(HumanoidModel<?> armor, PlayerAssets.Model player) {
         // 两种体型各有实际渲染模型实例；资源重载后不能继续使用旧骨架权重。
         Cached cached = CACHE.get(armor);
         if (cached == null || cached.skeleton() != player.skeleton()) {
@@ -50,12 +50,12 @@ public final class ArmorMesh {
 
     public List<SkinnedMesh.Surface> surfaces() { return surfaces; }
 
-    public static boolean visible(BipedEntityModel<?> armor, SkinnedMesh.Surface surface) {
+    public static boolean visible(HumanoidModel<?> armor, SkinnedMesh.Surface surface) {
         ModelPart part = part(armor, surface.bone(), surface.outer());
-        return part.visible && !part.hidden;
+        return part.visible && !part.skipDraw;
     }
 
-    private static ModelPart part(BipedEntityModel<?> armor, BoneId region, boolean hat) {
+    private static ModelPart part(HumanoidModel<?> armor, BoneId region, boolean hat) {
         // 标签仅选择原版部件，实际每个顶点可受多个细分关节共同影响。
         return switch (region) {
             case HEAD -> hat ? armor.hat : armor.head;
@@ -81,19 +81,19 @@ public final class ArmorMesh {
             }
         }
         List<SkinnedMesh.Vertex> vertices = new ArrayList<>();
-        part.forEachCuboid(new MatrixStack(), (ignored, path, index, cuboid) -> {
-            // forEachCuboid 的矩阵带当前动画；这里只读方块，绑定矩阵另取默认姿态。
+        part.visit(new PoseStack(), (ignored, path, index, cuboid) -> {
+            // visit 的矩阵带当前动画；这里只读方块，绑定矩阵另取默认姿态。
             Matrix4f bind = bindTransform(part, path);
             if (region.arm()) {
                 // 细臂原版复制姿态后肩部降低半像素，盔甲本身仍保持四像素宽。
                 Vec3 shoulder = player.skeleton().bone(region).pivot();
-                ModelTransform original = part.getDefaultTransform();
-                bind.m30(bind.m30() + shoulder.x() - original.pivotX);
-                bind.m31(bind.m31() + Rig.MODEL_ORIGIN_HEIGHT - shoulder.y() - original.pivotY);
-                bind.m32(bind.m32() + shoulder.z() - original.pivotZ);
+                PartPose original = part.getInitialPose();
+                bind.m30(bind.m30() + shoulder.x() - original.x);
+                bind.m31(bind.m31() + Rig.MODEL_ORIGIN_HEIGHT - shoulder.y() - original.y);
+                bind.m32(bind.m32() + shoulder.z() - original.z);
             }
             QuadCollector collector = new QuadCollector();
-            cuboid.renderCuboid(new MatrixStack().peek(), collector, 0, 0, 1, 1, 1, 1);
+            cuboid.compile(new PoseStack().last(), collector, 0, 0, 1, 1, 1, 1);
             bakeCuboid(cuboid, collector.corners, bind, bindings, player.mesh(), vertices);
         });
         result.add(new SkinnedMesh.Surface(region, hat, List.copyOf(vertices)));
@@ -101,24 +101,24 @@ public final class ArmorMesh {
 
     private static Matrix4f bindTransform(ModelPart root, String path) {
         Matrix4f result = new Matrix4f();
-        appendBind(result, root.getDefaultTransform());
+        appendBind(result, root.getInitialPose());
         // 原版部件没有子节点；仍按模型提供的默认层级读取，避免混入当前姿态。
         ModelPart current = root;
         if (!path.isEmpty()) {
             for (String name : path.substring(1).split("/")) {
                 current = current.getChild(name);
-                appendBind(result, current.getDefaultTransform());
+                appendBind(result, current.getInitialPose());
             }
         }
         return result;
     }
 
-    private static void appendBind(Matrix4f matrix, ModelTransform bind) {
+    private static void appendBind(Matrix4f matrix, PartPose bind) {
         // 此处使用原版模型像素坐标（Y 向下），提交蒙皮前统一转换到骨架空间。
-        matrix.translate(bind.pivotX, bind.pivotY, bind.pivotZ).rotateZYX(bind.roll, bind.yaw, bind.pitch);
+        matrix.translate(bind.x, bind.y, bind.z).rotateZYX(bind.zRot, bind.yRot, bind.xRot);
     }
 
-    private static void bakeCuboid(ModelPart.Cuboid cuboid, List<Corner> corners, Matrix4f bind,
+    private static void bakeCuboid(ModelPart.Cube cuboid, List<Corner> corners, Matrix4f bind,
                                     List<Binding> bindings, SkinnedMesh skin, List<SkinnedMesh.Vertex> result) {
         Vector3f min = new Vector3f(Float.POSITIVE_INFINITY);
         Vector3f max = new Vector3f(Float.NEGATIVE_INFINITY);
@@ -207,7 +207,7 @@ public final class ArmorMesh {
         }
 
         @Override
-        public VertexConsumer texture(float u, float v) {
+        public VertexConsumer uv(float u, float v) {
             this.u = u;
             this.v = v;
             return this;
@@ -219,12 +219,12 @@ public final class ArmorMesh {
             return this;
         }
 
-        @Override public void next() { corners.add(new Corner(position, normal, u, v)); }
+        @Override public void endVertex() { corners.add(new Corner(position, normal, u, v)); }
         // 材质和光照由每次原版绘制传入，缓存只记录几何与 UV。
         @Override public VertexConsumer color(int r, int g, int b, int a) { return this; }
-        @Override public VertexConsumer overlay(int u, int v) { return this; }
-        @Override public VertexConsumer light(int u, int v) { return this; }
-        @Override public void fixedColor(int r, int g, int b, int a) { }
-        @Override public void unfixColor() { }
+        @Override public VertexConsumer overlayCoords(int u, int v) { return this; }
+        @Override public VertexConsumer uv2(int u, int v) { return this; }
+        @Override public void defaultColor(int r, int g, int b, int a) { }
+        @Override public void unsetDefaultColor() { }
     }
 }

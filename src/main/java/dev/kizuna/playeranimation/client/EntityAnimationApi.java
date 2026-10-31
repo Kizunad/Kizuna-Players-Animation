@@ -7,17 +7,17 @@ import dev.kizuna.playeranimation.protocol.pb.EntityAnimationProtocol.EntityAnim
 import dev.kizuna.playeranimation.protocol.pb.EntityAnimationProtocol.Play;
 import dev.kizuna.playeranimation.protocol.pb.EntityAnimationProtocol.RegisterGeometry;
 import dev.kizuna.playeranimation.protocol.pb.EntityAnimationProtocol.Stop;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.AbstractClientPlayerEntity;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.Entity;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.AbstractClientPlayer;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
 
 /** 处理附属发来的实体注册、播放和停止请求。 */
 public final class EntityAnimationApi {
     private EntityAnimationApi() { }
 
     public static byte[] exchange(byte[] payload) {
-        if (!MinecraftClient.getInstance().isOnThread()) {
+        if (!Minecraft.getInstance().isSameThread()) {
             return response("", EntityAnimationResponse.Code.INVALID_REQUEST, "必须在客户端主线程调用").toByteArray();
         }
         try {
@@ -49,7 +49,7 @@ public final class EntityAnimationApi {
         if (entity == null) {
             return response(request.getRequestId(), EntityAnimationResponse.Code.ENTITY_NOT_LOADED, "客户端未加载目标实体");
         }
-        if (entity instanceof AbstractClientPlayerEntity || MobAnimationRegistry.model(entity) == null) {
+        if (entity instanceof AbstractClientPlayer || MobAnimationRegistry.model(entity) == null) {
             return response(request.getRequestId(), EntityAnimationResponse.Code.INVALID_REQUEST, "自动层需要已注册生物");
         }
         float progress = automatic.getActionProgress();
@@ -87,7 +87,7 @@ public final class EntityAnimationApi {
             return response(request.getRequestId(), EntityAnimationResponse.Code.ENTITY_NOT_LOADED,
                     "客户端未加载目标实体");
         }
-        if (!(entity instanceof AbstractClientPlayerEntity) && MobAnimationRegistry.model(entity) == null) {
+        if (!(entity instanceof AbstractClientPlayer) && MobAnimationRegistry.model(entity) == null) {
             return response(request.getRequestId(), EntityAnimationResponse.Code.INVALID_REQUEST,
                     "目标实体未注册几何");
         }
@@ -113,12 +113,12 @@ public final class EntityAnimationApi {
         if (play.hasStartTick()) {
             startTick = play.getStartTick();
         }
-        if (entity instanceof AbstractClientPlayerEntity player) {
+        if (entity instanceof AbstractClientPlayer player) {
             if (play.hasNormalizedProgress()) {
-                PlayerAnimationClient.PLAYBACK.scrub(player.getUuid(), play.getAnimationId(),
+                PlayerAnimationClient.PLAYBACK.scrub(player.getUUID(), play.getAnimationId(),
                         play.getNormalizedProgress());
             } else {
-                PlayerAnimationClient.PLAYBACK.play(player.getUuid(), play.getAnimationId(), startTick,
+                PlayerAnimationClient.PLAYBACK.play(player.getUUID(), play.getAnimationId(), startTick,
                         request.getRequestId(), loop);
             }
             return;
@@ -144,8 +144,8 @@ public final class EntityAnimationApi {
             animation = stop.getAnimationId();
         }
         LivingEntity entity = loadedEntity(stop.getEntityId());
-        if (entity instanceof AbstractClientPlayerEntity player) {
-            PlayerAnimationClient.PLAYBACK.stop(player.getUuid(), animation);
+        if (entity instanceof AbstractClientPlayer player) {
+            PlayerAnimationClient.PLAYBACK.stop(player.getUUID(), animation);
         } else {
             PlayerAnimationClient.PLAYBACK.stopEntity(stop.getEntityId(), animation);
         }
@@ -154,8 +154,8 @@ public final class EntityAnimationApi {
 
     private static EntityAnimationResponse clear(EntityAnimationRequest request) {
         LivingEntity entity = loadedEntity(request.getClear().getEntityId());
-        if (entity instanceof AbstractClientPlayerEntity player) {
-            PlayerAnimationClient.PLAYBACK.remove(player.getUuid());
+        if (entity instanceof AbstractClientPlayer player) {
+            PlayerAnimationClient.PLAYBACK.remove(player.getUUID());
         }
         PlayerAnimationClient.PLAYBACK.remove(request.getClear().getEntityId());
         return response(request.getRequestId(), EntityAnimationResponse.Code.OK, "");
@@ -173,11 +173,11 @@ public final class EntityAnimationApi {
     }
 
     private static LivingEntity loadedEntity(int id) {
-        MinecraftClient client = MinecraftClient.getInstance();
-        if (client.world == null) {
+        Minecraft client = Minecraft.getInstance();
+        if (client.level == null) {
             return null;
         }
-        return living(client.world.getEntityById(id));
+        return living(client.level.getEntity(id));
     }
 
     private static EntityAnimationResponse response(String requestId, EntityAnimationResponse.Code code,

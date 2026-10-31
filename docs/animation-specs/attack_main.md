@@ -8,7 +8,7 @@
 
 - **用途**：主手持剑、斧或工具做近战挥击，打实体或打空气都用它。挖方块用 `mine_main`，放置和使用用各自动作；
   调度按原版交互类型区分，不靠手持物猜。
-- **原版进度来源**：`LivingEntity.handSwingProgress`，即 `handSwingTicks / getHandSwingDuration()`。默认 6 tick；
+- **原版进度来源**：`LivingEntity.attackAnim`，即 `swingTime / getCurrentSwingDuration()`。默认 6 tick；
   急迫 n 级为 `6 − (1 + amplifier)`，挖掘疲劳为 `6 + (1 + amplifier) × 2`。远端玩家由原版
   `EntityAnimationS2CPacket(SWING_MAIN_HAND)` 同步，不需要额外的播放请求。
 - **伤害时机**：原版在点击当刻就结算伤害；本动作的 `hit` 时间线事件只是视觉通知，不授权伤害。
@@ -27,7 +27,7 @@
 
 驱动（运行时需求，详见 `/tmp/players-animation-redo-notes.md` 的「分工」节第 5 条）：
 
-- 挥手进行中：`t = 0.30 × (handSwingTicks + tickDelta) / getHandSwingDuration()`，按 scrub 取样，不自由播放。
+- 挥手进行中：`t = 0.30 × (swingTime + tickDelta) / getCurrentSwingDuration()`，按 scrub 取样，不自由播放。
 - 原版挥手结束后：t 从 0.30 起按同一速率（`0.30 / duration` 剪辑秒每 tick）继续走到 0.50 再淡出。
 - 任意时刻出现新的挥手：从当前取样姿态用 0.05 s 交叉淡入，重新从 t = 0 开始。
 - 急迫、挖掘疲劳只改变速率，不改变姿势。

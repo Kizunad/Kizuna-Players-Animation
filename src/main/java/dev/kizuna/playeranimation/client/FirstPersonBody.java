@@ -2,13 +2,13 @@ package dev.kizuna.playeranimation.client;
 
 import dev.kizuna.playeranimation.model.BoneId;
 import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderContext;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.AbstractClientPlayerEntity;
-import net.minecraft.client.render.entity.PlayerEntityRenderer;
-import net.minecraft.entity.Entity;
-import net.minecraft.item.Items;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.AbstractClientPlayer;
+import net.minecraft.client.renderer.entity.player.PlayerRenderer;
+import net.minecraft.util.Mth;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.phys.Vec3;
 
 /** 第一人称复用世界中的玩家渲染，视线与交互位置仍由原版相机决定。 */
 public final class FirstPersonBody {
@@ -16,28 +16,28 @@ public final class FirstPersonBody {
     private static final double BODY_BACK_OFFSET = 0.25;
     private static final double CROUCH_BACK_OFFSET = 0.30;
     private static boolean enabled = true;
-    private static AbstractClientPlayerEntity renderingPlayer;
+    private static AbstractClientPlayer renderingPlayer;
 
     private FirstPersonBody() { }
 
     public static void setEnabled(boolean value) { enabled = value; }
 
-    public static boolean active(AbstractClientPlayerEntity player) {
-        MinecraftClient client = MinecraftClient.getInstance();
+    public static boolean active(AbstractClientPlayer player) {
+        Minecraft client = Minecraft.getInstance();
         // 横躺/旋转类姿态需要各自的相机空间适配，当前保留其原版视角。
-        return enabled && client.options.getPerspective().isFirstPerson()
+        return enabled && client.options.getCameraType().isFirstPerson()
                 && client.getCameraEntity() == player && player.isAlive() && !player.isSpectator()
-                && !player.isSleeping() && !player.isFallFlying() && !player.isUsingRiptide()
-                && !player.isInSwimmingPose() && player.getLeaningPitch(client.getTickDelta()) == 0
-                && PlayerAnimationClient.ASSETS.model("slim".equals(player.getModel())) != null;
+                && !player.isSleeping() && !player.isFallFlying() && !player.isAutoSpinAttack()
+                && !player.isVisuallySwimming() && player.getSwimAmount(client.getFrameTime()) == 0
+                && PlayerAnimationClient.ASSETS.model("slim".equals(player.getModelName())) != null;
     }
 
     public static boolean rendering(Entity entity) { return renderingPlayer == entity; }
 
-    public static boolean vanillaHands(AbstractClientPlayerEntity player) {
+    public static boolean vanillaHands(AbstractClientPlayer player) {
         // 地图需要原版动态内容面板，望远镜瞄准需要原版镜片遮罩。
-        return player.getMainHandStack().isOf(Items.FILLED_MAP)
-                || player.getOffHandStack().isOf(Items.FILLED_MAP) || player.isUsingSpyglass();
+        return player.getMainHandItem().is(Items.FILLED_MAP)
+                || player.getOffhandItem().is(Items.FILLED_MAP) || player.isScoping();
     }
 
     public static boolean visible(Entity entity, BoneId bone) {
@@ -46,37 +46,37 @@ public final class FirstPersonBody {
                 && (!bone.arm() || !vanillaHands(renderingPlayer));
     }
 
-    static Vec3d bodyOffset(float yawDegrees, boolean crouching) {
+    static Vec3 bodyOffset(float yawDegrees, boolean crouching) {
         // Minecraft 偏航零度朝 +Z；模型偏移取身体朝向的反方向。
         double radians = Math.toRadians(yawDegrees);
         double distance = crouching ? CROUCH_BACK_OFFSET : BODY_BACK_OFFSET;
-        return new Vec3d(Math.sin(radians) * distance, 0, -Math.cos(radians) * distance);
+        return new Vec3(Math.sin(radians) * distance, 0, -Math.cos(radians) * distance);
     }
 
     public static void render(WorldRenderContext context) {
-        MinecraftClient client = MinecraftClient.getInstance();
-        if (!(context.camera().getFocusedEntity() instanceof AbstractClientPlayerEntity player)
-                || context.camera().isThirdPerson() || !active(player)) {
+        Minecraft client = Minecraft.getInstance();
+        if (!(context.camera().getEntity() instanceof AbstractClientPlayer player)
+                || context.camera().isDetached() || !active(player)) {
             return;
         }
         float delta = context.tickDelta();
         var dispatcher = client.getEntityRenderDispatcher();
-        PlayerEntityRenderer renderer = (PlayerEntityRenderer) dispatcher.getRenderer(player);
-        Vec3d position = player.getLerpedPos(delta).subtract(context.camera().getPos())
-                .add(renderer.getPositionOffset(player, delta))
-                .add(bodyOffset(MathHelper.lerpAngleDegrees(delta, player.prevBodyYaw, player.bodyYaw),
-                        player.isInSneakingPose()));
+        PlayerRenderer renderer = (PlayerRenderer) dispatcher.getRenderer(player);
+        Vec3 position = player.getPosition(delta).subtract(context.camera().getPosition())
+                .add(renderer.getRenderOffset(player, delta))
+                .add(bodyOffset(Mth.rotLerp(delta, player.yBodyRotO, player.yBodyRot),
+                        player.isCrouching()));
         var matrices = context.matrixStack();
-        matrices.push();
+        matrices.pushPose();
         renderingPlayer = player;
         try {
             // 直接调用玩家渲染器，沿用皮肤、骨架、装备和持物；不补画影子或碰撞箱。
             matrices.translate(position.x, position.y, position.z);
-            renderer.render(player, player.getYaw(delta), delta, matrices, context.consumers(),
-                    dispatcher.getLight(player, delta));
+            renderer.render(player, player.getViewYRot(delta), delta, matrices, context.consumers(),
+                    dispatcher.getPackedLightCoords(player, delta));
         } finally {
             renderingPlayer = null;
-            matrices.pop();
+            matrices.popPose();
         }
     }
 }

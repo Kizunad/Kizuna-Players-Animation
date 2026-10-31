@@ -1,12 +1,12 @@
 package dev.kizuna.playeranimation.mixin;
 
-import net.minecraft.client.network.AbstractClientPlayerEntity;
-import net.minecraft.client.render.entity.PlayerEntityRenderer;
+import net.minecraft.client.player.AbstractClientPlayer;
+import net.minecraft.client.renderer.entity.player.PlayerRenderer;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Invoker;
 
-@Mixin(PlayerEntityRenderer.class)
+@Mixin(PlayerRenderer.class)
 public interface PlayerEntityRendererAccessor {
-    @Invoker("setModelPose")
-    void kpa$setModelPose(AbstractClientPlayerEntity player);
+    @Invoker("setModelProperties")
+    void kpa$setModelPose(AbstractClientPlayer player);
 }

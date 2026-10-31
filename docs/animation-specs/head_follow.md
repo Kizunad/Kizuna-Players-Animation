@@ -6,14 +6,14 @@
 
 ## 1. 动作目的与触发
 
-- **用途**：原版把视线偏航全部放在脖子上：`head.yaw = netHeadYaw`；身体偏航 `bodyYaw` 在 `LivingEntity.turnHead`
-  中每 tick 追随 30%，并保证 `|headYaw − bodyYaw| ≤ 50°`。所以头可以相对身体转 ±50°、俯仰 ±90°，躯干完全不动。
+- **用途**：原版把视线偏航全部放在脖子上：`head.yaw = netHeadYaw`；身体偏航 `yBodyRot` 在 `LivingEntity.tickHeadTurn`
+  中每 tick 追随 30%，并保证 `|yHeadRot − yBodyRot| ≤ 50°`。所以头可以相对身体转 ±50°、俯仰 ±90°，躯干完全不动。
   本动作把相对偏航按比例分给胸、腰，俯仰分给胸腰，形成“转头带肩、低头带胸”的联动。
 - **现状问题**：所有已交付资源（包括 `walk` / `run`）都有 `head` 旋转轨道，覆盖式混合会丢掉原版视线；目前只有望远镜、号角、
   持弩在 `applyArmPosePitch` 里把俯仰补回头部。新增的长时间动作（吃喝、拉弓、格挡、潜行、骑乘等）都需要视线。
 - **触发**：客户端每帧，被渲染玩家处于站立类状态（站、走、跑、潜行、骑乘、攀爬、打坐及其上层动作）时启用；
   睡眠、泳姿、鞘翅（只叠偏航）、激流、死亡时关闭。
-- **原版进度来源**：`netHeadYaw = headYaw − bodyYaw`（插值后，度，±50）与 `headPitch`（度，±90）。
+- **原版进度来源**：`netHeadYaw = yHeadRot − yBodyRot`（插值后，度，±50）与 `headPitch`（度，±90）。
 
 ## 2. 资源与时间轴（姿势空间剪辑）
 

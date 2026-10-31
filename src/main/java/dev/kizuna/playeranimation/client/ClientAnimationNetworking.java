@@ -13,8 +13,8 @@ import java.util.List;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.text.Text;
+import net.minecraft.client.Minecraft;
+import net.minecraft.network.chat.Component;
 
 /** 网络线程只解码；实体查询、资源查询和播放全部安排到客户端主线程。 */
 public final class ClientAnimationNetworking {
@@ -38,7 +38,7 @@ public final class ClientAnimationNetworking {
                 PlayRequest request = AnimationPackets.read(buffer, PlayRequest.parser());
                 client.execute(() -> {
                     // 排队期间可能断线并加入另一个世界，不把旧连接的包带过去。
-                    if (client.getNetworkHandler() == handler) {
+                    if (client.getConnection() == handler) {
                         reply(play(client, request));
                     }
                 });
@@ -50,7 +50,7 @@ public final class ClientAnimationNetworking {
             try {
                 StopRequest request = AnimationPackets.read(buffer, StopRequest.parser());
                 client.execute(() -> {
-                    if (client.getNetworkHandler() == handler) {
+                    if (client.getConnection() == handler) {
                         reply(stop(request));
                     }
                 });
@@ -60,7 +60,7 @@ public final class ClientAnimationNetworking {
         });
     }
 
-    private static Result play(MinecraftClient client, PlayRequest request) {
+    private static Result play(Minecraft client, PlayRequest request) {
         UUID player;
         try {
             player = AnimationRequests.validate(request);
@@ -71,7 +71,7 @@ public final class ClientAnimationNetworking {
         if (!PlayerAnimationClient.ASSETS.animations().containsKey(request.getAnimationId())) {
             return result(request.getRequestId(), Result.Code.ANIMATION_NOT_FOUND, "客户端未加载动画");
         }
-        if (client.world == null || client.world.getPlayerByUuid(player) == null) {
+        if (client.level == null || client.level.getPlayerByUUID(player) == null) {
             return result(request.getRequestId(), Result.Code.PLAYER_NOT_LOADED, "客户端未加载玩家");
         }
         if (request.hasNormalizedProgress()) {
@@ -112,10 +112,10 @@ public final class ClientAnimationNetworking {
         REPLIES.add(result);
     }
 
-    private static void tick(MinecraftClient client) {
+    private static void tick(Minecraft client) {
         // 各端只检查自己要发送的通道，双方共同要求 play、stop 和 result 完整接通。
         ticks++;
-        if (channels == null || client.getNetworkHandler() == null) {
+        if (channels == null || client.getConnection() == null) {
             return;
         }
         try {
@@ -128,7 +128,7 @@ public final class ClientAnimationNetworking {
             REPLIES.clear();
         } catch (IllegalStateException missingChannels) {
             PlayerAnimationClient.LOG.error("动画接线失败", missingChannels);
-            client.getNetworkHandler().getConnection().disconnect(Text.literal(missingChannels.getMessage()));
+            client.getConnection().getConnection().disconnect(Component.literal(missingChannels.getMessage()));
         }
     }
 }

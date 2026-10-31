@@ -7,13 +7,13 @@
 
 ## 1. 动作目的与触发
 
-- **用途**：`UseAction.SPEAR`（三叉戟）持续使用。原版 `ArmPose.THROW_SPEAR`：持戟臂 `pitch × 0.5 − π`（举过头顶），`yaw 0`，
+- **用途**：`UseAnim.SPEAR`（三叉戟）持续使用。原版 `ArmPose.THROW_SPEAR`：持戟臂 `pitch × 0.5 − π`（举过头顶），`yaw 0`，
   身体不动。
 - **触发**：`armPoseAction` 的 `SPEAR` 分支；主手 `trident_charge`，副手 [trident_charge_off](trident_charge_off.md)。
 - **原版进度来源**：最大使用时间 72000 tick；`TridentItem.onStoppedUsing` 要求**已使用 ≥ 10 tick** 才投掷（或激流），
   不随蓄力继续增强。
 - **驱动**：`t = min(已使用 / 20, 0.50)`；`≥ 0.50`（10 tick，可投掷）后在 `loop_region [0.50, 1.70]` 回绕。
-  松手且已使用 ≥ 10 tick、未触发激流：调度按真实时间推进 1.70→2.10（8 tick 投掷跟随）后淡出；不足 10 tick 或激流（`isUsingRiptide`
+  松手且已使用 ≥ 10 tick、未触发激流：调度按真实时间推进 1.70→2.10（8 tick 投掷跟随）后淡出；不足 10 tick 或激流（`isAutoSpinAttack`
   由原版渲染器旋转整身）直接淡出。
 - **结束**：投掷跟随段末淡出 0.15 s。投出后手中无物（忠诚附魔回来前），跟随段手指张开即与之相符。
 
@@ -66,7 +66,7 @@
 ## 8. 接口缺口
 
 1. `armPoseAction` 的 `SPEAR` → `trident_charge(_off)`；`armPoseProgress`：`loopedSecondsProgress(min(used, …), 2.10, 0.50, 1.70)`。
-2. 投掷尾段：与 `bow_draw` 共用“停止使用后按真实时间推进尾段”的调度状态；激流（`isUsingRiptide()`）时不播尾段。
+2. 投掷尾段：与 `bow_draw` 共用“停止使用后按真实时间推进尾段”的调度状态；激流（`isAutoSpinAttack()`）时不播尾段。
 3. 视线：原版 THROW_SPEAR 臂不跟视线；本资源头轨道仍需 `head_follow` 叠加。
 4. 目录、`upperOverlay`、`GRIP_IDS` 同其他持物动作。
 

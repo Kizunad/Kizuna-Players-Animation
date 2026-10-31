@@ -9,7 +9,7 @@ import dev.kizuna.playeranimation.server.AnimationSyncState;
 import io.netty.buffer.Unpooled;
 import java.util.List;
 import java.util.UUID;
-import net.minecraft.network.PacketByteBuf;
+import net.minecraft.network.FriendlyByteBuf;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -74,7 +74,7 @@ class AnimationSyncTest {
     @Test
     void fabricPayloadContainsOnlyProtobufAndRejectsOversizeOrTruncation() throws Exception {
         PlayRequest request = play("meditate", 400);
-        PacketByteBuf buffer = AnimationPackets.write(request);
+        FriendlyByteBuf buffer = AnimationPackets.write(request);
         try {
             byte[] bytes = new byte[buffer.readableBytes()];
             buffer.getBytes(0, bytes);
@@ -83,8 +83,8 @@ class AnimationSyncTest {
         } finally {
             buffer.release();
         }
-        PacketByteBuf oversized = new PacketByteBuf(Unpooled.wrappedBuffer(new byte[AnimationPackets.MAX_BYTES + 1]));
-        PacketByteBuf truncated = new PacketByteBuf(Unpooled.wrappedBuffer(new byte[]{10, 5, 1}));
+        FriendlyByteBuf oversized = new FriendlyByteBuf(Unpooled.wrappedBuffer(new byte[AnimationPackets.MAX_BYTES + 1]));
+        FriendlyByteBuf truncated = new FriendlyByteBuf(Unpooled.wrappedBuffer(new byte[]{10, 5, 1}));
         try {
             assertThrows(IllegalArgumentException.class, () -> AnimationPackets.read(oversized, PlayRequest.parser()));
             assertThrows(InvalidProtocolBufferException.class, () -> AnimationPackets.read(truncated, PlayRequest.parser()));

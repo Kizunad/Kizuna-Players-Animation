@@ -6,10 +6,10 @@
 
 ## 1. 动作目的与触发
 
-- **用途**：替换原版六部件潜行姿势（`BipedEntityModel.setAngles` 中 `sneaking` 分支：身体前倾 `0.5 rad ≈ 28.6°`、
+- **用途**：替换原版六部件潜行姿势（`HumanoidModel.setupAnim` 中 `crouching` 分支：身体前倾 `0.5 rad ≈ 28.6°`、
   双臂 `+0.4 rad`、腿枢轴后移 4 px、头/身体下移 4.2 / 3.2 px）。原版双腿笔直，上身像折叠一样前倾；本动作改为屈膝下蹲、
   胯后坐、脊柱分段前屈、头抬起看前方。
-- **触发**：`player.isInSneakingPose()`、着地、非骑乘/游泳/攀爬/睡眠/鞘翅，且水平静止（沿用 `crouch_work` 的
+- **触发**：`player.isCrouching()`、着地、非骑乘/游泳/攀爬/睡眠/鞘翅，且水平静止（沿用 `crouch_work` 的
   `STATIONARY_SPEED_SQUARED = 0.0004` 方块²/tick²）。移动时换 [sneak_walk](sneak_walk.md)；有已制作的工具/使用动作时
   由 `crouch_work` 接管下身（见第 6 节互斥规则）。
 - **原版进度来源**：潜行没有进度值，是状态姿势；本动作是自由时钟循环（3.0 s，约 20 次/分呼吸），不需要 scrub。
@@ -17,7 +17,7 @@
 
 ### 原版下沉 2.13 px 的处理（需审阅确认）
 
-`PlayerEntityRenderer.getPositionOffset` 在潜行时把整个模型下移 `0.125` 格；模型再按 `0.9375` 缩放，所以在模型像素里是
+`PlayerRenderer.getRenderOffset` 在潜行时把整个模型下移 `0.125` 格；模型再按 `0.9375` 缩放，所以在模型像素里是
 `0.125 × 16 / 0.9375 = 2.13 px`。原版潜行腿枢轴还多下移 0.2 px，脚底实际穿进方块约 2.3 px，但头顶恰好落在 1.5 格碰撞箱
 （28 px 高的模型 × 0.0586 格/px − 0.137 格 ≈ 1.504 格）。
 

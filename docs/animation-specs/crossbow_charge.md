@@ -11,7 +11,7 @@
 
 - **用途**：原版 `ArmPose.CROSSBOW_CHARGE`：按住右键给弩上弦期间。
 - **触发**：`armPoseAction` 对 `CrossbowItem` 且正在使用时选 `crossbow_charge`（副手持弩选 `crossbow_charge_off`）。
-- **驱动**：`t = 1.25 × CrossbowItem.getPullProgress(已使用 tick, stack)`。上弦 25 tick（快速装填每级 −5 tick）；进度到 1 后玩家仍按住右键时保持末帧，松开后弩变为已上弦，调度换 `crossbow_hold`。
+- **驱动**：`t = 1.25 × CrossbowItem.getPowerForTime(已使用 tick, stack)`。上弦 25 tick（快速装填每级 −5 tick）；进度到 1 后玩家仍按住右键时保持末帧，松开后弩变为已上弦，调度换 `crossbow_hold`。
 - 原版在进度 0.2、0.5 播放上弦音效，满弦时播放完成音效；本剪辑对应：0.25 s 左手刚勾住弦开始拉、0.62 s 拉到半程、1.08–1.12 s 挂上扳机的顿挫。
 
 ## 2. 时间轴

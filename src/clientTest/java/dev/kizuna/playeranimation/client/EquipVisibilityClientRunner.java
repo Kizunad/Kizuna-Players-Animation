@@ -18,12 +18,12 @@ public final class EquipVisibilityClientRunner implements ClientModInitializer {
     public void onInitializeClient() {
         // 进入真实集成世界后在客户端主线程执行测试，结束后正常关闭客户端和服务器。
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
-            if (finished || client.world == null || client.player == null) {
+            if (finished || client.level == null || client.player == null) {
                 return;
             }
             finished = true;
             runTests();
-            client.scheduleStop();
+            client.stop();
         });
     }
 

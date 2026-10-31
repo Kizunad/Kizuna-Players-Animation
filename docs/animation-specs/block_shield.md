@@ -5,7 +5,7 @@
 
 ## 1. 动作目的与触发
 
-- **用途**：`UseAction.BLOCK`（盾牌）持续使用。原版 `ArmPose.BLOCK`：持盾臂 `pitch × 0.5 − 0.942 rad`（前举 54°）、
+- **用途**：`UseAnim.BLOCK`（盾牌）持续使用。原版 `ArmPose.BLOCK`：持盾臂 `pitch × 0.5 − 0.942 rad`（前举 54°）、
   `yaw −0.524 rad`（内收 30°），身体和腿不动。
 - **触发**：`armPoseAction` 的 `BLOCK` 分支；盾在主手 `block_shield`，副手 [block_shield_off](block_shield_off.md)。
 - **原版进度来源**：盾牌最大使用时间 72000 tick；`LivingEntity.isBlocking()` 要求**已使用 ≥ 5 tick** 才真正格挡。
@@ -58,7 +58,7 @@
 
 1. `armPoseAction` 的 `BLOCK` → `block_shield` / `block_shield_off`；`armPoseProgress` → `loopedSecondsProgress(used, 1.95, 0.35, 1.95)`。
 2. 目录 `BLOCK_SHIELD`、`BLOCK_SHIELD_OFF`；`upperOverlay` 加入 `block_shield`；`GRIP_IDS` 加入两者。
-3. 盾牌渲染：确认 `PlayerHeldItemFeatureRenderer.renderItem` 对使用中的盾仍走 `shield_blocking` 模型（原版由物品
+3. 盾牌渲染：确认 `PlayerItemInHandLayer.renderArmWithItem` 对使用中的盾仍走 `shield_blocking` 模型（原版由物品
    `blocking` 谓词决定，与姿态无关），需 `calib_item` 游戏内核对盾面朝向。
 
 ## 9. 门禁预期（原型实测，classic）

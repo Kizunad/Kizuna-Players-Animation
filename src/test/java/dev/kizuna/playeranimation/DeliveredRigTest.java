@@ -1,21 +1,22 @@
 package dev.kizuna.playeranimation;
 
 import com.google.gson.JsonParser;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.math.Axis;
 import dev.kizuna.playeranimation.client.PlayerMeshRenderer;
 import dev.kizuna.playeranimation.model.*;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
-import net.minecraft.client.model.Dilation;
-import net.minecraft.client.render.entity.model.PlayerEntityModel;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.util.Arm;
-import net.minecraft.util.math.RotationAxis;
+import net.minecraft.client.model.PlayerModel;
+import net.minecraft.client.model.geom.builders.CubeDeformation;
+import net.minecraft.world.entity.HumanoidArm;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
 
 class DeliveredRigTest {
     private record Point(long x, long y, long z) {
@@ -99,25 +100,25 @@ class DeliveredRigTest {
     void bothHeldItemSocketsMatchVanillaIncludingSlimShoulderCorrection() throws Exception {
         for (boolean slim : new boolean[]{false, true}) {
             Skeleton skeleton = skeleton(slim);
-            PlayerEntityModel<?> model = new PlayerEntityModel<>(PlayerEntityModel
-                    .getTexturedModelData(Dilation.NONE, slim).getRoot().createPart(64, 64), slim);
+            PlayerModel<?> model = new PlayerModel<>(PlayerModel
+                    .createMesh(CubeDeformation.NONE, slim).getRoot().bake(64, 64), slim);
             for (float pitch : new float[]{0, -(float) Math.PI / 10, -1.2f}) {
                 // 混合旋转与肩部位移覆盖站姿、抬手和姿态变化，比较完整物品矩阵。
-                model.rightArm.pitch = model.leftArm.pitch = pitch;
-                model.rightArm.yaw = 0.2f;
-                model.leftArm.roll = -0.3f;
-                model.rightArm.pivotZ = 1.4f;
-                model.body.pitch = 0.4f;
+                model.rightArm.xRot = model.leftArm.xRot = pitch;
+                model.rightArm.yRot = 0.2f;
+                model.leftArm.zRot = -0.3f;
+                model.rightArm.z = 1.4f;
+                model.body.xRot = 0.4f;
                 Matrix4f[] matrices = Rig.matrices(skeleton, PlayerMeshRenderer.basePose(skeleton, model, false, slim));
-                for (Arm arm : Arm.values()) {
-                    MatrixStack vanilla = new MatrixStack();
-                    model.setArmAngle(arm, vanilla);
-                    vanilla.multiply(RotationAxis.POSITIVE_X.rotationDegrees(-90));
-                    vanilla.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(180));
-                    vanilla.translate((arm == Arm.RIGHT ? 1 : -1) / 16f, 0.125, -0.625);
-                    BoneId socket = arm == Arm.RIGHT ? BoneId.R_ITEM : BoneId.L_ITEM;
+                for (HumanoidArm arm : HumanoidArm.values()) {
+                    PoseStack vanilla = new PoseStack();
+                    model.translateToHand(arm, vanilla);
+                    vanilla.mulPose(Axis.XP.rotationDegrees(-90));
+                    vanilla.mulPose(Axis.YP.rotationDegrees(180));
+                    vanilla.translate((arm == HumanoidArm.RIGHT ? 1 : -1) / 16f, 0.125, -0.625);
+                    BoneId socket = arm == HumanoidArm.RIGHT ? BoneId.R_ITEM : BoneId.L_ITEM;
                     Matrix4f actual = Rig.itemTransform(skeleton, matrices, socket);
-                    assertTrue(vanilla.peek().getPositionMatrix().equals(actual, 0.00001f),
+                    assertTrue(vanilla.last().pose().equals(actual, 0.00001f),
                             "持物偏移: slim=" + slim + " arm=" + arm + " pitch=" + pitch);
                 }
             }
@@ -127,9 +128,9 @@ class DeliveredRigTest {
     @Test
     void slimCorrectionFollowsRootAndWristAnimation() throws Exception {
         Skeleton skeleton = skeleton(true);
-        PlayerEntityModel<?> model = new PlayerEntityModel<>(PlayerEntityModel
-                .getTexturedModelData(Dilation.NONE, true).getRoot().createPart(64, 64), true);
-        model.rightArm.yaw = 0.3f;
+        PlayerModel<?> model = new PlayerModel<>(PlayerModel
+                .createMesh(CubeDeformation.NONE, true).getRoot().bake(64, 64), true);
+        model.rightArm.yRot = 0.3f;
         Pose[] pose = PlayerMeshRenderer.basePose(skeleton, model, false, true);
         pose[BoneId.R_HAND.ordinal()] = new Pose(Vec3.ZERO, new Vec3(35, 0, 20));
         Matrix4f item = Rig.itemTransform(skeleton, Rig.matrices(skeleton, pose), BoneId.R_ITEM);

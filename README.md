@@ -104,7 +104,7 @@ timeout 240s xvfb-run -a -s "-screen 0 1024x768x24" \
 
 2026-10-26 剩余原版动作一批（潜行、吃喝、视线层、盾牌、拉弓、三叉戟、骑乘、睡眠、鞘翅、攀爬、游泳）的导出一致性、双体型门禁与 `./gradlew test` 88 项已通过，游戏内录制与双客户端视觉验收尚未执行。
 
-校准动画 `calib_zero`、`calib_axes`、`calib_item`、`calib_mirror`、`calib_layer` 已交付，仍需在游戏中逐帧对照 Blockbench。手持挂点 pivot 由原版 `HeldItemFeatureRenderer` 的平移推算得到，未经游戏内校准，不能视为已对齐原版持物位置。
+校准动画 `calib_zero`、`calib_axes`、`calib_item`、`calib_mirror`、`calib_layer` 已交付，仍需在游戏中逐帧对照 Blockbench。手持挂点 pivot 由原版 `ItemInHandLayer` 的平移推算得到，未经游戏内校准，不能视为已对齐原版持物位置。
 
 动作设计见 [`docs/animation-specs/`](docs/animation-specs/) 和 [`transitions.md`](docs/animation-specs/transitions.md)。已制作动作按原版进度驱动，主副手继续使用镜像模板；未制作资源保持原版姿态。本轮离线预览位于 `build/anim-review/revision-20261023/`，其中 `combined/` 使用真实 Java 播放器输出潜行挖掘叠加与望远镜俯仰矩阵，包含左右主手和两种体型；预览产物不纳入版本控制。
 

@@ -12,8 +12,8 @@ import java.io.IOException;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import net.fabricmc.fabric.api.resource.SimpleSynchronousResourceReloadListener;
-import net.minecraft.resource.ResourceManager;
-import net.minecraft.util.Identifier;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.packs.resources.ResourceManager;
 
 public final class PlayerAssets implements SimpleSynchronousResourceReloadListener {
     public record Model(Skeleton skeleton, SkinnedMesh mesh) { }
@@ -22,12 +22,12 @@ public final class PlayerAssets implements SimpleSynchronousResourceReloadListen
     private Map<String, AnimationEntry> animations = Map.of();
 
     @Override
-    public Identifier getFabricId() {
+    public ResourceLocation getFabricId() {
         return id("player_assets");
     }
 
-    public static Identifier id(String path) {
-        return new Identifier(PlayerAnimationClient.ID, path);
+    public static ResourceLocation id(String path) {
+        return new ResourceLocation(PlayerAnimationClient.ID, path);
     }
 
     public Model model(boolean thinArms) {
@@ -37,15 +37,15 @@ public final class PlayerAssets implements SimpleSynchronousResourceReloadListen
     public Map<String, AnimationEntry> animations() { return animations; }
 
     @Override
-    public void reload(ResourceManager manager) {
+    public void onResourceManagerReload(ResourceManager manager) {
         // 热重载原子替换资源；失败时清空旧播放，避免跨版本骨架数据混用。
         PlayerAnimationClient.PLAYBACK.clear();
         ArmorMesh.clearCache();
         classic = null;
         slim = null;
         animations = Map.of();
-        Identifier geometryId = id("geo/player_skeleton.geo.json");
-        Identifier indexId = id("player_anim_index.json");
+        ResourceLocation geometryId = id("geo/player_skeleton.geo.json");
+        ResourceLocation indexId = id("player_anim_index.json");
         if (manager.getResource(geometryId).isEmpty() && manager.getResource(indexId).isEmpty()) {
             PlayerAnimationClient.LOG.info("尚未提供玩家骨架和动画资源，保留原版玩家渲染");
             return;
@@ -57,12 +57,12 @@ public final class PlayerAssets implements SimpleSynchronousResourceReloadListen
             Model newClassic = new Model(classicSkeleton, new SkinnedMesh(classicSkeleton));
             Model newSlim = new Model(slimSkeleton, new SkinnedMesh(slimSkeleton));
             Map<String, AnimationEntry> entries = new LinkedHashMap<>();
-            Map<Identifier, JsonObject> files = new LinkedHashMap<>();
+            Map<ResourceLocation, JsonObject> files = new LinkedHashMap<>();
             JsonObject index = read(manager, indexId);
             for (var element : JsonInput.array(index, "animations")) {
                 JsonObject raw = element.getAsJsonObject();
                 String name = JsonInput.string(raw, "id");
-                Identifier file = id(JsonInput.string(raw, "file"));
+                ResourceLocation file = id(JsonInput.string(raw, "file"));
                 // 同文件的多个动作只解析一次 JSON，但各自保持独立播放参数。
                 if (!files.containsKey(file)) {
                     files.put(file, read(manager, file));
@@ -84,9 +84,9 @@ public final class PlayerAssets implements SimpleSynchronousResourceReloadListen
         }
     }
 
-    private static JsonObject read(ResourceManager manager, Identifier id) throws IOException {
+    private static JsonObject read(ResourceManager manager, ResourceLocation id) throws IOException {
         // Reader 与资源生命周期在加载边界关闭，不在渲染线程持有文件句柄。
-        try (var reader = manager.getResourceOrThrow(id).getReader()) {
+        try (var reader = manager.getResourceOrThrow(id).openAsReader()) {
             return JsonParser.parseReader(reader).getAsJsonObject();
         }
     }

@@ -1,12 +1,12 @@
 # ride：骑乘（跨坐、握缰、随坐骑起伏）
 
-> 状态：2026-10-26 已录入 classic `.bbmodel` 并接入调度（服务端 `hasVehicle()`；`shouldRiderSit` 仅客户端存在，原版坐骑均为坐姿）：2.4 s 起伏循环，22 骨 184 帧。双体型门禁通过，GIF 在 `build/anim-review/2026-10-26/`，游戏内视觉验收尚未执行；下文为设计记录，数值以 `.bbmodel` 为准。
+> 状态：2026-10-26 已录入 classic `.bbmodel` 并接入调度（服务端 `isPassenger()`；`shouldRiderSit` 仅客户端存在，原版坐骑均为坐姿）：2.4 s 起伏循环，22 骨 184 帧。双体型门禁通过，GIF 在 `build/anim-review/2026-10-26/`，游戏内视觉验收尚未执行；下文为设计记录，数值以 `.bbmodel` 为准。
 
 ## 1. 动作目的与触发
 
-- **用途**：替换原版骑乘姿势（`BipedEntityModel.riding`：大腿 `pitch −1.414 rad`（屈髋 81°）、`yaw ±0.314`（外旋 18°）、
+- **用途**：替换原版骑乘姿势（`HumanoidModel.riding`：大腿 `pitch −1.414 rad`（屈髋 81°）、`yaw ±0.314`（外旋 18°）、
   `roll ±0.0785`，双臂额外前举 36°）。原版膝不弯，小腿直直伸向前方。
-- **触发**：`LivingEntityRenderer` 的 `riding = hasVehicle() && vehicle.shouldRiderSit()`（马、驴、猪、炽足兽、骆驼、船、矿车）。
+- **触发**：`LivingEntityRenderer` 的 `riding = isPassenger() && vehicle.shouldRiderSit()`（马、驴、猪、炽足兽、骆驼、船、矿车）。
   服务端调度用同一条件。
 - **原版进度来源**：骑乘是状态姿势，无进度。坐骑移动时原版骑手没有起伏；本动作是 2.4 s 自由时钟循环，表现呼吸和轻微随动，
   不推断坐骑步态（见第 8 节可选项）。
@@ -60,7 +60,7 @@
 
 ## 6. 衔接
 
-- 进入：`stand` / `walk` / `jump_air` → `ride`，淡入 0.25 s（上马瞬间原版即切骑乘姿势）。`jump` 调度在 `hasVehicle()` 时已退出。
+- 进入：`stand` / `walk` / `jump_air` → `ride`，淡入 0.25 s（上马瞬间原版即切骑乘姿势）。`jump` 调度在 `isPassenger()` 时已退出。
 - 退出：→ `stand`，淡出 0.25 s。
 - 上层叠加：攻击、挖掘、放置、吃喝、拉弓、格挡、三叉戟均以 `upper` 叠加；`lowerBase` 需加入 `ride`，使骑乘时上层动作不改腿。
 

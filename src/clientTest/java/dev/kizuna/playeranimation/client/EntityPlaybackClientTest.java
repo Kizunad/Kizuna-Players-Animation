@@ -11,10 +11,10 @@ import dev.kizuna.playeranimation.protocol.pb.EntityAnimationProtocol.RegisterGe
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.mob.ZombieEntity;
+import net.minecraft.client.Minecraft;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.monster.Zombie;
 import org.junit.jupiter.api.Test;
 
 /** 生物独立播放不能触发只属于玩家的事件或继承已卸载实体的状态。 */
@@ -26,33 +26,33 @@ final class EntityPlaybackClientTest {
 
     @Test
     void mobPlaybackMustNotEmitPlayerEventsAndMustClearOnUnload() {
-        MinecraftClient client = MinecraftClient.getInstance();
+        Minecraft client = Minecraft.getInstance();
         PlayerPlayback playback = PlayerAnimationClient.PLAYBACK;
-        long savedTime = client.world.getTime();
-        ZombieEntity zombie = new ZombieEntity(EntityType.ZOMBIE, client.world);
+        long savedTime = client.level.getGameTime();
+        Zombie zombie = new Zombie(EntityType.ZOMBIE, client.level);
         zombie.setId(ENTITY_ID);
-        client.world.addEntity(ENTITY_ID, zombie);
+        client.level.putNonPlayerEntity(ENTITY_ID, zombie);
         PlayerAnimations.EVENT.register((player, animation, event) -> EVENTS.add(player));
         EVENTS.clear();
         try {
             assertPlayerEvents(client, playback);
             EVENTS.clear();
             playback.clear();
-            client.world.setTime(START_TICK);
+            client.level.setGameTime(START_TICK);
             playback.playEntity(ENTITY_ID, "equip_chestplate", START_TICK, "mob-event", null);
             assertNotNull(playback.entity(ENTITY_ID));
-            client.world.setTime(START_TICK + EVENT_TICKS);
+            client.level.setGameTime(START_TICK + EVENT_TICKS);
             playback.tick(client);
             assertTrue(EVENTS.isEmpty(), "生物不能向玩家事件发送 UUID");
-            client.world.removeEntity(ENTITY_ID, Entity.RemovalReason.DISCARDED);
+            client.level.removeEntity(ENTITY_ID, Entity.RemovalReason.DISCARDED);
             assertNull(playback.entity(ENTITY_ID), "实体卸载必须同步清理播放状态");
-            ZombieEntity replacement = new ZombieEntity(EntityType.ZOMBIE, client.world);
+            Zombie replacement = new Zombie(EntityType.ZOMBIE, client.level);
             replacement.setId(ENTITY_ID);
-            client.world.addEntity(ENTITY_ID, replacement);
+            client.level.putNonPlayerEntity(ENTITY_ID, replacement);
             assertNull(playback.entity(ENTITY_ID), "复用 ID 的实体不能继承动画");
         } finally {
-            client.world.removeEntity(ENTITY_ID, Entity.RemovalReason.DISCARDED);
-            client.world.setTime(savedTime);
+            client.level.removeEntity(ENTITY_ID, Entity.RemovalReason.DISCARDED);
+            client.level.setGameTime(savedTime);
             playback.clear();
         }
     }
@@ -60,12 +60,12 @@ final class EntityPlaybackClientTest {
     @Test
     void defaultNamespaceMustResolveRegisteredGeometry() throws Exception {
         // 注册和查询必须使用同一规范化实体类型，省略命名空间不能产生无效绑定。
-        MinecraftClient client = MinecraftClient.getInstance();
-        ZombieEntity zombie = new ZombieEntity(EntityType.ZOMBIE, client.world);
+        Minecraft client = Minecraft.getInstance();
+        Zombie zombie = new Zombie(EntityType.ZOMBIE, client.level);
         zombie.setId(ENTITY_ID);
-        client.world.addEntity(ENTITY_ID, zombie);
+        client.level.putNonPlayerEntity(ENTITY_ID, zombie);
         try (var stream = client.getResourceManager()
-                .getResourceOrThrow(PlayerAssets.id("geo/player_skeleton.geo.json")).getInputStream()) {
+                .getResourceOrThrow(PlayerAssets.id("geo/player_skeleton.geo.json")).open()) {
             RegisterGeometry geometry = RegisterGeometry.newBuilder()
                     .setGeometryId("geometry.player.classic")
                     .setGeometryJson(ByteString.copyFrom(stream.readAllBytes()))
@@ -87,7 +87,7 @@ final class EntityPlaybackClientTest {
                     .build();
             assertEquals(EntityAnimationResponse.Code.OK, exchange(request).getCode());
         } finally {
-            client.world.removeEntity(ENTITY_ID, Entity.RemovalReason.DISCARDED);
+            client.level.removeEntity(ENTITY_ID, Entity.RemovalReason.DISCARDED);
             PlayerAnimationClient.PLAYBACK.clear();
         }
     }
@@ -99,12 +99,12 @@ final class EntityPlaybackClientTest {
         return response;
     }
 
-    private static void assertPlayerEvents(MinecraftClient client, PlayerPlayback playback) {
+    private static void assertPlayerEvents(Minecraft client, PlayerPlayback playback) {
         // 同一事件窗口先验证玩家会收到回调，避免隔离断言因事件源未推进而空通过。
-        client.world.setTime(START_TICK);
-        UUID player = client.player.getUuid();
+        client.level.setGameTime(START_TICK);
+        UUID player = client.player.getUUID();
         playback.play(player, "equip_chestplate", START_TICK, "player-event");
-        client.world.setTime(START_TICK + EVENT_TICKS);
+        client.level.setGameTime(START_TICK + EVENT_TICKS);
         playback.tick(client);
         assertEquals(List.of(player), EVENTS);
     }

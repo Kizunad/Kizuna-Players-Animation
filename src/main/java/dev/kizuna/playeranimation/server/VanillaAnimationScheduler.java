@@ -8,18 +8,18 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import net.minecraft.item.ArmorItem;
-import net.minecraft.item.BlockItem;
-import net.minecraft.enchantment.EnchantmentHelper;
-import net.minecraft.item.BowItem;
-import net.minecraft.item.CrossbowItem;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.MiningToolItem;
-import net.minecraft.util.Hand;
-import net.minecraft.util.UseAction;
-import net.minecraft.util.math.Vec3d;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.item.ArmorItem;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.BowItem;
+import net.minecraft.world.item.CrossbowItem;
+import net.minecraft.world.item.DiggerItem;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.UseAnim;
+import net.minecraft.world.item.enchantment.EnchantmentHelper;
+import net.minecraft.world.phys.Vec3;
 
 /**
  * 把原版实体状态转换成动作 ID 和归一化 scrub 进度。进度每 tick 从实体真实字段计算，
@@ -32,7 +32,7 @@ final class VanillaAnimationScheduler {
     private final Map<UUID, Set<String>> scrubbed = new HashMap<>();
     private final Map<UUID, AttackState> attacks = new HashMap<>();
     private final Map<UUID, HoldState> crossbowHolds = new HashMap<>();
-    private final Map<UUID, Vec3d> previousPositions = new HashMap<>();
+    private final Map<UUID, Vec3> previousPositions = new HashMap<>();
     private final Map<UUID, ReleaseTail> releases = new HashMap<>();
     private final Map<UUID, ClimbState> climbs = new HashMap<>();
     private final Map<UUID, SwimState> swims = new HashMap<>();
@@ -60,9 +60,9 @@ final class VanillaAnimationScheduler {
     private static final float TRIDENT_READY_SECONDS = 0.50f;
     private static final float TRIDENT_HOLD_END_SECONDS = 1.70f;
     private static final int TRIDENT_MIN_THROW_TICKS = 10;
-    // 原版 BipedEntityModel 在滑翔超过 4 tick 后切换滑翔头部姿态，鞘翅动作使用同一阈值。
+    // 原版 HumanoidModel 在滑翔超过 4 tick 后切换滑翔头部姿态，鞘翅动作使用同一阈值。
     private static final int ELYTRA_POSE_TICKS = 4;
-    // 原版 LivingEntity.updateLimbs：肢体速度 = min(位移 × 4, 1)；泳姿划臂周期 limbAngle % 26。
+    // 原版 LivingEntity.calculateEntityAnimation：肢体速度 = min(位移 × 4, 1)；泳姿划臂周期 limbAngle % 26。
     static final double SWIM_LIMB_SCALE = 4.0;
     static final double SWIM_STROKE_LIMB_UNITS = 26.0;
     // 每 tick 位移不超过 0.02 方块视作静止；比较水平位移平方（方块²/tick²）。
@@ -196,14 +196,14 @@ final class VanillaAnimationScheduler {
     }
 
     /**
-     * 游泳相位：与原版 LimbAnimator 同一公式，每 tick 前进 min(位移 × 4, 1) 个肢体单位，
+     * 游泳相位：与原版 WalkAnimationState 同一公式，每 tick 前进 min(位移 × 4, 1) 个肢体单位，
      * 原版划臂一周期 26 单位，因此划臂节奏随实际速度变化，停下时停在当前姿态。
      */
     static final class SwimState {
-        private Vec3d previous;
+        private Vec3 previous;
         private double phase;
 
-        float progress(Vec3d position) {
+        float progress(Vec3 position) {
             if (previous != null) {
                 double limbSpeed = Math.min(position.distanceTo(previous) * SWIM_LIMB_SCALE, 1.0);
                 phase += limbSpeed / SWIM_STROKE_LIMB_UNITS;
@@ -219,8 +219,8 @@ final class VanillaAnimationScheduler {
     }
 
     void tick(MinecraftServer server) {
-        for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
-            UUID id = player.getUuid();
+        for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+            UUID id = player.getUUID();
             ArmorSnapshot previousArmor = armor.put(id, ArmorSnapshot.capture(player));
             playArmorEquip(player, previousArmor);
             Set<String> desired = new HashSet<>();
@@ -241,15 +241,15 @@ final class VanillaAnimationScheduler {
                 }
             }
         }
-        jumps.keySet().removeIf(id -> server.getPlayerManager().getPlayer(id) == null);
-        attacks.keySet().removeIf(id -> server.getPlayerManager().getPlayer(id) == null);
-        crossbowHolds.keySet().removeIf(id -> server.getPlayerManager().getPlayer(id) == null);
-        armor.keySet().removeIf(id -> server.getPlayerManager().getPlayer(id) == null);
-        scrubbed.keySet().removeIf(id -> server.getPlayerManager().getPlayer(id) == null);
-        previousPositions.keySet().removeIf(id -> server.getPlayerManager().getPlayer(id) == null);
-        releases.keySet().removeIf(id -> server.getPlayerManager().getPlayer(id) == null);
-        climbs.keySet().removeIf(id -> server.getPlayerManager().getPlayer(id) == null);
-        swims.keySet().removeIf(id -> server.getPlayerManager().getPlayer(id) == null);
+        jumps.keySet().removeIf(id -> server.getPlayerList().getPlayer(id) == null);
+        attacks.keySet().removeIf(id -> server.getPlayerList().getPlayer(id) == null);
+        crossbowHolds.keySet().removeIf(id -> server.getPlayerList().getPlayer(id) == null);
+        armor.keySet().removeIf(id -> server.getPlayerList().getPlayer(id) == null);
+        scrubbed.keySet().removeIf(id -> server.getPlayerList().getPlayer(id) == null);
+        previousPositions.keySet().removeIf(id -> server.getPlayerList().getPlayer(id) == null);
+        releases.keySet().removeIf(id -> server.getPlayerList().getPlayer(id) == null);
+        climbs.keySet().removeIf(id -> server.getPlayerList().getPlayer(id) == null);
+        swims.keySet().removeIf(id -> server.getPlayerList().getPlayer(id) == null);
     }
 
     void clear(UUID player) {
@@ -297,8 +297,8 @@ final class VanillaAnimationScheduler {
         return ((tick % periodTicks + periodTicks) % periodTicks) / (float) periodTicks;
     }
 
-    static String handAction(String main, String off, Hand hand) {
-        return hand == Hand.OFF_HAND ? off : main;
+    static String handAction(String main, String off, InteractionHand hand) {
+        return hand == InteractionHand.OFF_HAND ? off : main;
     }
 
     static Transition armorTransition(boolean previousEquipped, boolean equipped) {
@@ -325,34 +325,34 @@ final class VanillaAnimationScheduler {
         return clampProgress(0.60f + Math.max(0, elapsedTicks) * 0.60f / duration);
     }
 
-    private void scheduleJump(ServerPlayerEntity player, Set<String> desired) {
+    private void scheduleJump(ServerPlayer player, Set<String> desired) {
         // 着地仅表示碰撞结果；骑乘、飞行、流体和攀爬有各自的姿态与支撑来源。
-        boolean allowed = player.isAlive() && !player.isSpectator() && !player.hasVehicle()
+        boolean allowed = player.isAlive() && !player.isSpectator() && !player.isPassenger()
                 && !player.isFallFlying() && !player.getAbilities().flying && !player.isSleeping()
-                && !player.isSwimming() && !player.isTouchingWater() && !player.isInLava() && !player.isClimbing();
-        JumpState state = jumps.computeIfAbsent(player.getUuid(), ignored -> new JumpState());
-        Float progress = state.progress(allowed, player.isOnGround(), player.getVelocity().y,
-                player.getWorld().getTime());
+                && !player.isSwimming() && !player.isInWater() && !player.isInLava() && !player.onClimbable();
+        JumpState state = jumps.computeIfAbsent(player.getUUID(), ignored -> new JumpState());
+        Float progress = state.progress(allowed, player.onGround(), player.getDeltaMovement().y,
+                player.level().getGameTime());
         if (progress != null) {
             syncScrub(player, "jump", progress, desired);
         }
     }
 
-    private boolean updateStationary(ServerPlayerEntity player) {
+    private boolean updateStationary(ServerPlayer player) {
         // 静止判断取服务端相邻 tick 的实际水平位置差；首个 tick 没有上一位置，按移动处理。
-        Vec3d position = player.getPos();
-        Vec3d previousPosition = previousPositions.put(player.getUuid(), position);
+        Vec3 position = player.position();
+        Vec3 previousPosition = previousPositions.put(player.getUUID(), position);
         return previousPosition != null
-                && position.subtract(previousPosition).horizontalLengthSquared() <= STATIONARY_SPEED_SQUARED;
+                && position.subtract(previousPosition).horizontalDistanceSqr() <= STATIONARY_SPEED_SQUARED;
     }
 
-    private static boolean groundedSneak(ServerPlayerEntity player) {
+    private static boolean groundedSneak(ServerPlayer player) {
         // 潜行底层只在着地的普通潜行中使用；骑乘、入水和攀爬有各自的姿态来源。
-        return player.isInSneakingPose() && player.isOnGround() && !player.hasVehicle()
-                && !player.isTouchingWater() && !player.isClimbing();
+        return player.isCrouching() && player.onGround() && !player.isPassenger()
+                && !player.isInWater() && !player.onClimbable();
     }
 
-    private void scheduleCrouchWork(ServerPlayerEntity player, Set<String> desired, boolean stationary) {
+    private void scheduleCrouchWork(ServerPlayer player, Set<String> desired, boolean stationary) {
         // 只在已制作的工具动作下提供静止支撑；移动时交回潜行步态，避免锁脚滑行。
         boolean working = desired.stream().anyMatch(action -> action.startsWith("attack_")
                 || action.startsWith("mine_") || action.startsWith("place_block")
@@ -366,7 +366,7 @@ final class VanillaAnimationScheduler {
         playLoop(player, "crouch_work", desired);
     }
 
-    private void scheduleSneak(ServerPlayerEntity player, Set<String> desired, boolean stationary) {
+    private void scheduleSneak(ServerPlayer player, Set<String> desired, boolean stationary) {
         // sneak、sneak_walk、crouch_work 三选一：操作支撑已接管时不再叠加通用潜行。
         if (desired.contains("crouch_work") || !groundedSneak(player)) {
             return;
@@ -375,46 +375,46 @@ final class VanillaAnimationScheduler {
         playLoop(player, action, desired);
     }
 
-    private void scheduleSpecialPose(ServerPlayerEntity player, Set<String> desired) {
+    private void scheduleSpecialPose(ServerPlayer player, Set<String> desired) {
         // 原版特殊姿态各自独占全身：睡眠、鞘翅滑翔（与原版头部切换同为滑翔超过 4 tick）、骑乘。
-        // Entity.shouldRiderSit 只存在于客户端；原版坐骑默认都让骑手坐下，服务端按 hasVehicle 判断。
+        // Entity.shouldRiderSit 只存在于客户端；原版坐骑默认都让骑手坐下，服务端按 isPassenger 判断。
         if (!player.isAlive() || player.isSpectator()) {
             return;
         }
         if (player.isSleeping()) {
             playLoop(player, "sleep", desired);
-        } else if (player.isFallFlying() && player.getRoll() > ELYTRA_POSE_TICKS) {
+        } else if (player.isFallFlying() && player.getFallFlyingTicks() > ELYTRA_POSE_TICKS) {
             playLoop(player, "elytra", desired);
-        } else if (player.hasVehicle()) {
+        } else if (player.isPassenger()) {
             playLoop(player, "ride", desired);
         }
     }
 
-    private void scheduleClimb(ServerPlayerEntity player, Set<String> desired) {
+    private void scheduleClimb(ServerPlayer player, Set<String> desired) {
         // 只在攀爬且未站在地面时接管；着地站在梯子底部交回站立/步态，并重置相位起点。
-        if (!player.isAlive() || player.isSpectator() || !player.isClimbing() || player.isOnGround()
-                || player.hasVehicle()) {
-            climbs.remove(player.getUuid());
+        if (!player.isAlive() || player.isSpectator() || !player.onClimbable() || player.onGround()
+                || player.isPassenger()) {
+            climbs.remove(player.getUUID());
             return;
         }
-        ClimbState state = climbs.computeIfAbsent(player.getUuid(), ignored -> new ClimbState());
+        ClimbState state = climbs.computeIfAbsent(player.getUUID(), ignored -> new ClimbState());
         syncScrub(player, "climb", state.progress(player.getY()), desired);
     }
 
-    private void scheduleSwim(ServerPlayerEntity player, Set<String> desired) {
+    private void scheduleSwim(ServerPlayer player, Set<String> desired) {
         // 只在水中泳姿使用；陆地爬行同为 SWIMMING 姿态但不在水中，保持原版。
-        if (!player.isAlive() || player.isSpectator() || !player.isInSwimmingPose() || !player.isTouchingWater()) {
-            swims.remove(player.getUuid());
+        if (!player.isAlive() || player.isSpectator() || !player.isVisuallySwimming() || !player.isInWater()) {
+            swims.remove(player.getUUID());
             return;
         }
-        SwimState state = swims.computeIfAbsent(player.getUuid(), ignored -> new SwimState());
-        syncScrub(player, "swim", state.progress(player.getPos()), desired);
+        SwimState state = swims.computeIfAbsent(player.getUUID(), ignored -> new SwimState());
+        syncScrub(player, "swim", state.progress(player.position()), desired);
     }
 
-    private void playLoop(ServerPlayerEntity player, String action, Set<String> desired) {
+    private void playLoop(ServerPlayer player, String action, Set<String> desired) {
         // 循环动作按自由时钟播放，只在本 tick 新进入时发送一次；离开状态由 tick 末尾统一停止。
         desired.add(action);
-        Set<String> previous = scrubbed.get(player.getUuid());
+        Set<String> previous = scrubbed.get(player.getUUID());
         if (previous == null || !previous.contains(action)) {
             ServerPlayerAnimations.play(player, action);
         }
@@ -424,21 +424,21 @@ final class VanillaAnimationScheduler {
         return velocity > 0.2 ? velocity : 0.42;
     }
 
-    private void scheduleOriginalProgress(ServerPlayerEntity player, Set<String> desired) {
-        UUID id = player.getUuid();
+    private void scheduleOriginalProgress(ServerPlayer player, Set<String> desired) {
+        UUID id = player.getUUID();
         if (player.isUsingItem()) {
             crossbowHolds.remove(id);
             attacks.remove(id);
-            ItemStack stack = player.getActiveItem();
-            Hand hand = player.getActiveHand();
-            UseAction useAction = stack.getItem().getUseAction(stack);
+            ItemStack stack = player.getUseItem();
+            InteractionHand hand = player.getUsedItemHand();
+            UseAnim useAction = stack.getItem().getUseAnimation(stack);
             String action = armPoseAction(stack, hand, useAction);
             if (action != null) {
                 float progress = armPoseProgress(player, stack, action);
                 syncScrub(player, action, progress, desired);
             }
             armReleaseTail(player, stack, action);
-        } else if (player.handSwinging) {
+        } else if (player.swinging) {
             crossbowHolds.remove(id);
             scheduleReleaseTail(player, desired);
             scheduleHandSwing(player, desired);
@@ -453,35 +453,35 @@ final class VanillaAnimationScheduler {
         }
     }
 
-    private void armReleaseTail(ServerPlayerEntity player, ItemStack stack, String action) {
+    private void armReleaseTail(ServerPlayer player, ItemStack stack, String action) {
         // 只有拉弓与投掷有松手尾段；其他使用动作清掉旧状态，避免换物品后误播。
         String base = action == null ? "" : action.replace("_off", "");
         int used = usedTicks(player, stack);
         if (base.equals("bow_draw")) {
-            boolean fires = BowItem.getPullProgress(used) >= BOW_MIN_RELEASE_PULL;
-            releases.computeIfAbsent(player.getUuid(), ignored -> new ReleaseTail())
+            boolean fires = BowItem.getPowerForTime(used) >= BOW_MIN_RELEASE_PULL;
+            releases.computeIfAbsent(player.getUUID(), ignored -> new ReleaseTail())
                     .using(action, fires, BOW_HOLD_END_SECONDS, BOW_CLIP_SECONDS, BOW_CLIP_SECONDS);
             return;
         }
         if (base.equals("trident_charge")) {
             // 激流在水中或雨中发动时原版旋转整身，不播投掷跟随；不足 10 tick 原版不投掷。
-            boolean riptide = EnchantmentHelper.getRiptide(stack) > 0 && player.isTouchingWaterOrRain();
+            boolean riptide = EnchantmentHelper.getRiptide(stack) > 0 && player.isInWaterOrRain();
             boolean throwsTrident = used >= TRIDENT_MIN_THROW_TICKS && !riptide;
-            releases.computeIfAbsent(player.getUuid(), ignored -> new ReleaseTail())
+            releases.computeIfAbsent(player.getUUID(), ignored -> new ReleaseTail())
                     .using(action, throwsTrident, TRIDENT_HOLD_END_SECONDS, TRIDENT_CLIP_SECONDS, TRIDENT_CLIP_SECONDS);
             return;
         }
-        releases.remove(player.getUuid());
+        releases.remove(player.getUUID());
     }
 
-    private void scheduleReleaseTail(ServerPlayerEntity player, Set<String> desired) {
-        ReleaseTail tail = releases.get(player.getUuid());
+    private void scheduleReleaseTail(ServerPlayer player, Set<String> desired) {
+        ReleaseTail tail = releases.get(player.getUUID());
         if (tail == null) {
             return;
         }
-        Float progress = tail.released(player.getWorld().getTime());
+        Float progress = tail.released(player.level().getGameTime());
         if (progress == null) {
-            releases.remove(player.getUuid());
+            releases.remove(player.getUUID());
             return;
         }
         syncScrub(player, tail.action(), progress, desired);
@@ -495,12 +495,12 @@ final class VanillaAnimationScheduler {
         return loopedSecondsProgress(usedTicks, BOW_CLIP_SECONDS, BOW_FULL_SECONDS, BOW_HOLD_END_SECONDS);
     }
 
-    private void scheduleHandSwing(ServerPlayerEntity player, Set<String> desired) {
-        UUID id = player.getUuid();
-        // 挥动手独立于持续使用物品的手，由原版 swingHand 更新。
-        Hand hand = player.preferredHand;
-        ItemStack swung = player.getStackInHand(hand);
-        boolean mining = swung.getItem() instanceof MiningToolItem;
+    private void scheduleHandSwing(ServerPlayer player, Set<String> desired) {
+        UUID id = player.getUUID();
+        // 挥动手独立于持续使用物品的手，由原版 swing 更新。
+        InteractionHand hand = player.swingingArm;
+        ItemStack swung = player.getItemInHand(hand);
+        boolean mining = swung.getItem() instanceof DiggerItem;
         boolean placing = swung.getItem() instanceof BlockItem;
         String action = handAction(placing ? "place_block" : mining ? "mine_main" : "attack_main",
                 placing ? "place_block_off" : mining ? "mine_off" : "attack_off", hand);
@@ -515,60 +515,60 @@ final class VanillaAnimationScheduler {
         }
         state.swinging = true;
         desired.add(action);
-        float progress = state.tool == null ? 0.60f * clampProgress(player.getHandSwingProgress(1f))
-                : state.tool.progress(true, player.getHandSwingProgress(1f),
-                        player.getWorld().getTime(), state.durationTicks);
+        float progress = state.tool == null ? 0.60f * clampProgress(player.getAttackAnim(1f))
+                : state.tool.progress(true, player.getAttackAnim(1f),
+                        player.level().getGameTime(), state.durationTicks);
         syncScrub(player, action, progress, desired);
     }
 
-    private void scheduleHandSwingTail(ServerPlayerEntity player, Set<String> desired) {
-        AttackState state = attacks.get(player.getUuid());
+    private void scheduleHandSwingTail(ServerPlayer player, Set<String> desired) {
+        AttackState state = attacks.get(player.getUUID());
         if (state == null || state.swinging || state.action == null) {
             return;
         }
         if (state.tailStart < 0) {
-            state.tailStart = player.getWorld().getTime();
+            state.tailStart = player.level().getGameTime();
         }
-        long elapsed = Math.max(0, player.getWorld().getTime() - state.tailStart);
+        long elapsed = Math.max(0, player.level().getGameTime() - state.tailStart);
         float progress = state.tool == null ? attackTailProgress(elapsed, state.durationTicks)
-                : state.tool.progress(false, player.getHandSwingProgress(1f),
-                        player.getWorld().getTime(), state.durationTicks);
+                : state.tool.progress(false, player.getAttackAnim(1f),
+                        player.level().getGameTime(), state.durationTicks);
         if (progress >= 1) {
             ServerPlayerAnimations.stop(player, state.action);
-            attacks.remove(player.getUuid());
+            attacks.remove(player.getUUID());
             return;
         }
         desired.add(state.action);
         ServerPlayerAnimations.scrub(player, state.action, progress);
     }
 
-    private void scheduleCrossbowHold(ServerPlayerEntity player, Set<String> desired) {
+    private void scheduleCrossbowHold(ServerPlayer player, Set<String> desired) {
         ItemStack stack;
-        Hand hand;
-        if (player.getMainHandStack().getItem() instanceof CrossbowItem
-                && CrossbowItem.isCharged(player.getMainHandStack())) {
-            stack = player.getMainHandStack();
-            hand = Hand.MAIN_HAND;
-        } else if (player.getOffHandStack().getItem() instanceof CrossbowItem
-                && CrossbowItem.isCharged(player.getOffHandStack())) {
-            stack = player.getOffHandStack();
-            hand = Hand.OFF_HAND;
+        InteractionHand hand;
+        if (player.getMainHandItem().getItem() instanceof CrossbowItem
+                && CrossbowItem.isCharged(player.getMainHandItem())) {
+            stack = player.getMainHandItem();
+            hand = InteractionHand.MAIN_HAND;
+        } else if (player.getOffhandItem().getItem() instanceof CrossbowItem
+                && CrossbowItem.isCharged(player.getOffhandItem())) {
+            stack = player.getOffhandItem();
+            hand = InteractionHand.OFF_HAND;
         } else {
-            crossbowHolds.remove(player.getUuid());
+            crossbowHolds.remove(player.getUUID());
             return;
         }
         String action = handAction("crossbow_hold", "crossbow_hold_off", hand);
-        HoldState state = crossbowHolds.computeIfAbsent(player.getUuid(), ignored -> new HoldState());
+        HoldState state = crossbowHolds.computeIfAbsent(player.getUUID(), ignored -> new HoldState());
         if (!action.equals(state.action)) {
             state.action = action;
-            state.startTick = player.getWorld().getTime();
+            state.startTick = player.level().getGameTime();
         }
-        long elapsed = Math.max(0, player.getWorld().getTime() - state.startTick);
+        long elapsed = Math.max(0, player.level().getGameTime() - state.startTick);
         syncScrub(player, action, clampProgress(elapsed / (20f * 0.40f)), desired);
     }
 
-    private static int usedTicks(ServerPlayerEntity player, ItemStack stack) {
-        return Math.max(0, stack.getMaxUseTime() - player.getItemUseTimeLeft());
+    private static int usedTicks(ServerPlayer player, ItemStack stack) {
+        return Math.max(0, stack.getUseDuration() - player.getUseItemRemainingTicks());
     }
 
     static float clipSecondsProgress(float seconds, float duration) {
@@ -584,30 +584,30 @@ final class VanillaAnimationScheduler {
         return clipSecondsProgress(seconds, duration);
     }
 
-    private static float armPoseProgress(ServerPlayerEntity player, ItemStack stack, String action) {
+    private static float armPoseProgress(ServerPlayer player, ItemStack stack, String action) {
         int used = usedTicks(player, stack);
         String base = action.endsWith("_off") ? action.substring(0, action.length() - 4) : action;
         return switch (base) {
             case "spyglass" -> loopedSecondsProgress(used, 2.35f, 0.35f, 2.35f);
             case "toot_horn" -> clipSecondsProgress(Math.min(used / 20f, 2.60f), 2.60f);
             case "crossbow_charge" -> {
-                int pullTime = Math.max(1, CrossbowItem.getPullTime(stack));
+                int pullTime = Math.max(1, CrossbowItem.getChargeDuration(stack));
                 yield clipSecondsProgress(1.25f * clampProgress(used / (float) pullTime), 1.25f);
             }
             case "brush" -> loopedSecondsProgress(used * TOOL_PLAYBACK_SPEED, 0.925f, 0.30f, 0.80f);
             case "use_item" -> clipSecondsProgress(used / 20f * TOOL_PLAYBACK_SPEED, 0.40f);
             case "eat" -> loopedSecondsProgress(used, EAT_CLIP_SECONDS, EAT_LOOP_START_SECONDS, EAT_CLIP_SECONDS);
-            case "bow_draw" -> bowProgress(BowItem.getPullProgress(used), used);
+            case "bow_draw" -> bowProgress(BowItem.getPowerForTime(used), used);
             case "trident_charge" -> loopedSecondsProgress(used, TRIDENT_CLIP_SECONDS, TRIDENT_READY_SECONDS,
                     TRIDENT_HOLD_END_SECONDS);
             case "block_shield" -> loopedSecondsProgress(used, SHIELD_CLIP_SECONDS, SHIELD_LOOP_START_SECONDS,
                     SHIELD_CLIP_SECONDS);
             case "drink" -> clipSecondsProgress(Math.min(used / 20f, DRINK_CLIP_SECONDS), DRINK_CLIP_SECONDS);
-            default -> useProgress(player.getItemUseTimeLeft(), stack.getMaxUseTime());
+            default -> useProgress(player.getUseItemRemainingTicks(), stack.getUseDuration());
         };
     }
 
-    private static String armPoseAction(ItemStack stack, Hand hand, UseAction useAction) {
+    private static String armPoseAction(ItemStack stack, InteractionHand hand, UseAnim useAction) {
         if (stack.getItem() instanceof CrossbowItem) {
             return handAction("crossbow_charge", "crossbow_charge_off", hand);
         }
@@ -624,7 +624,7 @@ final class VanillaAnimationScheduler {
         };
     }
 
-    private static void syncScrub(ServerPlayerEntity player, String action, float progress, Set<String> desired) {
+    private static void syncScrub(ServerPlayer player, String action, float progress, Set<String> desired) {
         // 尚未交付资源的动作不发请求，避免接收端逐 tick 报 ANIMATION_NOT_FOUND；该状态保留原版姿态。
         if (!PlayerAnimationAction.find(action).delivered()) {
             return;
@@ -633,12 +633,12 @@ final class VanillaAnimationScheduler {
         ServerPlayerAnimations.scrub(player, action, progress);
     }
 
-    private static void playArmorEquip(ServerPlayerEntity player, ArmorSnapshot previous) {
+    private static void playArmorEquip(ServerPlayer player, ArmorSnapshot previous) {
         if (previous == null) {
             return;
         }
         for (int slot = 0; slot < 4; slot++) {
-            if (armorTransition(previous.equipped(slot), !player.getInventory().getArmorStack(slot).isEmpty()) != Transition.START) {
+            if (armorTransition(previous.equipped(slot), !player.getInventory().getArmor(slot).isEmpty()) != Transition.START) {
                 continue;
             }
             String part = switch (slot) {
@@ -655,13 +655,13 @@ final class VanillaAnimationScheduler {
     }
 
     private record ArmorSnapshot(boolean[] slots, boolean mainHandArmor, boolean offHandArmor) {
-        static ArmorSnapshot capture(ServerPlayerEntity player) {
+        static ArmorSnapshot capture(ServerPlayer player) {
             boolean[] slots = new boolean[4];
             for (int slot = 0; slot < slots.length; slot++) {
-                slots[slot] = !player.getInventory().getArmorStack(slot).isEmpty();
+                slots[slot] = !player.getInventory().getArmor(slot).isEmpty();
             }
-            ItemStack main = player.getMainHandStack();
-            ItemStack off = player.getOffHandStack();
+            ItemStack main = player.getMainHandItem();
+            ItemStack off = player.getOffhandItem();
             return new ArmorSnapshot(slots, main.getItem() instanceof ArmorItem, off.getItem() instanceof ArmorItem);
         }
 

@@ -13,10 +13,10 @@
 
 ## 1. 动作目的与触发
 
-- **用途**：`UseAction.BOW` 持续使用。原版 `ArmPose.BOW_AND_ARROW`（主手右手持弓）：右臂 `yaw = −0.1 + headYaw`、
+- **用途**：`UseAnim.BOW` 持续使用。原版 `ArmPose.BOW_AND_ARROW`（主手右手持弓）：右臂 `yaw = −0.1 + headYaw`、
   左臂 `yaw = 0.5 + headYaw`，两臂 `pitch = −90° + headPitch`，即双臂平举指向视线，左手并不后拉。
 - **触发**：`armPoseAction` 的 `BOW` 分支；弓在主手 `bow_draw`，副手 [bow_draw_off](bow_draw_off.md)。
-- **原版进度来源**：`BowItem.getPullProgress(useTicks)`：`f = t / 20`，`pull = min((f² + 2f) / 3, 1)`，**20 tick 满弓**；
+- **原版进度来源**：`BowItem.getPowerForTime(useTicks)`：`f = t / 20`，`pull = min((f² + 2f) / 3, 1)`，**20 tick 满弓**；
   松手时 `pull < 0.1` 不发射。弓最大使用时间 72000 tick。
 - **驱动**（scrub）：
   - 拉弦：`clip = 1.0 × pull`（`pull < 1`）。2 tick 时 pull 0.07、4 tick 0.15：前 0.15 s 剪辑（举弓、搭箭）约在 4 tick 内完成。
@@ -90,7 +90,7 @@
 
 ## 8. 接口缺口
 
-1. `armPoseAction` 的 `BOW` → `bow_draw` / `bow_draw_off`；`armPoseProgress` 用 `BowItem.getPullProgress(used)` 与保持回绕。
+1. `armPoseAction` 的 `BOW` → `bow_draw` / `bow_draw_off`；`armPoseProgress` 用 `BowItem.getPowerForTime(used)` 与保持回绕。
 2. 撒放尾段：调度需要记住“上一 tick 在用弓且 pull ≥ 0.1”，停止使用后按真实时间推进 1.6→1.9（新增状态，复用 `AttackState` 风格）。
 3. 视线：`PlayerMeshRenderer.applyArmPosePitch` 加入 `bow_draw` / `bow_draw_off`，按 `spyglass` 的共同肩线刚性旋转；
    原版双臂还跟随 `headYaw`，需同时绕胸部竖直轴补偿剩余偏航（与 [head_follow](head_follow.md) 的分配配合）。

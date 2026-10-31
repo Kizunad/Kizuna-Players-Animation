@@ -2,56 +2,56 @@ package dev.kizuna.playeranimation.server;
 
 import java.util.List;
 import net.fabricmc.fabric.api.gametest.v1.FabricGameTest;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.test.GameTest;
-import net.minecraft.test.TestContext;
-import net.minecraft.util.Hand;
-import net.minecraft.world.GameMode;
+import net.minecraft.gametest.framework.GameTest;
+import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.level.GameType;
 
 public final class HandSwingGameTest implements FabricGameTest {
-    @GameTest(templateName = FabricGameTest.EMPTY_STRUCTURE)
-    public void offHandBlockSwingMustSelectOffHandPlacement(TestContext context) throws ReflectiveOperationException {
+    @GameTest(template = FabricGameTest.EMPTY_STRUCTURE)
+    public void offHandBlockSwingMustSelectOffHandPlacement(GameTestHelper context) throws ReflectiveOperationException {
         // 主手剑不能把副手方块的挥动误判成攻击。
-        assertScheduledSwing(context, Hand.OFF_HAND, Items.DIAMOND_SWORD, Items.STONE, "place_block_off");
+        assertScheduledSwing(context, InteractionHand.OFF_HAND, Items.DIAMOND_SWORD, Items.STONE, "place_block_off");
     }
 
-    @GameTest(templateName = FabricGameTest.EMPTY_STRUCTURE)
-    public void mainHandBlockSwingMustSelectMainHandPlacement(TestContext context) throws ReflectiveOperationException {
+    @GameTest(template = FabricGameTest.EMPTY_STRUCTURE)
+    public void mainHandBlockSwingMustSelectMainHandPlacement(GameTestHelper context) throws ReflectiveOperationException {
         // 上次使用过副手物品，不应影响随后主手方块的挥动。
-        assertScheduledSwing(context, Hand.MAIN_HAND, Items.STONE, Items.DIAMOND_SWORD, "place_block");
+        assertScheduledSwing(context, InteractionHand.MAIN_HAND, Items.STONE, Items.DIAMOND_SWORD, "place_block");
     }
 
-    @GameTest(templateName = FabricGameTest.EMPTY_STRUCTURE)
-    public void mainHandAttackMustSelectMainHandAttack(TestContext context) throws ReflectiveOperationException {
+    @GameTest(template = FabricGameTest.EMPTY_STRUCTURE)
+    public void mainHandAttackMustSelectMainHandAttack(GameTestHelper context) throws ReflectiveOperationException {
         // 副手方块不能改变主手剑的动作分类。
-        assertScheduledSwing(context, Hand.MAIN_HAND, Items.DIAMOND_SWORD, Items.STONE, "attack_main");
+        assertScheduledSwing(context, InteractionHand.MAIN_HAND, Items.DIAMOND_SWORD, Items.STONE, "attack_main");
     }
 
-    @GameTest(templateName = FabricGameTest.EMPTY_STRUCTURE)
-    public void offHandAttackMustSelectOffHandAttack(TestContext context) throws ReflectiveOperationException {
+    @GameTest(template = FabricGameTest.EMPTY_STRUCTURE)
+    public void offHandAttackMustSelectOffHandAttack(GameTestHelper context) throws ReflectiveOperationException {
         // 主手方块不能改变副手剑的动作分类。
-        assertScheduledSwing(context, Hand.OFF_HAND, Items.STONE, Items.DIAMOND_SWORD, "attack_off");
+        assertScheduledSwing(context, InteractionHand.OFF_HAND, Items.STONE, Items.DIAMOND_SWORD, "attack_off");
     }
 
-    private static void assertScheduledSwing(TestContext context, Hand hand, Item main, Item off, String expected)
+    private static void assertScheduledSwing(GameTestHelper context, InteractionHand hand, Item main, Item off, String expected)
             throws ReflectiveOperationException {
         // 使用真实实体与原版物品使用、挥手入口，断言完整调度入口登记的动作。
-        var server = context.getWorld().getServer();
-        var player = context.createMockCreativeServerPlayerInWorld();
+        var server = context.getLevel().getServer();
+        var player = context.makeMockServerPlayerInLevel();
         try {
             swingWithDifferentUseHand(player, hand, main, off);
             context.assertFalse(player.isUsingItem(), "挥手场景不得仍在持续使用物品");
-            context.assertTrue(player.handSwinging && player.preferredHand == hand, "原版必须使用指定的手挥动");
-            context.assertTrue(player.getActiveHand() != hand, "物品使用手与挥动手必须不同");
+            context.assertTrue(player.swinging && player.swingingArm == hand, "原版必须使用指定的手挥动");
+            context.assertTrue(player.getUsedItemHand() != hand, "物品使用手与挥动手必须不同");
 
             new VanillaAnimationScheduler().tick(server);
             var field = ServerPlayerAnimations.class.getDeclaredField("STATE");
             field.setAccessible(true /* flag */);
             var state = (AnimationSyncState) field.get(null);
-            List<String> actions = state.snapshot(player.getUuid()).stream()
+            List<String> actions = state.snapshot(player.getUUID()).stream()
                     .map(request -> request.getAnimationId())
                     .filter(action -> !action.equals("jump"))
                     .toList();
@@ -59,24 +59,24 @@ public final class HandSwingGameTest implements FabricGameTest {
         } finally {
             // 假连接不能留到后续人体同步 tick。
             ServerPlayerAnimations.stopAll(player);
-            server.getPlayerManager().remove(player);
+            server.getPlayerList().remove(player);
         }
-        context.complete();
+        context.succeed();
     }
 
-    private static void swingWithDifferentUseHand(ServerPlayerEntity player, Hand hand, Item main, Item off) {
+    private static void swingWithDifferentUseHand(ServerPlayer player, InteractionHand hand, Item main, Item off) {
         // 保留另一只手的物品使用标志，再通过原版入口开始挥手。
-        player.changeGameMode(GameMode.SURVIVAL);
-        player.setStackInHand(Hand.MAIN_HAND, new ItemStack(main));
-        player.setStackInHand(Hand.OFF_HAND, new ItemStack(off));
-        Hand previousUseHand;
-        if (hand == Hand.MAIN_HAND) {
-            previousUseHand = Hand.OFF_HAND;
+        player.setGameMode(GameType.SURVIVAL);
+        player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(main));
+        player.setItemInHand(InteractionHand.OFF_HAND, new ItemStack(off));
+        InteractionHand previousUseHand;
+        if (hand == InteractionHand.MAIN_HAND) {
+            previousUseHand = InteractionHand.OFF_HAND;
         } else {
-            previousUseHand = Hand.MAIN_HAND;
+            previousUseHand = InteractionHand.MAIN_HAND;
         }
-        player.setCurrentHand(previousUseHand);
-        player.stopUsingItem();
-        player.swingHand(hand);
+        player.startUsingItem(previousUseHand);
+        player.releaseUsingItem();
+        player.swing(hand);
     }
 }

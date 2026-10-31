@@ -9,15 +9,15 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.registry.Registries;
-import net.minecraft.util.Identifier;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.LivingEntity;
 
 /** PA 内部保存附属注册的实体几何；注册内容只在客户端渲染线程使用。 */
 public final class MobAnimationRegistry {
     public record Model(PlayerAssets.Model body, SkinnedMesh overlay) { }
 
-    private static final Map<Identifier, Model> ENTITY_MODELS = new HashMap<>();
+    private static final Map<ResourceLocation, Model> ENTITY_MODELS = new HashMap<>();
 
     private MobAnimationRegistry() { }
 
@@ -37,15 +37,15 @@ public final class MobAnimationRegistry {
         SkinnedMesh overlay = overlay(json, skeleton, mesh, registration.overlayGeometryId());
         Model model = new Model(new PlayerAssets.Model(skeleton, mesh), overlay);
         // 先完成全部校验再替换绑定，失败的注册不能留下半份实体映射。
-        List<Identifier> entityTypes = new ArrayList<>();
+        List<ResourceLocation> entityTypes = new ArrayList<>();
         for (String type : registration.entityTypes()) {
-            Identifier identifier = Identifier.tryParse(type);
-            if (identifier == null || !Registries.ENTITY_TYPE.containsId(identifier)) {
+            ResourceLocation identifier = ResourceLocation.tryParse(type);
+            if (identifier == null || !BuiltInRegistries.ENTITY_TYPE.containsKey(identifier)) {
                 throw new IllegalArgumentException("未知实体类型: " + type);
             }
             entityTypes.add(identifier);
         }
-        for (Identifier type : entityTypes) {
+        for (ResourceLocation type : entityTypes) {
             ENTITY_MODELS.put(type, model);
         }
     }
@@ -66,7 +66,7 @@ public final class MobAnimationRegistry {
     }
 
     public static Model model(LivingEntity entity) {
-        Identifier type = Registries.ENTITY_TYPE.getId(entity.getType());
+        ResourceLocation type = BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType());
         return ENTITY_MODELS.get(type);
     }
 }
