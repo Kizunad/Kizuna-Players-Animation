@@ -91,7 +91,8 @@ tasks.register('checkAnimationGates', Exec) {
             'door_breaker_sweep', 'door_breaker_sweep_off', 'door_breaker_close', 'door_breaker_close_off',
             'door_breaker_chain', 'door_breaker_chain_off', 'door_breaker_finale', 'door_breaker_finale_off',
             'door_breaker_guard', 'door_breaker_guard_off', 'technique_leap',
-            'peddler_snap_kick', 'peddler_push_kick', 'peddler_roundhouse'
+            'peddler_snap_kick', 'peddler_push_kick', 'peddler_roundhouse', 'peddler_ground_sweep',
+            'peddler_triple_kick'
 }
 
 tasks.register('checkAnimationAntiForgery', Exec) {

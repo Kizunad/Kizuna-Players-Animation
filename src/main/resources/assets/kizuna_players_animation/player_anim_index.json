@@ -1974,6 +1974,102 @@
           ]
         }
       ]
+    },
+    {
+      "id": "peddler_ground_sweep",
+      "file": "animations/peddler_ground_sweep.animation.json",
+      "mask": "full",
+      "priority": 24,
+      "blend_in": 0.1,
+      "blend_out": 0.25,
+      "hand": "main",
+      "fpv": false,
+      "unbalanced_windows": [
+        [
+          0.68,
+          0.9
+        ],
+        [
+          1.53,
+          3.1
+        ]
+      ],
+      "phases": [
+        {
+          "id": "squat",
+          "start": 0.6,
+          "end": 1.4
+        },
+        {
+          "id": "spin",
+          "start": 1.6,
+          "end": 2.8
+        },
+        {
+          "id": "rise",
+          "start": 2.82,
+          "end": 3.45
+        }
+      ]
+    },
+    {
+      "id": "peddler_triple_kick",
+      "file": "animations/peddler_triple_kick.animation.json",
+      "mask": "full",
+      "priority": 24,
+      "blend_in": 0.1,
+      "blend_out": 0.25,
+      "hand": "main",
+      "fpv": false,
+      "impact_window": [
+        [
+          1.4,
+          1.7
+        ],
+        [
+          2.0,
+          2.3
+        ],
+        [
+          2.7,
+          3.0
+        ]
+      ],
+      "phases": [
+        {
+          "id": "low",
+          "start": 1.35,
+          "end": 1.7,
+          "chain": [
+            "pelvis",
+            "l_thigh",
+            "l_shin",
+            "l_foot"
+          ]
+        },
+        {
+          "id": "mid",
+          "start": 1.85,
+          "end": 2.3,
+          "chain": [
+            "pelvis",
+            "l_thigh",
+            "l_shin",
+            "l_foot"
+          ]
+        },
+        {
+          "id": "high",
+          "start": 2.4,
+          "end": 3.0,
+          "chain": [
+            "pelvis",
+            "l_thigh",
+            "l_shin",
+            "l_foot"
+          ]
+        }
+      ]
     }
   ]
 }
