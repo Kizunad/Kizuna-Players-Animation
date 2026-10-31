@@ -1,6 +1,6 @@
 # peddler_ground_sweep：千里腿第三式「扫堂」（仆步全蹲，绕后脚转一整圈，伸直的腿贴地扫）
 
-> 状态：**已实现，门禁通过，待游戏内验收**（2026-10-31）。规格 2026-10-31 审过（待决定全部按建议）；关键帧已录入粗、细臂 `.bbmodel` 并导出，实测与出入见第 10 节；没在游戏里看过。轴向、坐标和面板值约定见 [共用约定](conventions.md)；架势基准见 [stance_idle](stance_idle.md) 第 3 节；十段共用的约束 C1–C10 与待决定见 [PROGRESS-peddler](PROGRESS-peddler.md)；`root` 整圈转的先例见 [door_breaker_sweep](door_breaker_sweep.md) 第 3 节「`root` 回旋曲线」与第 6 节。
+> 状态：**已实现，门禁通过，待游戏内验收**（2026-10-31）。规格 2026-10-31 审过（待决定全部按建议）；关键帧已录入 `player_skeleton_classic.bbmodel`（仓内动画只存 classic，细臂共用同一导出）并导出，实测与出入见第 10 节；没在游戏里看过。轴向、坐标和面板值约定见 [共用约定](conventions.md)；架势基准见 [stance_idle](stance_idle.md) 第 3 节；十段共用的约束 C1–C10 与待决定见 [PROGRESS-peddler](PROGRESS-peddler.md)；`root` 整圈转的先例见 [door_breaker_sweep](door_breaker_sweep.md) 第 3 节「`root` 回旋曲线」与第 6 节。
 > 来源：
 > - 千里腿动作稿 `~/Code/Kizuna-remote-session/handoff/pa-cloud-anim/17-Players-Animation-Peddler.md` §1、§2（仆步、扫腿要领）、§3、§4、§5.3、§6、§7、§9；
 > - 已和服务端设计稿 `16-Peddler-Legwork-Addon.md`（交接目录，2026-10-31）§4、§4.2 核对：`hit` 1.85 / 2.35 s、生效 0.50 s、承接入口 0.40 s（接在尥蹶之后）一致。
@@ -212,7 +212,7 @@ GIF 20 fps，与 `technique_dash_forward`、`jump` 并排；旋扫段的左踝�
 
 ## 10. 制作实测（2026-10-31）
 
-原型 `kpa-door-breaker-proto/peddler/d_ground_sweep.py` 求解，装进粗、细臂 `.bbmodel` 后导出。下列数值取自导出资源的分析器报告（粗、细臂相同）和原型自查。
+原型 `kpa-door-breaker-proto/peddler/d_ground_sweep.py` 求解，装进 `player_skeleton_classic.bbmodel` 后导出。下列数值取自导出资源按粗、细臂两套几何跑的分析器报告（两套相同）和原型自查。
 
 **索引实际值**：不登记 `impact_window`；`unbalanced_windows [[0.68, 0.90], [1.53, 3.10]]`；`phases [[0.60, 1.40], [1.60, 2.80], [2.82, 3.45]]`（三段都用默认链）；时间线 `{"0.64": "step_r", "0.94": "step_l", "1.85": "hit", "2.35": "hit", "3.14": "step_l", "3.4": "step_r"}`。打击时刻、承接入口和设计稿 16 一致，只有 `step_*` 时刻变了。
 

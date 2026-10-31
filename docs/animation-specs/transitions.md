@@ -238,17 +238,20 @@
 | peddler_ground_sweep → stance_idle | 0.25 / 0.25 | 6.0 s 播完 | 淡回架势底层；末帧 `root` 为 0 |
 | stance_idle → peddler_triple_kick | 0.10 / 0.25 | 宿主在连环起手时播放 | 起止姿态等于 `stance_idle` 首帧；按真实时间播 6.0 s；前脚 1.00–3.40 s 不落地；承接入口 0.40 s |
 | peddler_triple_kick → stance_idle | 0.25 / 0.25 | 6.0 s 播完 | 淡回架势底层 |
+| stance_idle → peddler_mule_kick | 0.10 / 0.25 | 宿主在尥蹶起手时播放 | 起止姿态等于 `stance_idle` 首帧；按真实时间播 5.0 s；不作后式；整段关掉视线层（渲染器按 id） |
+| peddler_mule_kick → stance_idle | 0.25 / 0.25 | 5.0 s 播完 | 淡回架势底层 |
+| stance_idle → peddler_flying_kick | 0.10 / 0.25 | 宿主在飞踹起手时播放 | 起止姿态等于 `stance_idle` 首帧；按真实时间播 6.0 s；助跑原地迈步、实体由冲量推动；承接入口 0.40 s |
+| peddler_flying_kick → stance_idle | 0.25 / 0.25 | 6.0 s 播完 | 淡回架势底层 |
+| stance_idle → peddler_axe_kick | 0.10 / 0.25 | 宿主在下劈起手时播放 | 起止姿态等于 `stance_idle` 首帧；按真实时间播 6.0 s；承接入口 0.40 s |
+| peddler_axe_kick → stance_idle | 0.25 / 0.25 | 6.0 s 播完 | 淡回架势底层 |
 
 未交付各式的设计行：
 
 | 来源 | 目标 | 淡入 / 淡出 | 触发 | 约束 | 状态 |
 | --- | --- | ---: | --- | --- | --- |
-| stance_idle | peddler_mule_kick | 0.10 / 0.25 | 宿主在尥蹶起手时播放 | 起止姿态等于 `stance_idle` 首帧；按真实时间播 5.0 s；不作后式；整段关掉视线层（渲染器按 id，PROGRESS 待决定第 4 条） | 待制作 |
-| stance_idle | peddler_flying_kick | 0.10 / 0.25 | 宿主在飞踹起手时播放 | 同上；6.0 s；助跑原地迈步、实体由冲量推动；承接入口 0.40 s | 待制作 |
-| stance_idle | peddler_axe_kick | 0.10 / 0.25 | 宿主在下劈起手时播放 | 同上；6.0 s；承接入口 0.40 s | 待制作 |
-| stance_idle | peddler_whirlwind | 0.10 / 0.25 | 宿主在不留行起手时播放 | 同上；9.0 s；`root` 2.85–3.43 s 腾空向左转一整圈，转的期间打断会倒转；承接入口 1.20 s | 待制作 |
+| stance_idle | peddler_whirlwind | 0.10 / 0.25 | 宿主在不留行起手时播放 | 起止姿态等于 `stance_idle` 首帧；按真实时间播 9.0 s；`root` 2.85–3.43 s 腾空向左转一整圈，转的期间打断会倒转；承接入口 1.20 s | 待制作 |
 | stance_idle | peddler_horse_stance | 0.10 / 0.25 | 宿主在蹲马步开始时播放 | 同上；32.0 s 一次性，不用 `loop_region`；不作前式、后式 | 待制作 |
-| peddler_mule_kick / peddler_flying_kick / peddler_axe_kick / peddler_whirlwind / peddler_horse_stance | stance_idle | 0.25 / 0.25 | 剪辑播完 | 淡回架势底层；末帧等于 `stance_idle` 首帧，`root` 为 0 | 待制作 |
+| peddler_whirlwind / peddler_horse_stance | stance_idle | 0.25 / 0.25 | 剪辑播完 | 淡回架势底层；末帧等于 `stance_idle` 首帧，`root` 为 0 | 待制作 |
 | peddler_snap_kick | peddler_roundhouse / peddler_triple_kick | 0.30 / 0.25 | 承接（宿主在后一式起手时切换） | 前一式淡出 0.30 s，后一式从 0.40 s 起播 | 待承接接线 |
 | peddler_mule_kick | peddler_ground_sweep | 0.30 / 0.25 | 承接 | 从 0.40 s 起播 | 待承接接线 |
 | peddler_push_kick | peddler_flying_kick | 0.30 / 0.25 | 承接 | 从 0.40 s 起播 | 待承接接线 |

@@ -2070,6 +2070,121 @@
           ]
         }
       ]
+    },
+    {
+      "id": "peddler_mule_kick",
+      "file": "animations/peddler_mule_kick.animation.json",
+      "mask": "full",
+      "priority": 24,
+      "blend_in": 0.1,
+      "blend_out": 0.25,
+      "hand": "main",
+      "fpv": false,
+      "impact_window": [
+        1.3,
+        1.55
+      ],
+      "unbalanced_windows": [
+        [
+          1.82,
+          1.92
+        ]
+      ],
+      "phases": [
+        {
+          "id": "bend",
+          "start": 0.3,
+          "end": 1.0,
+          "chain": [
+            "pelvis",
+            "waist",
+            "chest",
+            "head"
+          ]
+        },
+        {
+          "id": "kick",
+          "start": 1.3,
+          "end": 1.5,
+          "chain": [
+            "r_thigh",
+            "r_shin",
+            "r_foot"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "peddler_flying_kick",
+      "file": "animations/peddler_flying_kick.animation.json",
+      "mask": "full",
+      "priority": 24,
+      "blend_in": 0.1,
+      "blend_out": 0.25,
+      "hand": "main",
+      "fpv": false,
+      "impact_window": [
+        1.6,
+        1.9
+      ],
+      "slide_window": [
+        0.5,
+        2.8
+      ],
+      "unbalanced_windows": [
+        [
+          0.45,
+          1.42
+        ],
+        [
+          1.92,
+          2.35
+        ]
+      ],
+      "phases": [
+        {
+          "id": "kick",
+          "start": 1.45,
+          "end": 1.8,
+          "chain": [
+            "pelvis",
+            "r_thigh",
+            "r_shin",
+            "r_foot"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "peddler_axe_kick",
+      "file": "animations/peddler_axe_kick.animation.json",
+      "mask": "full",
+      "priority": 24,
+      "blend_in": 0.1,
+      "blend_out": 0.25,
+      "hand": "main",
+      "fpv": false,
+      "impact_window": [
+        2.3,
+        2.6
+      ],
+      "phases": [
+        {
+          "id": "raise",
+          "start": 1.7,
+          "end": 2.15,
+          "chain": [
+            "pelvis",
+            "r_thigh",
+            "r_foot"
+          ]
+        },
+        {
+          "id": "chop",
+          "start": 2.3,
+          "end": 2.5
+        }
+      ]
     }
   ]
 }

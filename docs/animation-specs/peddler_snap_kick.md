@@ -1,6 +1,6 @@
 # peddler_snap_kick：千里腿第一式「弹腿」（坐腿提膝，小腿弹出点膝，身不动）
 
-> 状态：**已实现，门禁通过，待游戏内验收**（2026-10-31）。规格 2026-10-31 审过（待决定全部按建议）；关键帧已录入粗、细臂 `.bbmodel` 并导出，实测与出入见第 10 节；没在游戏里看过。轴向、坐标和面板值约定见 [共用约定](conventions.md)；架势基准见 [stance_idle](stance_idle.md) 第 3 节；十段共用的约束 C1–C10 与待决定见 [PROGRESS-peddler](PROGRESS-peddler.md)。
+> 状态：**已实现，门禁通过，待游戏内验收**（2026-10-31）。规格 2026-10-31 审过（待决定全部按建议）；关键帧已录入 `player_skeleton_classic.bbmodel`（仓内动画只存 classic，细臂共用同一导出）并导出，实测与出入见第 10 节；没在游戏里看过。轴向、坐标和面板值约定见 [共用约定](conventions.md)；架势基准见 [stance_idle](stance_idle.md) 第 3 节；十段共用的约束 C1–C10 与待决定见 [PROGRESS-peddler](PROGRESS-peddler.md)。
 > 来源：
 > - 千里腿动作稿 `~/Code/Kizuna-remote-session/handoff/pa-cloud-anim/17-Players-Animation-Peddler.md` §1、§3、§4、§5.1、§6、§7、§9；
 > - 已和服务端设计稿 `16-Peddler-Legwork-Addon.md`（交接目录，2026-10-31）§4、§4.2 核对：`hit` 1.05 s、不作后式、起手不能打断一致。
@@ -186,7 +186,7 @@ GIF 20 fps，与 `technique_dash_forward`、`jump` 并排。
 
 ## 10. 制作实测（2026-10-31）
 
-原型 `kpa-door-breaker-proto/peddler/d_snap.py` 求解，装进粗、细臂 `.bbmodel` 后导出。下列数值取自导出资源的分析器报告（粗、细臂相同）和原型自查。
+原型 `kpa-door-breaker-proto/peddler/d_snap.py` 求解，装进 `player_skeleton_classic.bbmodel` 后导出。下列数值取自导出资源按粗、细臂两套几何跑的分析器报告（两套相同）和原型自查。
 
 **索引实际值**：`impact_window [0.95, 1.25]`；`unbalanced_windows [[1.02, 1.10], [1.35, 1.40]]`（实测重心出界只有两小段：腿伸到最远时、落脚前一刻；单撑其余时段照查重心）；`phases` 同第 6 节；时间线 `1.05 hit`、`1.45 step_l`。
 

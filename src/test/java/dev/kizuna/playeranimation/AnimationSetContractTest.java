@@ -77,7 +77,8 @@ class AnimationSetContractTest {
                 "door_breaker_chain", "door_breaker_chain_off", "door_breaker_finale", "door_breaker_finale_off",
                 "door_breaker_guard", "door_breaker_guard_off", "technique_leap",
                 "peddler_snap_kick", "peddler_push_kick", "peddler_roundhouse", "peddler_ground_sweep",
-                "peddler_triple_kick"), ids);
+                "peddler_triple_kick", "peddler_mule_kick", "peddler_flying_kick",
+                "peddler_axe_kick"), ids);
         // 已交付标记必须与打包资源一致：调度只请求已交付动作，未打包的动作不得标为已交付。
         for (PlayerAnimationAction action : PlayerAnimationAction.values()) {
             assertEquals(ids.contains(action.id()), action.delivered(), action.id());

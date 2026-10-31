@@ -188,7 +188,7 @@ public enum PlayerAnimationAction {
     }
 
     private static final java.util.Set<PlayerAnimationAction> PENDING = java.util.EnumSet.of(
-            PEDDLER_MULE_KICK, PEDDLER_FLYING_KICK, PEDDLER_AXE_KICK, PEDDLER_WHIRLWIND, PEDDLER_HORSE_STANCE);
+            PEDDLER_WHIRLWIND, PEDDLER_HORSE_STANCE);
 
     public static PlayerAnimationAction find(String id) {
         for (PlayerAnimationAction action : values()) {
