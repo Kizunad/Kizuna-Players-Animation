@@ -42,12 +42,13 @@ public final class PlayerMeshRenderer {
         if (model == null) {
             return null;
         }
-        // 先还原原版姿态，再按实际存在的轨道覆盖，未写的腿仍保持原版走路。
-        // 视线层启用时底层去掉原版头部偏航/俯仰，最后由视线层统一加回，避免动作头轨道吞掉视线或重复计算。
-        LookLayer.Clips look = lookEnabled(player, firstPerson) ? LookLayer.clips(PlayerAnimationClient.ASSETS.animations()) : null;
-        Pose[] base = basePose(model.skeleton(), vanilla, firstPerson, "slim".equals(player.getModel()), look != null);
         var animation = PlayerAnimationClient.PLAYBACK.player(player.getUuid());
         double now = PlayerPlayback.now(tickDelta);
+        // 先还原原版姿态，再按实际存在的轨道覆盖，未写的腿仍保持原版走路。
+        // 视线层启用时底层去掉原版头部偏航/俯仰，最后由视线层统一加回，避免动作头轨道吞掉视线或重复计算。
+        LookLayer.Clips look = lookEnabled(player, firstPerson) && !lookSuppressed(animation, now)
+                ? LookLayer.clips(PlayerAnimationClient.ASSETS.animations()) : null;
+        Pose[] base = basePose(model.skeleton(), vanilla, firstPerson, "slim".equals(player.getModel()), look != null);
         Pose[] pose = animation == null ? base
                 : animation.sample(base, now, firstPerson, vanilla.sneaking);
         if (animation != null) {
@@ -66,6 +67,12 @@ public final class PlayerMeshRenderer {
         // 睡眠、泳姿/爬行过渡、鞘翅、激流和死亡时原版头部有专用姿态，视线层不接管；独立手臂入口不画头。
         return !firstPerson && !player.isSleeping() && !player.isInSwimmingPose() && !player.isFallFlying()
                 && !player.isUsingRiptide() && player.deathTime == 0 && player.getLeaningPitch(0) == 0;
+    }
+
+    static boolean lookSuppressed(dev.kizuna.playeranimation.animation.AnimationPlayer animation, double now) {
+        // 千里腿尥蹶两拳撑地、从胯下看身后：视线层的偏航会拧腰、胸、上臂，俯仰会把颈压过限位，
+        // 拳离开或插进地面，所以整段不叠视线层（docs/animation-specs/peddler_mule_kick.md）。
+        return animation != null && animation.hasActive("peddler_mule_kick", now);
     }
 
     static float lookPitchWeight(dev.kizuna.playeranimation.animation.AnimationPlayer animation, double now) {

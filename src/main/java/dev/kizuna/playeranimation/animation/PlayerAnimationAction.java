@@ -121,6 +121,28 @@ public enum PlayerAnimationAction {
     /** 万门一斩（docs/animation-specs/door_breaker_finale.md）：双手叠握荡斧、竖斧蹲蓄、起跳、落地竖劈、折身喘气，9.0 秒；2.30 秒前荡轻击、4.85 秒落地竖劈击中。 */
     DOOR_BREAKER_FINALE("door_breaker_finale", 180),
     DOOR_BREAKER_FINALE_OFF("door_breaker_finale_off", 180),
+    // 千里腿九式与蹲马步（docs/animation-specs/PROGRESS-peddler.md）：宿主起手时按真实时间播放，承接时用 start_tick
+    // 前推到承接入口；整段全身，不分主副手（左主手由运行时整段镜像）。
+    /** 弹腿：后坐提膝、小腿弹出又收回，3.0 秒；1.05 秒击中。 */
+    PEDDLER_SNAP_KICK("peddler_snap_kick", 60),
+    /** 正蹬：提膝过胸、送胯蹬出，5.0 秒；1.95 秒击中。 */
+    PEDDLER_PUSH_KICK("peddler_push_kick", 100),
+    /** 扫堂：仆步贴地、绕后脚旋扫一整圈，6.0 秒；1.85、2.35 秒击中，root 1.60–2.80 秒转 360°。 */
+    PEDDLER_GROUND_SWEEP("peddler_ground_sweep", 120),
+    /** 鞭腿：碾脚翻胯、后腿横抽到头高，5.0 秒；2.00 秒击中。 */
+    PEDDLER_ROUNDHOUSE("peddler_roundhouse", 100),
+    /** 连环：单腿站、前腿低中高连踢三下，6.0 秒；1.55、2.15、2.85 秒击中。 */
+    PEDDLER_TRIPLE_KICK("peddler_triple_kick", 120),
+    /** 尥蹶：俯身两拳撑地、双腿向后上蹬，5.0 秒；1.45 秒击中；整段不叠视线层。 */
+    PEDDLER_MULE_KICK("peddler_mule_kick", 100),
+    /** 飞踹：原地小跑两步、单脚起跳、空中侧踹，6.0 秒；1.75 秒击中，位移由冲量负责。 */
+    PEDDLER_FLYING_KICK("peddler_flying_kick", 120),
+    /** 下劈：直腿高举、脚跟劈下，6.0 秒；2.45 秒击中。 */
+    PEDDLER_AXE_KICK("peddler_axe_kick", 120),
+    /** 不留行：摆臂起跳、空中转一整圈击响、落地扶膝喘气，9.0 秒；3.05、3.25 秒击中，root 2.85–3.43 秒转 360°。 */
+    PEDDLER_WHIRLWIND("peddler_whirlwind", 180),
+    /** 蹲马步（训练）：进桩、站桩 30 秒、收桩，32.0 秒。 */
+    PEDDLER_HORSE_STANCE("peddler_horse_stance", 640),
     /**
      * 持物手覆盖层（docs/animation-specs/door_breaker_guard.md）：破门、连门、万门一斩起手时另一只手非空，
      * 与该式同起，只接管持物那条手臂（主手版 l_arm、副手版 r_arm），0.40 秒收到体侧后保持；
@@ -165,7 +187,9 @@ public enum PlayerAnimationAction {
         return !PENDING.contains(this);
     }
 
-    private static final java.util.Set<PlayerAnimationAction> PENDING = java.util.EnumSet.noneOf(PlayerAnimationAction.class);
+    private static final java.util.Set<PlayerAnimationAction> PENDING = java.util.EnumSet.of(
+            PEDDLER_GROUND_SWEEP, PEDDLER_TRIPLE_KICK, PEDDLER_MULE_KICK, PEDDLER_FLYING_KICK, PEDDLER_AXE_KICK,
+            PEDDLER_WHIRLWIND, PEDDLER_HORSE_STANCE);
 
     public static PlayerAnimationAction find(String id) {
         for (PlayerAnimationAction action : values()) {

@@ -71,6 +71,8 @@ FULL_BODY_IDS = {
     "door_breaker_ram", "door_breaker_ram_off", "door_breaker_hook", "door_breaker_hook_off",
     "door_breaker_sweep", "door_breaker_sweep_off", "door_breaker_close", "door_breaker_close_off",
     "door_breaker_chain", "door_breaker_chain_off", "door_breaker_finale", "door_breaker_finale_off",
+    "peddler_snap_kick", "peddler_push_kick", "peddler_ground_sweep", "peddler_roundhouse", "peddler_triple_kick",
+    "peddler_mule_kick", "peddler_flying_kick", "peddler_axe_kick", "peddler_whirlwind", "peddler_horse_stance",
 }
 
 GRIP_IDS = {
@@ -84,6 +86,8 @@ GRIP_IDS = {
     "door_breaker_ram", "door_breaker_ram_off", "door_breaker_hook", "door_breaker_hook_off",
     "door_breaker_sweep", "door_breaker_sweep_off", "door_breaker_close", "door_breaker_close_off",
     "door_breaker_chain", "door_breaker_chain_off", "door_breaker_finale", "door_breaker_finale_off",
+    "peddler_snap_kick", "peddler_push_kick", "peddler_ground_sweep", "peddler_roundhouse", "peddler_triple_kick",
+    "peddler_mule_kick", "peddler_flying_kick", "peddler_axe_kick", "peddler_whirlwind", "peddler_horse_stance",
 }
 
 # 跃步与 jump 同类：整段在空中，着地口径由原型自查的脚底高度代替（docs/animation-specs/technique_leap.md 第 9 节）。
@@ -99,9 +103,11 @@ LATERAL_GAIT_IDS = {"stance_walk_left", "stance_walk_right"}
 # 破门的两次前脚迈步、撞门冲刺的两步与收步、破盾后脚的三次迈步、横扫的外撤步与单脚回旋、掩门的两次撤步与收脚、
 # 连门的两次垫步、弓步与收脚、万门一斩的前迈、起跳落地与收脚是单脚支撑或腾空期
 # （docs/animation-specs/door_breaker_cleave.md、door_breaker_ram.md、door_breaker_hook.md、door_breaker_sweep.md、door_breaker_close.md、
-# door_breaker_chain.md、door_breaker_finale.md 第 4 节）。
+# door_breaker_chain.md、door_breaker_finale.md 第 4 节）；千里腿各式的单腿出腿、迈步、腾空与撑地段同理
+# （docs/animation-specs/PROGRESS-peddler.md C5）。
 UNBALANCED_WINDOW_PREFIXES = ("dodge_", "technique_dash_", "door_breaker_cleave", "door_breaker_ram", "door_breaker_hook",
-                              "door_breaker_sweep", "door_breaker_close", "door_breaker_chain", "door_breaker_finale")
+                              "door_breaker_sweep", "door_breaker_close", "door_breaker_chain", "door_breaker_finale",
+                              "peddler_")
 # 爆发窗口（索引字段 burst_windows）开放给闪避、轻步与撞门的后脚蹬伸（每段至多一段、≤ 0.08 s）。
 BURST_WINDOW_PREFIXES = ("dodge_", "technique_dash_", "door_breaker_ram")
 # 视线叠加层（索引 layer: look）：时间轴表示视线角度而不是时间，只对这两个 ID 使用姿势层判据。
@@ -114,11 +120,14 @@ SLEEP_EFFECTIVE_ROTATION_DEG = 1.0
 LOOK_LAYER_SUM_TOLERANCE_DEG = 1.0
 LOOK_LAYER_SYMMETRY_TOLERANCE_DEG = 0.05
 # 破门斩各式的打击时段（每段 ≤ 0.35 s，见 docs/animation-specs/door_breaker_knock.md）与攻击、挖掘共用放宽上限。
+# 千里腿除扫堂、蹲马步外各式的出腿段同理；连环三下各一段（impact_window 可写多段，PROGRESS-peddler.md 待决定第 6 条）。
 IMPACT_WINDOW_IDS = {"attack_main", "attack_off", "mine_main", "mine_off",
                      "door_breaker_knock", "door_breaker_knock_off", "door_breaker_cleave", "door_breaker_cleave_off",
                      "door_breaker_ram", "door_breaker_ram_off", "door_breaker_hook", "door_breaker_hook_off",
                      "door_breaker_close", "door_breaker_close_off", "door_breaker_chain", "door_breaker_chain_off",
-                     "door_breaker_finale", "door_breaker_finale_off"}
+                     "door_breaker_finale", "door_breaker_finale_off",
+                     "peddler_snap_kick", "peddler_push_kick", "peddler_roundhouse", "peddler_triple_kick",
+                     "peddler_mule_kick", "peddler_flying_kick", "peddler_axe_kick", "peddler_whirlwind"}
 # 单臂覆盖层（遮罩只含一条手臂，叠在双手式上，见 docs/animation-specs/door_breaker_guard.md 第 10 节）：
 # 值为覆盖臂一侧。躯干、腿、预备跟随、主链峰值、着地重心归下层的式；有效运动按覆盖臂三骨计，错峰链改为覆盖臂。
 ARM_OVERLAY_IDS = {"door_breaker_guard": "l", "door_breaker_guard_off": "r"}
@@ -314,7 +323,9 @@ def preparation_follow_gates(sampler: AnimationSampler, times: list[float]) -> d
     }
 
 
-def velocity_gates(sampler: AnimationSampler, times: list[float], impact_window: tuple[float, float] | None = None) -> dict[str, Any]:
+def velocity_gates(sampler: AnimationSampler, times: list[float],
+                   impact_window: list[tuple[float, float]] | None = None) -> dict[str, Any]:
+    # impact_window 是若干段 [开始, 结束]（多击的式每击一段）；差分按末帧时刻落在任一段内即算窗口内。
     dt = 1 / 60
     max_speed = 0.0
     max_jerk = 0.0
@@ -335,7 +346,7 @@ def velocity_gates(sampler: AnimationSampler, times: list[float], impact_window:
                   for i in range(1, len(frames))]
         for index, speed in enumerate(speeds):
             at = times[index + 1]
-            inside = impact_window is not None and impact_window[0] <= at <= impact_window[1]
+            inside = impact_window is not None and any(start <= at <= end for start, end in impact_window)
             if speed > max_speed:
                 max_speed, speed_at = speed, (bone, times[index + 1])
             if inside:
@@ -348,7 +359,7 @@ def velocity_gates(sampler: AnimationSampler, times: list[float], impact_window:
         jerks = [(accelerations[i] - accelerations[i - 1]) / dt for i in range(1, len(accelerations))]
         for index, jerk in enumerate(jerks):
             at = times[index + 3]
-            inside = impact_window is not None and impact_window[0] <= at <= impact_window[1]
+            inside = impact_window is not None and any(start <= at <= end for start, end in impact_window)
             if abs(jerk) > max_jerk:
                 max_jerk, jerk_at = abs(jerk), (bone, times[index + 3])
             if inside:
@@ -875,6 +886,23 @@ def _phase_ranges(sampler: AnimationSampler) -> tuple[list[tuple[str, float, flo
     return [("whole_clip", 0.0, sampler.duration)], False
 
 
+def _phase_chains(sampler: AnimationSampler) -> dict[str, list[str]]:
+    """对象写法的阶段可带 chain（近端到远端的骨名列表），覆盖按 id 推断的主链；踢腿段用胯 → 大腿 → 小腿 → 脚。"""
+    chains: dict[str, list[str]] = {}
+    raw = sampler.animation.get("phases")
+    if not isinstance(raw, list):
+        return chains
+    for index, item in enumerate(raw):
+        if not isinstance(item, dict) or "chain" not in item:
+            continue
+        chain = item["chain"]
+        # 资源边界校验一次：骨名必须存在，至少 3 根才能判错峰。
+        if not isinstance(chain, list) or len(chain) < 3 or any(bone not in sampler.model.bones for bone in chain):
+            raise ValueError(f"phases[{index}].chain 必须是至少 3 根已有骨骼的列表: {chain}")
+        chains[str(item.get("id", item.get("name", f"phase_{index}")))] = [str(bone) for bone in chain]
+    return chains
+
+
 def anti_forgery_peak_order_gates(sampler: AnimationSampler, times: list[float], active: set[str]) -> dict[str, Any]:
     """在每个声明阶段内按主动作方向角速度峰值检查传力链错峰。"""
     if sampler.loop:
@@ -895,7 +923,10 @@ def anti_forgery_peak_order_gates(sampler: AnimationSampler, times: list[float],
     missing: list[str] = []
     tolerance = PEAK_ORDER_FRAME_TOLERANCE / 60
     phase_ranges, explicitly_declared = _phase_ranges(sampler)
+    phase_chains = _phase_chains(sampler)
+    default_chain = chain
     for phase_name, start, end in phase_ranges:
+        chain = phase_chains.get(phase_name, default_chain)
         indices = [index for index, time in enumerate(times) if start <= time <= end]
         if animation_id == "jump":
             indices = [index for index in indices if times[index] >= 0.55]
@@ -939,7 +970,7 @@ def anti_forgery_peak_order_gates(sampler: AnimationSampler, times: list[float],
         "applicable": applicable,
         "reason": "每个显式声明阶段按主动作方向角速度峰值检查近端先于远端；同帧允许 60 Hz 两帧量化容差"
                    if explicitly_declared else "仅有 equip 事件边界，缺少阶段主动作声明；峰值仅作诊断",
-        "chain": chain,
+        "chain": default_chain,
         "phases": phase_results,
         "peak_times_s": all_peak_times,
         "peaks": all_details,
@@ -1031,7 +1062,7 @@ def look_layer_gates(sampler: AnimationSampler, times: list[float]) -> dict[str,
             "failures": failures}
 
 
-def report(sampler: AnimationSampler, impact_window: tuple[float, float] | None = None) -> dict[str, Any]:
+def report(sampler: AnimationSampler, impact_window: list[tuple[float, float]] | None = None) -> dict[str, Any]:
     times = sample_times(sampler)
     animation_id = sampler.key.rsplit(".", 1)[-1]
     threshold = SLEEP_EFFECTIVE_ROTATION_DEG if animation_id in SLEEP_POSE_IDS else EFFECTIVE_ROTATION_DEG
@@ -1145,7 +1176,7 @@ def main() -> int:
     parser.add_argument("--json", action="store_true", help="输出完整 JSON 报告")
     args = parser.parse_args()
     index = load_json(args.index)
-    impact_windows: dict[str, tuple[float, float]] = {}
+    impact_windows: dict[str, list[tuple[float, float]]] = {}
     phase_declarations: dict[str, Any] = {}
     index_extras: dict[str, dict[str, Any]] = {}
     for raw in index.get("animations", []):
@@ -1176,9 +1207,14 @@ def main() -> int:
         values = raw["impact_window"]
         if animation_id not in IMPACT_WINDOW_IDS:
             raise SystemExit(f"impact_window 只能用于 {sorted(IMPACT_WINDOW_IDS)}: {animation_id}")
-        if not isinstance(values, list) or len(values) != 2:
-            raise SystemExit(f"impact_window 必须为 [start,end]: {animation_id}")
-        impact_windows[animation_id] = (float(values[0]), float(values[1]))
+        # 单段写 [开始, 结束]，多段写 [[开始, 结束], ...]；多段按时间先后、互不重叠。
+        segments = values if isinstance(values, list) and values and all(isinstance(item, list) for item in values) else [values]
+        if not all(isinstance(item, list) and len(item) == 2 for item in segments):
+            raise SystemExit(f"impact_window 必须为 [start,end] 或 [[start,end], ...]: {animation_id}")
+        windows = [(float(start), float(end)) for start, end in segments]
+        if any(start >= end for start, end in windows) or any(left[1] > right[0] for left, right in zip(windows, windows[1:])):
+            raise SystemExit(f"impact_window 各段必须开始早于结束、按时间先后且互不重叠: {animation_id}")
+        impact_windows[animation_id] = windows
     reports = []
     for label, model_path in (("classic", args.source), ("slim", args.slim)):
         model = SkeletonModel(load_json(model_path))

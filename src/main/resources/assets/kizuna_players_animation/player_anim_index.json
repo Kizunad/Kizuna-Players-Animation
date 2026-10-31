@@ -1869,6 +1869,111 @@
           0.14
         ]
       ]
+    },
+    {
+      "id": "peddler_snap_kick",
+      "file": "animations/peddler_snap_kick.animation.json",
+      "mask": "full",
+      "priority": 24,
+      "blend_in": 0.1,
+      "blend_out": 0.25,
+      "hand": "main",
+      "fpv": false,
+      "impact_window": [
+        0.95,
+        1.25
+      ],
+      "unbalanced_windows": [
+        [
+          1.02,
+          1.1
+        ],
+        [
+          1.35,
+          1.4
+        ]
+      ],
+      "phases": [
+        {
+          "id": "snap",
+          "start": 0.7,
+          "end": 1.08,
+          "chain": [
+            "l_thigh",
+            "l_shin",
+            "l_foot"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "peddler_push_kick",
+      "file": "animations/peddler_push_kick.animation.json",
+      "mask": "full",
+      "priority": 24,
+      "blend_in": 0.1,
+      "blend_out": 0.25,
+      "hand": "main",
+      "fpv": false,
+      "impact_window": [
+        1.8,
+        2.1
+      ],
+      "phases": [
+        {
+          "id": "push",
+          "start": 1.8,
+          "end": 2.05,
+          "chain": [
+            "pelvis",
+            "l_thigh",
+            "l_shin",
+            "l_foot"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "peddler_roundhouse",
+      "file": "animations/peddler_roundhouse.animation.json",
+      "mask": "full",
+      "priority": 24,
+      "blend_in": 0.1,
+      "blend_out": 0.25,
+      "hand": "main",
+      "fpv": false,
+      "impact_window": [
+        1.75,
+        2.15
+      ],
+      "unbalanced_windows": [
+        [
+          0.58,
+          0.77
+        ],
+        [
+          3.0,
+          3.14
+        ]
+      ],
+      "phases": [
+        {
+          "id": "wind",
+          "start": 0.9,
+          "end": 1.55
+        },
+        {
+          "id": "whip",
+          "start": 1.7,
+          "end": 2.05,
+          "chain": [
+            "pelvis",
+            "r_thigh",
+            "r_shin",
+            "r_foot"
+          ]
+        }
+      ]
     }
   ]
 }
