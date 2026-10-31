@@ -24,7 +24,7 @@
 - `AnimationPlayer` 只做时间、层叠和事件；Minecraft 生命周期、渲染与资源重载留在 `client` / `mixin` 包，便于用纯数值回归验证骨架与播放行为。
 - `AnimationPlayer.scrub` / `PlayerPlayback.scrub` 为原版进度动作提供归一化取样；同一动作 ID 连续更新游标而不重建淡入，客户端在服务端 tick 之间以 `tickDelta` 插值，停止时冻结当前游标再按 `blend_out` 淡回底层。`mine_*` 跨 0.20 秒循环接缝正向插值，`place_block*` 回绕直接接回零点，两者均不触发重开淡入。
 - 时间线在客户端 tick 推进，渲染可以多次取样而不重复发送事件；回调在遍历结束后触发，允许调用方启动或停止动画。
-- 服务端不读取客户端动画资源；`VanillaAnimationScheduler` 从 `handSwingProgress`、物品使用剩余/最大时间、弩拉力、潜行操作和跳跃状态生成已交付动作的 scrub 请求，客户端缺资源仍按既有回执报错。吃喝、拉弓、三叉戟、通用潜行、游泳、攀爬、骑乘、睡觉、鞘翅、扭头带动身体、闪避和格挡不生成自定义动作请求，继续使用原版姿态。动作目录中的一次性动作在 Java 目录登记对应资源时长，到期沿既有停止协议清理同步快照，循环、保持和目录外动作仍由状态或玩法显式停止。
+- 服务端不读取客户端动画资源；`VanillaAnimationScheduler` 从 `attackAnim`、物品使用剩余/最大时间、弩拉力、潜行操作和跳跃状态生成已交付动作的 scrub 请求，客户端缺资源仍按既有回执报错。吃喝、拉弓、三叉戟、通用潜行、游泳、攀爬、骑乘、睡觉、鞘翅、扭头带动身体、闪避和格挡不生成自定义动作请求，继续使用原版姿态。动作目录中的一次性动作在 Java 目录登记对应资源时长，到期沿既有停止协议清理同步快照，循环、保持和目录外动作仍由状态或玩法显式停止。
 - jump 使用单段剪辑和竖直速度归一化，落地保留 6 tick 缓冲；attack、place 的前 0.60 进度跟随挥手，结束后自走收势。mine 使用 0.8 倍独立游标，原版重挥只请求下一轮完整循环，单次点击和松手从当前游标收势。调度按原版 `UseAnim` 对齐 PlayerModel 的 ArmPose：望远镜按已用时长并在 `[0.35,2.35]` 回绕，号角按已用时长，弩按真实拉力/持弩时钟，刷子按 0.8 倍时钟并在 `[0.30,0.80]` 回绕，普通物品 `use_item` 也按 0.8 倍时钟；现有专属姿态的副手均选 `_off`。
 - 跳跃允许条件与着地标记分开处理：骑乘、飞行、睡眠、流体、攀爬、死亡和旁观状态不能因 `onGround=false` 进入跳跃；退出时清除整个周期，缓冲中再次起跳重新按速度采样。
 - 潜行操作的腿部由原版底层或 `crouch_work` 承担，工具动作动态使用 `upper` 遮罩，底层晚于工具启动也有效。静止判断取服务端相邻 tick 的实际水平位置差；开始移动时停止锁脚支撑。支撑关键帧在制作时求解，运行时沿用已有分层，不引入 IK 系统或并行骨架定义。
@@ -41,7 +41,7 @@
 | --- | --- | --- |
 | [Epic Fight 1.20.1：HumanoidModelBaker](https://github.com/Antikythera-Studios/epicfight/blob/9d25f19c121c5e51b1db9efe01833a563706eeee/src/main/java/yesman/epicfight/api/client/model/transformer/HumanoidModelBaker.java) | 原版盔甲直接选择预制的 `helmet/chestplate/leggins/boots` 蒙皮网格；自定义 humanoid 模型才经过转换器或自定义资源 | 原版套装可以使用同一组网格配不同材质，无须为每种金属创建独立动画 |
 | [Epic Fight：VanillaModelTransformer](https://github.com/Antikythera-Studios/epicfight/blob/9d25f19c121c5e51b1db9efe01833a563706eeee/src/main/java/yesman/epicfight/api/client/model/transformer/VanillaModelTransformer.java) 与 [WearableItemLayer](https://github.com/Antikythera-Studios/epicfight/blob/9d25f19c121c5e51b1db9efe01833a563706eeee/src/main/java/yesman/epicfight/client/renderer/patched/layer/WearableItemLayer.java) | 从绑定姿态取 cube、细分胸部/肢体并分配关节权重；绘制时传入玩家同一套骨骼矩阵，皮革染色/覆盖层、纹饰和附魔光效也画同一个变形网格 | 与本仓线性蒙皮路线最接近。GPL-3.0 源码仅作设计参考，不复制其代码或模型 |
-| [PlayerAnimator：BipedEntityModelMixin](https://github.com/KosmX/minecraftPlayerAnimator/blob/a17ecb85e7978e63286697bc0f5ff8a7348ef055/minecraft/common/src/main/java/dev/kosmx/playerAnim/mixin/BipedEntityModelMixin.java) 与 [BendHelper](https://github.com/KosmX/minecraftPlayerAnimator/blob/a17ecb85e7978e63286697bc0f5ff8a7348ef055/minecraft/common/src/main/java/dev/kosmx/playerAnim/impl/animation/BendHelper.java) | 给所有 humanoid 模型的身体、双臂、双腿注册 Bendy-Lib 弯曲器，复制玩家到盔甲时继续传递动画来源；Bendy-Lib 在 `ModelPart.copyTransform` 中复制 cube 的变形状态 | 保留原版盔甲 cuboid 和绘制流程，但不是本仓 25 骨权重蒙皮，直接加依赖不能让两套变形自然一致 |
+| [PlayerAnimator：BipedEntityModelMixin](https://github.com/KosmX/minecraftPlayerAnimator/blob/a17ecb85e7978e63286697bc0f5ff8a7348ef055/minecraft/common/src/main/java/dev/kosmx/playerAnim/mixin/BipedEntityModelMixin.java) 与 [BendHelper](https://github.com/KosmX/minecraftPlayerAnimator/blob/a17ecb85e7978e63286697bc0f5ff8a7348ef055/minecraft/common/src/main/java/dev/kosmx/playerAnim/impl/animation/BendHelper.java) | 给所有 humanoid 模型的身体、双臂、双腿注册 Bendy-Lib 弯曲器，复制玩家到盔甲时继续传递动画来源；Bendy-Lib 在 `ModelPart.copyFrom` 中复制 cube 的变形状态 | 保留原版盔甲 cuboid 和绘制流程，但不是本仓 25 骨权重蒙皮，直接加依赖不能让两套变形自然一致 |
 
 Bendy-Lib 的复制路径另核对本地 Maven 源码包 `io.github.kosmx.bendy-lib:bendy-lib-fabric:4.0.0` 的 `IModelPartMixin.copyTransformExtended`：遍历源/目标 cuboid，调用 `copyStateFrom`。PlayerAnimator 为 MIT；这里没有引入其实现或依赖。
 
@@ -49,9 +49,9 @@ Bendy-Lib 的复制路径另核对本地 Maven 源码包 `io.github.kosmx.bendy-
 
 本轮实现限于 Vanilla 盔甲：`ArmorMesh` 通过原版 `Cube.compile` 读取绑定几何与 UV，按原始像素细分；权重在未膨胀位置选取皮肤分段骨，再复用 `SkinnedMesh.weights`，避免盔甲厚度挪动关节。细臂肩高来自骨架，袖子保留原版四像素宽。头盔随头刚性运动，胸甲与袖子随胸腰/肘腕，护腿与靴子随膝踝。
 
-`ArmorFeatureRendererMixin` 只替换 `renderModel`、`renderTrim`、`renderGlint` 的最终模型提交，所有材质、染色、图集 UV 包装与显隐继续由原版提供；蒙皮绘制复用皮肤的提交路径及同一个 `Frame.matrices`。帧取样移到原版 `setAngles` 之后、皮肤可见性判断之前，隐身玩家的盔甲/持物也能读取新姿态。几何按实际模型和骨架缓存，资源重载时清空；不新增动画、材质表或另一套骨架。
+`ArmorFeatureRendererMixin` 只替换 `renderModel`、`renderTrim`、`renderGlint` 的最终模型提交，所有材质、染色、图集 UV 包装与显隐继续由原版提供；蒙皮绘制复用皮肤的提交路径及同一个 `Frame.matrices`。帧取样移到原版 `setupAnim` 之后、皮肤可见性判断之前，隐身玩家的盔甲/持物也能读取新姿态。几何按实际模型和骨架缓存，资源重载时清空；不新增动画、材质表或另一套骨架。
 
-纹饰提交必须保留 `SpriteTexturedVertexConsumer`：其单属性方法返回底层缓冲，连续调用 `vertex(...).color(...).texture(...)` 会绕过图集 UV 映射，采样到其他纹饰区域。用户反馈彩色碎片与细线后，真实原版包装器回归复现了 UV 错误；现统一转换位置和法线后，一次向原包装器提交完整顶点。几何正确及启动无异常不能证明材质路径正确，该回归独立验证图集坐标。
+纹饰提交必须保留 `SpriteCoordinateExpander`：其单属性方法返回底层缓冲，连续调用 `vertex(...).color(...).uv(...)` 会绕过图集 UV 映射，采样到其他纹饰区域。用户反馈彩色碎片与细线后，真实原版包装器回归复现了 UV 错误；现统一转换位置和法线后，一次向原包装器提交完整顶点。几何正确及启动无异常不能证明材质路径正确，该回归独立验证图集坐标。
 
 验收需要包含：原版零姿态几何与 64×32 盔甲 UV 对照；粗/细臂与左右主手；潜行挖掘、望远镜、跳跃极限姿态；皮革染色、纹饰、附魔及穿戴事件；第一人称头盔隐藏和第三人称恢复。与皮肤使用相同矩阵能消除姿态失配，但弯折内侧的厚度挤压、相邻护甲片相交仍需实际游戏观察，不能承诺完全不穿模。
 
@@ -70,7 +70,7 @@ Bendy-Lib 的复制路径另核对本地 Maven 源码包 `io.github.kosmx.bendy-
 
 此前 Windows Native 启动发现并修正了附加层 Redirect 的泛型擦除签名，第一人称版本成功进入单人世界并正常保存退出；用户反馈第一人称“还可以”。首版盔甲实现通过 Windows Native 启动，使用独立存档副本穿戴染色皮革胸甲、纹饰和附魔装备，完成第一/第三人称切换、打坐预览及隐身/恢复，并由游戏保存截图。日志确认加载 36 段动画、进入世界和执行这些操作，未记录 Mixin 或渲染异常，但随后用户截图显示彩色碎片与细线，暴露了上述纹饰 UV 提交缺陷。离线实例仍有启动时的认证 401 及既有可选类警告。首版 JAR 的 SHA-256 为 `ccf0d3934c2466fa7abca5bc8a7090f0f1d63b032e7cd405991d96d4bde492bb`，本地记录保留在 `build/native-test/armor-20261023/`。
 
-纹饰修正版已完成 Java 17 Gradle `test build`：76 项 JUnit、资源一致性、构建门禁与反伪造检查全部通过。新增原版 `SpriteTexturedVertexConsumer` 回归在修复前失败、修复后通过；修正版也已进入 Windows Native 穿甲测试世界，日志没有新增运行异常。构建与部署 JAR 哈希一致，为 `55386f5b6898b72f8bb1a8732fc1b79abdd857a145c823e1a64a688aa0a17888`；入口和运行记录位于 `build/native-test/armor-trim-20261023/`。上述测试产物均不纳入版本控制。
+纹饰修正版已完成 Java 17 Gradle `test build`：76 项 JUnit、资源一致性、构建门禁与反伪造检查全部通过。新增原版 `SpriteCoordinateExpander` 回归在修复前失败、修复后通过；修正版也已进入 Windows Native 穿甲测试世界，日志没有新增运行异常。构建与部署 JAR 哈希一致，为 `55386f5b6898b72f8bb1a8732fc1b79abdd857a145c823e1a64a688aa0a17888`；入口和运行记录位于 `build/native-test/armor-trim-20261023/`。上述测试产物均不纳入版本控制。
 
 望远镜重复渲染修复后再次通过同一套 76 项 JUnit 与构建检查，并使用独立 Windows Native 存档和一次性探针执行真实物品使用。主/副手 × 左/右惯用手 × 第一/第三人称共 8 种组合：旧版全部复现头部镜筒绘制；修正版 524 个采样帧全部通过，第一人称每帧镜筒模型为 0、瞄准遮罩为 1，第三人称每帧仅绘制 1 个正确左右手模式的镜筒，头部模式为 0。探针未加入产品与长期测试集；结果保存在 `build/native-test/spyglass-20261023/probe-before.json` 与 `probe-fixed.json`，对应修正版 JAR 的 SHA-256 为 `338fc0a77a741098b30f2b60f6a59c6cf13ed9df8e21aed77a6d3733e38a9ad9`。这些计数验证绘制路径，镜筒与手掌的视觉贴合仍以游戏画面为准。
 

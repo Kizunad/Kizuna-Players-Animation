@@ -65,7 +65,7 @@
 
 1. 调度新增 `scheduleElytra`：状态边沿起播，`t = 已滑翔 tick / 20`，超过 2.1 s 按 `loop_region` 回绕（同 `spyglass`）。
 2. 分析器：全身动作、无地面支撑集合加入 `elytra`。
-3. 可选：按 `getRotationVec` 与速度夹角给身体加侧倾（原版已整体倾斜，不重复）。
+3. 可选：按 `getViewVector` 与速度夹角给身体加侧倾（原版已整体倾斜，不重复）。
 
 ## 9. 规模预估
 

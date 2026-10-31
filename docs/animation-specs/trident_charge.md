@@ -10,7 +10,7 @@
 - **用途**：`UseAnim.SPEAR`（三叉戟）持续使用。原版 `ArmPose.THROW_SPEAR`：持戟臂 `pitch × 0.5 − π`（举过头顶），`yaw 0`，
   身体不动。
 - **触发**：`armPoseAction` 的 `SPEAR` 分支；主手 `trident_charge`，副手 [trident_charge_off](trident_charge_off.md)。
-- **原版进度来源**：最大使用时间 72000 tick；`TridentItem.onStoppedUsing` 要求**已使用 ≥ 10 tick** 才投掷（或激流），
+- **原版进度来源**：最大使用时间 72000 tick；`TridentItem.releaseUsing` 要求**已使用 ≥ 10 tick** 才投掷（或激流），
   不随蓄力继续增强。
 - **驱动**：`t = min(已使用 / 20, 0.50)`；`≥ 0.50`（10 tick，可投掷）后在 `loop_region [0.50, 1.70]` 回绕。
   松手且已使用 ≥ 10 tick、未触发激流：调度按真实时间推进 1.70→2.10（8 tick 投掷跟随）后淡出；不足 10 tick 或激流（`isAutoSpinAttack`

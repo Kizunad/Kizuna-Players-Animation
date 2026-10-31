@@ -10,9 +10,9 @@
   调度按原版交互类型区分，不靠手持物猜。
 - **原版进度来源**：`LivingEntity.attackAnim`，即 `swingTime / getCurrentSwingDuration()`。默认 6 tick；
   急迫 n 级为 `6 − (1 + amplifier)`，挖掘疲劳为 `6 + (1 + amplifier) × 2`。远端玩家由原版
-  `EntityAnimationS2CPacket(SWING_MAIN_HAND)` 同步，不需要额外的播放请求。
+  `ClientboundAnimatePacket(SWING_MAIN_HAND)` 同步，不需要额外的播放请求。
 - **伤害时机**：原版在点击当刻就结算伤害；本动作的 `hit` 时间线事件只是视觉通知，不授权伤害。
-- **连点**：原版只在 `handSwingTicks ≥ duration / 2`（默认 3 tick）时重置挥手，所以重触发间隔至少 3～4 tick。
+- **连点**：原版只在 `swingTime ≥ duration / 2`（默认 3 tick）时重置挥手，所以重触发间隔至少 3～4 tick。
 
 ## 2. 时间轴与驱动
 

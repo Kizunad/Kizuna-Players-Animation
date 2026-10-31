@@ -7,7 +7,7 @@
 
 - **用途**：`UseAnim.DRINK`：药水、牛奶桶、蜂蜜瓶。原版第三人称只套 `ArmPose.ITEM`。
 - **触发**：`armPoseAction` 中 `DRINK` 分支，主手 `drink`、副手 [drink_off](drink_off.md)。
-- **原版进度来源**：药水、牛奶桶 32 tick，蜂蜜瓶 40 tick。`spawnConsumptionEffects` 对 DRINK 只播放饮用音效，节拍同进食：
+- **原版进度来源**：药水、牛奶桶 32 tick，蜂蜜瓶 40 tick。`triggerItemUseEffects` 对 DRINK 只播放饮用音效，节拍同进食：
   已使用 8、12、…、28 tick（32 tick 物品）。
 - **驱动**：`t = min(已使用 tick / 20, 1.60)`，保持末帧。剪辑 0.40 + 0.2k s 是吞咽点，对齐已使用 8、12…28 tick 的音效；
   1.60 s（32 tick）仰头最大。蜂蜜瓶多出的 8 tick 停在仰头姿态（音效 32、36 tick 时不再额外吞咽，见第 9 节待审项）。

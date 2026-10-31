@@ -14,7 +14,7 @@ import java.util.Map;
 public final class LookLayer {
     public static final String YAW_ID = "head_follow";
     public static final String PITCH_ID = "head_follow_pitch";
-    /** 原版 LivingEntity.turnHead 保证头相对身体最多偏 50°。 */
+    /** 原版 LivingEntity.tickHeadTurn 保证头相对身体最多偏 50°。 */
     static final float MAX_RELATIVE_YAW_DEGREES = 50;
     /** Minecraft 视线俯仰范围，正值低头。 */
     static final float MAX_PITCH_DEGREES = 90;

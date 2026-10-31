@@ -4,7 +4,7 @@
 
 ## 1. 动作目的与触发
 
-- **用途**：`Pose.SLEEPING`。`LivingEntityRenderer.setupTransforms` 按床朝向转 Y、再绕 Z 转 90°（`getLyingAngle`）、再转 Y 270°，
+- **用途**：`Pose.SLEEPING`。`LivingEntityRenderer.setupRotations` 按床朝向转 Y、再绕 Z 转 90°（`getFlipDegrees`）、再转 Y 270°，
   玩家仰面躺在床上；模型四肢不动。
 - **本动作在身体空间制作**：骨架仍是站姿坐标，由原版矩阵放倒；仰卧时身体后方（+Z）朝下贴床。
 - **触发**：`isSleeping()`。

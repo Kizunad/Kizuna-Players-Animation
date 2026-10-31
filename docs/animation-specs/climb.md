@@ -12,7 +12,7 @@
 - **用途**：`LivingEntity.onClimbable()`（`BlockTags.CLIMBABLE`：梯子、藤蔓、缠怨藤、垂泪藤、脚手架内；以及可进入的活板门）
   时的全身攀爬。原版没有攀爬姿势：四肢摆动只来自水平位移，竖直爬梯时手脚静止。
 - **触发**：`onClimbable()` 且未着地或有竖直位移；着地站在梯子底部不触发（交回站立/步态）。
-- **原版进度来源**：`applyClimbingSpeed` 把下滑速度限制在 0.15 格/tick，按住潜行时 `isHoldingOntoLadder` 停在原处；
+- **原版进度来源**：`handleOnClimbable` 把下滑速度限制在 0.15 格/tick，按住潜行时 `isSuppressingSlidingDownLadder` 停在原处；
   水平碰撞或跳跃键使竖直速度设为 0.2，扣重力与阻力后实际上爬约 0.118 格/tick（2.35 m/s）。
 - **驱动**（scrub，循环）：服务端每 tick 累加实体竖直位移 `Δy`（格），`phase = frac(累计 / 1.0)`，`clip = phase × 1.0 s`。
   一个循环 = 爬升 1 格：每只手、每只脚各抓/踩一次。上爬时剪辑正向，下滑时反向；挂住不动时游标不变，停在当前手脚姿态。

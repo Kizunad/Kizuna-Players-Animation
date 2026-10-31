@@ -52,7 +52,7 @@
 | crouch_work | sneak / sneak_walk | 0.18 / 0.18 | 否 | 工具动作结束 / 开始移动 |
 | stand / walk / jump_air | climb | 0.15 / 0.15 | 否 | `onClimbable()` 且未站稳；按竖直位移 scrub |
 | climb | stand / walk / jump_air | 0.15 / 0.15 | 否 | 离开可攀爬方块或着地 |
-| walk / run | swim | 0.3 / 0.3 | 否 | 进入泳姿；与原版 `leaningPitch` 放倒同步 |
+| walk / run | swim | 0.3 / 0.3 | 否 | 进入泳姿；与原版 `swimAmount` 放倒同步 |
 | swim | stand / walk | 0.3 / 0.3 | 否 | 离开泳姿 |
 | stand / walk / jump_air | ride | 0.25 / 0.25 | 否 | `isPassenger()`（原版坐骑均为坐姿） |
 | ride | stand | 0.25 / 0.25 | 否 | 下坐骑 |

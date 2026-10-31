@@ -9,9 +9,9 @@
   （手臂前举 18°），身体和头不动。
 - **触发**：`armPoseAction` 中 `EAT` 分支，主手 `eat`、副手 [eat_off](eat_off.md)。
 - **原版进度来源**：
-  - 普通食物使用时间 32 tick，零食（`FoodComponent.isSnack()`，如干海带、甜浆果）16 tick；吃完 `itemUseTimeLeft` 归零、
+  - 普通食物使用时间 32 tick，零食（`FoodProperties.isFastFood()`，如干海带、甜浆果）16 tick；吃完 `useItemRemaining` 归零、
     使用结束。
-  - `LivingEntity.shouldSpawnConsumptionEffects`：已使用 ≥ 7 tick（零食从 0 开始）且 `itemUseTimeLeft % 4 == 0` 时播放进食音效
+  - `LivingEntity.shouldTriggerItemUseEffects`：已使用 ≥ 7 tick（零食从 0 开始）且 `useItemRemaining % 4 == 0` 时播放进食音效
     和碎屑粒子。32 tick 食物的节拍落在已使用 **8、12、16、20、24、28 tick**。
 - **驱动**：`t = 已使用 tick / 20`；`t ≥ 0.80` 后在 `loop_region [0.40, 0.80]` 回绕（同 `spyglass` / `brush` 的
   `loopedSecondsProgress`）。剪辑 0.40 s 与 0.60 s 是两次“咬下”的姿势，正好对齐已使用 8、12 tick；回绕后每 0.2 s 一次，

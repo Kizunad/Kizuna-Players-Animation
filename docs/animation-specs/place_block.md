@@ -6,7 +6,7 @@
 ## 1. 动作目的与触发
 
 - **用途**：手持方块（`BlockItem`）右键放置成功时挥手的动作：把胸前的方块往前下方推出去、按在目标面上，再收回。
-- **触发与驱动**：`VanillaAnimationScheduler.scheduleHandSwing` 判定挥动物品是 `BlockItem` 时选 `place_block`（副手放置选 `place_block_off`）。与 attack 同一条 scrub 路径：挥动中 `u = 0.60 × handSwingProgress`（剪辑 `t = 0.30 × handSwingProgress`），挥动结束后 0.30–0.50 s 按原版挥手速率自走收势。
+- **触发与驱动**：`VanillaAnimationScheduler.scheduleHandSwing` 判定挥动物品是 `BlockItem` 时选 `place_block`（副手放置选 `place_block_off`）。与 attack 同一条 scrub 路径：挥动中 `u = 0.60 × attackAnim`（剪辑 `t = 0.30 × attackAnim`），挥动结束后 0.30–0.50 s 按原版挥手速率自走收势。
 - **连续放置**：按住右键时原版每 4 tick（`rightClickDelay = 4`）放一块并挥手，上一次挥动已过半，`swing` 重开，所以与连续挖掘一样每 4 tick 回到进度 0。本剪辑 **0–0.20 s 是一次完整的“蓄力 → 前推 → 收回”，0.20 s 与 0 s 姿态相同**，搭桥、砌墙时连续前推不跳变。
 - **单次放置**：6 tick 挥动播 0–0.30 s，随后 0.30–0.50 s 收回持物站姿。
 

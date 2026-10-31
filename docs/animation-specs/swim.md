@@ -7,16 +7,16 @@
 
 ## 1. 动作目的与触发
 
-- **用途**：原版泳姿（`Pose.SWIMMING`，疾跑入水后进入）。渲染器在 `leaningPitch > 0` 时把整个身体绕 X 转
+- **用途**：原版泳姿（`Pose.SWIMMING`，疾跑入水后进入）。渲染器在 `swimAmount > 0` 时把整个身体绕 X 转
   `−90° − pitch`（水中）并下移 1 格、前移 0.3 格；模型手臂按 `limbAngle % 26` 做三段划臂，双腿 `0.3 cos(limbAngle / 3)` 打腿。
 - **本动作在身体空间制作**：骨架仍按站立坐标（头在 +Y），由原版矩阵放倒。所以“举过头顶”= 世界里向前伸，
   “身体后方 +Z”= 世界里朝天。
 - **触发**：`isVisuallySwimming()` 且 `isInWater()`。陆地爬行（1 格高通道中的 `SWIMMING` 姿态）不触发，保持原版（另立 `crawl`）。
 - **原版进度来源**：`WalkAnimationState.update(min(位移 × 4, 1), 0.4)`，`limbAngle` 每 tick 前进至多 1；原版划臂周期 26 单位，
-  全速约 26 tick（1.3 s）。`leaningPitch` 每 tick 变化 0.09，约 11 tick 完成躺平。
+  全速约 26 tick（1.3 s）。`swimAmount` 每 tick 变化 0.09，约 11 tick 完成躺平。
 - **驱动**（scrub，循环）：服务端每 tick `phase += min(4 × |Δpos|, 1) / 26`（`Δpos` 为三维位移，格），`clip = frac(phase) × 1.3 s`；
   与原版 `limbAngle` 同一公式，因此划臂节奏与原版一致、停下来时停在当前姿态。
-- **结束**：离开泳姿淡出 0.30 s（原版 `leaningPitch` 回正约 0.55 s）。
+- **结束**：离开泳姿淡出 0.30 s（原版 `swimAmount` 回正约 0.55 s）。
 
 ## 2. 时间轴
 
