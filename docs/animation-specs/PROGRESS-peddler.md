@@ -1,6 +1,6 @@
 # 千里腿动作进度
 
-更新：2026-10-31。动作总稿在会话交接目录 `~/Code/Kizuna-remote-session/handoff/pa-cloud-anim/17-Players-Animation-Peddler.md`（下称「动作稿」：九式 + 蹲马步，共 10 段）。规格 2026-10-31 审过，14 条待决定全部按建议；**制作阶段进行中**：已交付的段按 README 流程录入 `player_skeleton_classic.bbmodel`（仓内动画只存 classic，细臂共用同一导出）、导出、过门禁、出 GIF 与接触表，未交付的段在 `PlayerAnimationAction.PENDING` 里。游戏内效果都没看过。
+更新：2026-10-31。动作总稿在会话交接目录 `~/Code/Kizuna-remote-session/handoff/pa-cloud-anim/17-Players-Animation-Peddler.md`（下称「动作稿」：九式 + 蹲马步，共 10 段）。规格 2026-10-31 审过，14 条待决定全部按建议；**制作阶段完成，待验收**：十段都按 README 流程录入 `player_skeleton_classic.bbmodel`（仓内动画只存 classic，细臂共用同一导出）、导出、过门禁、出 GIF 与接触表。游戏内效果都没看过。
 
 | ID | 规格 | 式 | 类型与时长 | 踢腿 | `hit` (s) | 承接入口 | 状态 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -12,8 +12,8 @@
 | `peddler_mule_kick` | [peddler_mule_kick.md](peddler_mule_kick.md) | 尥蹶 | 一次性 5.0 s（100 tick） | 双 | 1.45 | 不作后式 | 已实现，门禁通过，待游戏内验收 |
 | `peddler_flying_kick` | [peddler_flying_kick.md](peddler_flying_kick.md) | 飞踹 | 一次性 6.0 s（120 tick） | 后（右） | 1.75 | 0.40 | 已实现，门禁通过，待游戏内验收 |
 | `peddler_axe_kick` | [peddler_axe_kick.md](peddler_axe_kick.md) | 下劈 | 一次性 6.0 s（120 tick） | 后（右） | 2.45 | 0.40 | 已实现，门禁通过，待游戏内验收 |
-| `peddler_whirlwind` | [peddler_whirlwind.md](peddler_whirlwind.md) | 不留行 | 一次性 9.0 s（180 tick） | 后（右） | 3.05、3.25 | 1.20 | 规格已审，待制作 |
-| `peddler_horse_stance` | [peddler_horse_stance.md](peddler_horse_stance.md) | 蹲马步（训练） | 一次性 32.0 s（640 tick） | 双 | — | 不作后式 | 规格已审，待制作 |
+| `peddler_whirlwind` | [peddler_whirlwind.md](peddler_whirlwind.md) | 不留行 | 一次性 9.0 s（180 tick） | 后（右） | 3.05、3.25 | 1.20 | 已实现，门禁通过，待游戏内验收 |
+| `peddler_horse_stance` | [peddler_horse_stance.md](peddler_horse_stance.md) | 蹲马步（训练） | 一次性 32.0 s（640 tick） | 双 | — | 不作后式 | 已实现，门禁通过，待游戏内验收 |
 
 十段共同：`mask: full`、`priority: 24`、`blend_in: 0.10`、`blend_out: 0.25`、`hand: main`、`fpv: false`，不做 `_off`（左主手玩家由运行时整段镜像，左右腿互换，`step_l` / `step_r` 互换）；首帧、末帧等于 [stance_idle](stance_idle.md) 首帧；按真实时间播放，`start_tick` 同步起点；起手被伤害打断淡出 0.20 s。切换行见 [transitions](transitions.md)「千里腿」。
 
@@ -95,10 +95,10 @@
   - `FULL_BODY_IDS`、`GRIP_IDS` 加 10 段；
   - `phases` 的对象写法加可选 `chain`（骨名列表），缺省时仍按 id 推断。踢腿段用「胯 → 大腿 → 小腿 → 脚」，躯干、手臂段沿用默认的「腰 → 胸 → 上臂 → 前臂 → 手」。一个 id 里两种段都有（鞭腿、尥蹶、下劈），按 id 写死一条链不够；Java 不读 `phases`，只改分析器；
   - （未改，已交付各式不需要）只在确需爆发窗口时：修 `velocity_gates` 里「同时声明打击时段时不检查爆发窗口上限」的分支，`BURST_WINDOW_PREFIXES` 再加对应式（待决定第 9 条）。
-- `PlayerAnimationAction` 加 10 个显式接口（60、100、120、100、120、100、120、120、180、640 tick）（已改；未交付的段列在 `PENDING`，`delivered()` 为假，合同测试按它核对打包集合；交付一段删一段）；
-- 切换表 [transitions](transitions.md)「千里腿」由设计行改成正式行：`stance_idle` ↔ 10 段共 20 条有向边，`AnimationTransitionContractTest` 494 → 514（已改：交付一段改两行，现为 510）；承接边从剪辑中途起播，合同测试表达不了，等承接接线时再加（同破门斩）；
+- `PlayerAnimationAction` 加 10 个显式接口（60、100、120、100、120、100、120、120、180、640 tick）（已改；制作期间未交付的段列在 `PENDING`，`delivered()` 为假，合同测试按它核对打包集合；十段交付完 `PENDING` 已清空）；
+- 切换表 [transitions](transitions.md)「千里腿」由设计行改成正式行：`stance_idle` ↔ 10 段共 20 条有向边，`AnimationTransitionContractTest` 494 → 514（已改：十段交付完，现为 514）；承接边从剪辑中途起播，合同测试表达不了，等承接接线时再加（同破门斩）；
 - 合同测试打包集合、Gradle `checkAnimationGates`、渲染器接触表时刻（已改，随交付逐段加）；
-- 契约 [asset-contract](../asset-contract.md)、[验收](../animation-acceptance.md) 同步（已改打击时段多段写法、`phases` 的 `chain`、失衡窗口前缀、尥蹶视线层）；`root` 的用法段加上扫堂（已改）、不留行（待不留行交付时改）；
+- 契约 [asset-contract](../asset-contract.md)、[验收](../animation-acceptance.md) 同步（已改打击时段多段写法、`phases` 的 `chain`、失衡窗口前缀、尥蹶视线层）；`root` 的用法段加上扫堂、不留行（已改）；
 - 视线层开关（待决定第 4 条丙）：渲染器整段关掉 `peddler_mule_kick` 的视线叠加（已改 `PlayerMeshRenderer`；开、关是直接切，不淡入淡出，记为已知缺陷）；
 - 原型脚本（交接目录 `kpa-door-breaker-proto/peddler/`，不入库；已加大腿 Y、脚 Y 可设、支撑脚朝向锁定的腿 IK `ped.leg_ik_heading`，扫堂时加了脚底侧倾、膝朝向、脚 Y 参与求解三个可选项，已交付各式重跑结果不变）：支撑脚半提踵 / 半落跟的 IK，大腿 Y、脚 Y 可设的腿 IK（蹲马步、仆步），两拳锁地的手臂 IK，`root` 绕竖线平移补偿（沿用横扫），腾空沿用万门一斩，助跑沿用 `d_dash.py` 的 `SprintFoot`（限在 720°/s 内）。
 
@@ -160,13 +160,15 @@
 | 尥蹶 | 1,341 | 1,691°/s，2.60×10⁶°/s³ | `[1.82, 1.92]` | 胯只降 2.0 px、前倾 −50°，靠腰胸再弯；肩离地 10.3 px，拳撑地肘屈 40–51°（规格 10–20°）；提踵踝高 1.20 / 1.85（着地滑动门禁要）；`bend` 段声明躯干链；头最低离地 0.47 px |
 | 飞踹 | 1,407 | 1,629°/s，2.93×10⁶°/s³ | `[0.45, 1.42]`、`[1.92, 2.35]` | 着地段按第 3 节步序（第 9 节表有误）；蹬出大腿内旋 50°，脚底朝目标，**脚刀朝不了下**；胯 1.76–1.95 回转；落地只沉 1 px；关键帧少于目标 |
 | 下劈 | 1,512 | 912°/s，1.53×10⁶°/s³ | 不登记 | 脚顶最高 22.5 px（规格 ≥ 23，腿长所限）；只劈到世界屈髋约 55°（规格 40°）；后脚提踵 1.86（规格 2.15）；胯沉得少、前移得少；撤步 3.00–3.40，`step_r` 3.4 |
+| 不留行 | 2,559 | 1,618°/s，1.90×10⁶°/s³ | `[1.43, 1.58]`、`[1.95, 2.05]`、`[3.38, 3.53]` | 扣步、上步、蓄都用前脚掌；只蹲 1.4 px；右腿先屈膝外展再伸直里合，拍脚 0.47 px；右脚 3.25、左脚 3.30 起离地低于 2 px；扶膝膝右 ~100°、左 ~70°，手按大腿外前棱、腰胸右侧弯 6° |
+| 蹲马步 | 1,940 | 无打击时段；全段 615°/s，1.41×10⁶°/s³ | `[0.57, 0.70]`、`[31.43, 31.58]` | 右脚开步 0.53–0.72（`step_r` 0.72）、下蹲 0.72–1.06；收步出界的是左脚收回那段，不是右脚；站桩重心在踝线前 0.29 px（探针估踝线后 0.65）；拳端约 `(∓6.2, 10.2, −1.6)`，上臂后伸 43°、肘 98°；起身腰跟随 2.2° 没过，预备 / 跟随 4 / 5 |
 
-- 已交付各式都没登记爆发窗口，时段外最大 458–706°/s；没改分析器的爆发窗口分支。
+- 已交付各式都没登记爆发窗口，时段外最大 458–706°/s（不留行 704°/s，蹲马步全段 615°/s）；没改分析器的爆发窗口分支。
 - 服务端设计稿核对（各式打击时刻、承接、起手长度）结论见「依据」；制作没有改动打击时刻。
 
 ## 未做 / 未验证
 
-- 未交付：不留行、蹲马步（`PlayerAnimationAction.PENDING`）。
+- 十段都已交付，`PlayerAnimationAction.PENDING` 已清空。
 - 已交付各段只过了离线门禁和 GIF / 接触表（`build/anim-review/2026-10-31/<id>/`，不入库），**游戏内效果、左主手镜像、承接（`stance_idle` 以外的边）都没验证**；承接边、打断边仍是设计行。
 - 已知缺陷：尥蹶整段关视线层是直接切换，开始、结束时头会跳一下（资源已交付，没在游戏里看过）。
-- Gradle：按 README 用 `-PpaAssemblyScript=<交接目录>/full-assembly-7f20d21.gradle` 跑 `./gradlew test build checkAnimationGates checkAnimationAssets checkAnimationAntiForgery`，2026-10-31 交付前三式后、交付扫堂与连环后、交付尥蹶飞踹下劈后各跑一次，均通过（100 个测试 0 失败，闸门全 PASS）。`build.gradle` 的 `apply from` 改为可由该属性覆盖，默认仍指向框架仓的装配脚本。
+- Gradle：按 README 用 `-PpaAssemblyScript=<交接目录>/full-assembly-7f20d21.gradle` 跑 `./gradlew test build checkAnimationGates checkAnimationAssets checkAnimationAntiForgery`，2026-10-31 交付前三式后、交付扫堂与连环后、交付尥蹶飞踹下劈后、交付不留行与蹲马步后各跑一次，均通过（100 个测试 0 失败；导出一致性 106 段；动作门禁粗、细臂共 162 行全 PASS；反伪造夹具被拒）。`build.gradle` 的 `apply from` 改为可由该属性覆盖，默认仍指向框架仓的装配脚本。

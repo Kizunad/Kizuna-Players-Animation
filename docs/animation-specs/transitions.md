@@ -222,9 +222,9 @@
 
 ## 千里腿（2026-10-31 制作中）
 
-规格见 [PROGRESS-peddler](PROGRESS-peddler.md) 与各段页面：九式 + 蹲马步共 10 段。已交付资源的式见下面四列表，其余还只有规格（`PlayerAnimationAction` 标为未交付，调度不会请求）。
+规格见 [PROGRESS-peddler](PROGRESS-peddler.md) 与各段页面：九式 + 蹲马步共 10 段，资源都已交付，`stance_idle` 往返见下面四列表。
 `mask: full`、优先级 24，同破门斩：任何底层上都整段生效；`peddler_*` 不在 `AnimationPlayer` 的任何上层集合里，按索引就整段全身生效，不用改播放器。起手被伤害打断淡出 0.20 s 回架势（蹲马步另含宿主提前结束训练）。
-每交付一式，把 `stance_idle` ↔ 该式两行写进四列表（`AnimationTransitionContractTest` 解析，每式 2 条有向边，10 段交付完 494 → 514）；六列设计行不解析。承接边要从剪辑中途起播，现有回归表达不了，等承接接线时再加（同破门斩）。承接关系、起手长度、打击时刻已和服务端设计稿 16 核对（出入见 PROGRESS）。
+`stance_idle` ↔ 各式两行写在四列表（`AnimationTransitionContractTest` 解析，每式 2 条有向边，10 段交付后 494 → 514）；六列设计行不解析。承接边要从剪辑中途起播，现有回归表达不了，等承接接线时再加（同破门斩）。承接关系、起手长度、打击时刻已和服务端设计稿 16 核对（出入见 PROGRESS）。
 
 | 来源 → 目标 | 淡入 / 淡出 | 触发 | 约束 |
 | --- | ---: | --- | --- |
@@ -244,14 +244,15 @@
 | peddler_flying_kick → stance_idle | 0.25 / 0.25 | 6.0 s 播完 | 淡回架势底层 |
 | stance_idle → peddler_axe_kick | 0.10 / 0.25 | 宿主在下劈起手时播放 | 起止姿态等于 `stance_idle` 首帧；按真实时间播 6.0 s；承接入口 0.40 s |
 | peddler_axe_kick → stance_idle | 0.25 / 0.25 | 6.0 s 播完 | 淡回架势底层 |
+| stance_idle → peddler_whirlwind | 0.10 / 0.25 | 宿主在不留行起手时播放 | 起止姿态等于 `stance_idle` 首帧；按真实时间播 9.0 s；`root` 2.85–3.43 s 腾空向左转一整圈、3.50 s 换回 0°，转的期间打断会倒转；承接入口 1.20 s |
+| peddler_whirlwind → stance_idle | 0.25 / 0.25 | 9.0 s 播完 | 淡回架势底层；末帧 `root` 为 0 |
+| stance_idle → peddler_horse_stance | 0.10 / 0.25 | 宿主在蹲马步开始时播放 | 起止姿态等于 `stance_idle` 首帧；按真实时间播 32.0 s 一次性，不用 `loop_region`；不作前式、后式 |
+| peddler_horse_stance → stance_idle | 0.25 / 0.25 | 32.0 s 播完 | 淡回架势底层；末帧 `root` 为 0 |
 
-未交付各式的设计行：
+承接与打断的设计行（还没接线）：
 
 | 来源 | 目标 | 淡入 / 淡出 | 触发 | 约束 | 状态 |
 | --- | --- | ---: | --- | --- | --- |
-| stance_idle | peddler_whirlwind | 0.10 / 0.25 | 宿主在不留行起手时播放 | 起止姿态等于 `stance_idle` 首帧；按真实时间播 9.0 s；`root` 2.85–3.43 s 腾空向左转一整圈，转的期间打断会倒转；承接入口 1.20 s | 待制作 |
-| stance_idle | peddler_horse_stance | 0.10 / 0.25 | 宿主在蹲马步开始时播放 | 同上；32.0 s 一次性，不用 `loop_region`；不作前式、后式 | 待制作 |
-| peddler_whirlwind / peddler_horse_stance | stance_idle | 0.25 / 0.25 | 剪辑播完 | 淡回架势底层；末帧等于 `stance_idle` 首帧，`root` 为 0 | 待制作 |
 | peddler_snap_kick | peddler_roundhouse / peddler_triple_kick | 0.30 / 0.25 | 承接（宿主在后一式起手时切换） | 前一式淡出 0.30 s，后一式从 0.40 s 起播 | 待承接接线 |
 | peddler_mule_kick | peddler_ground_sweep | 0.30 / 0.25 | 承接 | 从 0.40 s 起播 | 待承接接线 |
 | peddler_push_kick | peddler_flying_kick | 0.30 / 0.25 | 承接 | 从 0.40 s 起播 | 待承接接线 |

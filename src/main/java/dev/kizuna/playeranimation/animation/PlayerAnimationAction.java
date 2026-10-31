@@ -187,8 +187,7 @@ public enum PlayerAnimationAction {
         return !PENDING.contains(this);
     }
 
-    private static final java.util.Set<PlayerAnimationAction> PENDING = java.util.EnumSet.of(
-            PEDDLER_WHIRLWIND, PEDDLER_HORSE_STANCE);
+    private static final java.util.Set<PlayerAnimationAction> PENDING = java.util.EnumSet.noneOf(PlayerAnimationAction.class);
 
     public static PlayerAnimationAction find(String id) {
         for (PlayerAnimationAction action : values()) {

@@ -2185,6 +2185,78 @@
           "end": 2.5
         }
       ]
+    },
+    {
+      "id": "peddler_whirlwind",
+      "file": "animations/peddler_whirlwind.animation.json",
+      "mask": "full",
+      "priority": 24,
+      "blend_in": 0.1,
+      "blend_out": 0.25,
+      "hand": "main",
+      "fpv": false,
+      "impact_window": [
+        2.95,
+        3.3
+      ],
+      "unbalanced_windows": [
+        [
+          1.43,
+          1.58
+        ],
+        [
+          1.95,
+          2.05
+        ],
+        [
+          3.38,
+          3.53
+        ]
+      ],
+      "phases": [
+        {
+          "id": "wind",
+          "start": 1.2,
+          "end": 1.95
+        },
+        {
+          "id": "launch",
+          "start": 2.55,
+          "end": 2.95
+        }
+      ]
+    },
+    {
+      "id": "peddler_horse_stance",
+      "file": "animations/peddler_horse_stance.animation.json",
+      "mask": "full",
+      "priority": 24,
+      "blend_in": 0.1,
+      "blend_out": 0.25,
+      "hand": "main",
+      "fpv": false,
+      "unbalanced_windows": [
+        [
+          0.57,
+          0.7
+        ],
+        [
+          31.43,
+          31.58
+        ]
+      ],
+      "phases": [
+        {
+          "id": "squat",
+          "start": 0.7,
+          "end": 1.0
+        },
+        {
+          "id": "rise",
+          "start": 31.0,
+          "end": 31.4
+        }
+      ]
     }
   ]
 }
