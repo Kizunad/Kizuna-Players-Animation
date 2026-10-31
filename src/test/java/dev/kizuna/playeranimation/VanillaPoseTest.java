@@ -8,7 +8,7 @@ import dev.kizuna.playeranimation.model.Skeleton;
 import dev.kizuna.playeranimation.model.Vec3;
 import java.util.ArrayList;
 import java.util.List;
-import net.minecraft.client.model.PlayerModel;
+import net.minecraft.client.model.player.PlayerModel;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.model.geom.builders.CubeDeformation;
 import org.joml.Matrix4f;
@@ -21,7 +21,7 @@ class VanillaPoseTest {
     @Test
     void splitBonesReproduceActualVanillaPartTransformsForBothSkinTypes() {
         for (boolean slim : new boolean[]{false, true}) {
-            PlayerModel<?> model = new PlayerModel<>(
+            PlayerModel model = new PlayerModel(
                     PlayerModel.createMesh(CubeDeformation.NONE, slim).getRoot().bake(64, 64), slim);
             // 混合旋转和枢轴位移模拟走路、抬手与蹲伏，不只检查静止的单位矩阵。
             model.body.xRot = 0.4f;
@@ -52,7 +52,7 @@ class VanillaPoseTest {
                 PoseStack vanilla = new PoseStack();
                 part.translateAndRotate(vanilla);
                 Matrix4f expected = new Matrix4f(vanilla.last().pose())
-                        .translate(-bind.x / 16, -bind.y / 16, -bind.z / 16);
+                        .translate(-bind.x() / 16, -bind.y() / 16, -bind.z() / 16);
                 assertTrue(expected.equals(Rig.toVanilla(actual[bone.ordinal()]), 0.00001f), bone + " slim=" + slim);
             }
         }

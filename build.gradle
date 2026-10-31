@@ -9,10 +9,10 @@ version = '0.1.0-SNAPSHOT'
 repositories { mavenCentral() }
 
 dependencies {
+    // 26.x 不混淆：直接用官方名编译，没有映射，模组依赖也不经重映射。
     minecraft libs.minecraft
-    mappings loom.officialMojangMappings()
-    modImplementation libs.fabric.loader
-    modImplementation libs.fabric.api
+    implementation libs.fabric.loader
+    implementation libs.fabric.api
     implementation libs.protobuf.java
     include libs.protobuf.java
     testImplementation libs.junit.jupiter
@@ -101,7 +101,11 @@ tasks.named('check') {
     dependsOn tasks.named('checkAnimationAntiForgery')
 }
 
-apply from: new File(kizunaWorkspace.directory('framework'), 'scripts/full-assembly.gradle')
+// 开发运行默认装入完整装配；-PkpaStandalone 只装本仓与 Fabric API，供其他仓的安装 JAR 与本仓版本不一致时单独验证。
+boolean fullAssembly = !providers.gradleProperty('kpaStandalone').isPresent()
+if (fullAssembly) {
+    apply from: new File(kizunaWorkspace.directory('framework'), 'scripts/full-assembly.gradle')
+}
 
 sourceSets {
     gametest {
@@ -117,16 +121,21 @@ sourceSets {
 dependencies {
     clientTestImplementation libs.junit.jupiter
     clientTestImplementation libs.junit.launcher
-    // 高层仓只在运行时需要，按装配清单读文件，不把 Human 组合进本仓构建。
-    clientTestRuntimeOnly files(kizunaWorkspace.artifact('human', 'client', false))
 }
 
-// Loom 不展开其他模组安装包里的纯 Java 嵌套库，测试运行显式装配实际依赖。
-['gametest', 'clientTest'].each { sourceSet ->
-    dependencies.add("${sourceSet}RuntimeOnly", files(
-            kizunaWorkspace.artifact('framework', 'server', false),
-            kizunaWorkspace.artifact('humanoid-threatening', 'server', false)))
-    dependencies.add("${sourceSet}RuntimeOnly", libs.tomlj)
+if (fullAssembly) {
+    dependencies {
+        // 高层仓只在运行时需要，按装配清单读文件，不把 Human 组合进本仓构建。
+        clientTestRuntimeOnly files(kizunaWorkspace.artifact('human', 'client', false))
+    }
+
+    // 完整装配里其他模组依赖的纯 Java 库，测试运行显式装配。
+    ['gametest', 'clientTest'].each { sourceSet ->
+        dependencies.add("${sourceSet}RuntimeOnly", files(
+                kizunaWorkspace.artifact('framework', 'server', false),
+                kizunaWorkspace.artifact('humanoid-threatening', 'server', false)))
+        dependencies.add("${sourceSet}RuntimeOnly", libs.tomlj)
+    }
 }
 
 loom {
@@ -164,7 +173,18 @@ tasks.register('prepareClientTestWorld', Copy) {
 tasks.named('runClientTest') {
     dependsOn tasks.named('prepareClientTestWorld')
     def report = layout.buildDirectory.file('clienttest-results.txt')
-    doFirst { report.get().asFile.text = 'success=false\n' }
+    def options = layout.buildDirectory.file('clienttest/options.txt')
+    doFirst {
+        report.get().asFile.text = 'success=false\n'
+        // 26.2 首启先弹无障碍引导页再进快速游戏，测试目录预置为已看过引导。
+        def file = options.get().asFile
+        if (file.exists()) {
+            file.text = file.text.replace('onboardAccessibility:true', 'onboardAccessibility:false')
+        } else {
+            file.parentFile.mkdirs()
+            file.text = 'onboardAccessibility:false\n'
+        }
+    }
     doLast {
         if (report.get().asFile.readLines().first() != 'success=true') {
             throw new GradleException("客户端 JUnit 未全部通过，查看 ${report.get().asFile}")

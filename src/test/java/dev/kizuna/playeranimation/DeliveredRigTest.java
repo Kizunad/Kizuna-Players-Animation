@@ -9,8 +9,9 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
-import net.minecraft.client.model.PlayerModel;
 import net.minecraft.client.model.geom.builders.CubeDeformation;
+import net.minecraft.client.model.player.PlayerModel;
+import net.minecraft.client.renderer.entity.state.AvatarRenderState;
 import net.minecraft.world.entity.HumanoidArm;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
@@ -100,8 +101,7 @@ class DeliveredRigTest {
     void bothHeldItemSocketsMatchVanillaIncludingSlimShoulderCorrection() throws Exception {
         for (boolean slim : new boolean[]{false, true}) {
             Skeleton skeleton = skeleton(slim);
-            PlayerModel<?> model = new PlayerModel<>(PlayerModel
-                    .createMesh(CubeDeformation.NONE, slim).getRoot().bake(64, 64), slim);
+            PlayerModel model = VanillaPlayerFixture.legacyPivotPlayer(slim);
             for (float pitch : new float[]{0, -(float) Math.PI / 10, -1.2f}) {
                 // 混合旋转与肩部位移覆盖站姿、抬手和姿态变化，比较完整物品矩阵。
                 model.rightArm.xRot = model.leftArm.xRot = pitch;
@@ -112,7 +112,8 @@ class DeliveredRigTest {
                 Matrix4f[] matrices = Rig.matrices(skeleton, PlayerMeshRenderer.basePose(skeleton, model, false, slim));
                 for (HumanoidArm arm : HumanoidArm.values()) {
                     PoseStack vanilla = new PoseStack();
-                    model.translateToHand(arm, vanilla);
+                    // 26.2 的持物挂点入口带渲染状态参数，玩家模型实现不读取它。
+                    model.translateToHand(new AvatarRenderState(), arm, vanilla);
                     vanilla.mulPose(Axis.XP.rotationDegrees(-90));
                     vanilla.mulPose(Axis.YP.rotationDegrees(180));
                     vanilla.translate((arm == HumanoidArm.RIGHT ? 1 : -1) / 16f, 0.125, -0.625);
@@ -128,7 +129,7 @@ class DeliveredRigTest {
     @Test
     void slimCorrectionFollowsRootAndWristAnimation() throws Exception {
         Skeleton skeleton = skeleton(true);
-        PlayerModel<?> model = new PlayerModel<>(PlayerModel
+        PlayerModel model = new PlayerModel(PlayerModel
                 .createMesh(CubeDeformation.NONE, true).getRoot().bake(64, 64), true);
         model.rightArm.yRot = 0.3f;
         Pose[] pose = PlayerMeshRenderer.basePose(skeleton, model, false, true);

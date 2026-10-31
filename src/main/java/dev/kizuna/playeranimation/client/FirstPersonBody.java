@@ -1,12 +1,17 @@
 package dev.kizuna.playeranimation.client;
 
+import com.mojang.blaze3d.vertex.PoseStack;
 import dev.kizuna.playeranimation.model.BoneId;
-import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderContext;
+import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext;
+import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.AbstractClientPlayer;
-import net.minecraft.client.renderer.entity.player.PlayerRenderer;
+import net.minecraft.client.renderer.entity.player.AvatarRenderer;
+import net.minecraft.client.renderer.entity.state.AvatarRenderState;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.PlayerModelType;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.phys.Vec3;
 
@@ -25,11 +30,13 @@ public final class FirstPersonBody {
     public static boolean active(AbstractClientPlayer player) {
         Minecraft client = Minecraft.getInstance();
         // 横躺/旋转类姿态需要各自的相机空间适配，当前保留其原版视角。
+        float delta = client.getDeltaTracker().getGameTimeDeltaPartialTick(false);
+        boolean slim = player.getSkin().model() == PlayerModelType.SLIM;
         return enabled && client.options.getCameraType().isFirstPerson()
                 && client.getCameraEntity() == player && player.isAlive() && !player.isSpectator()
                 && !player.isSleeping() && !player.isFallFlying() && !player.isAutoSpinAttack()
-                && !player.isVisuallySwimming() && player.getSwimAmount(client.getFrameTime()) == 0
-                && PlayerAnimationClient.ASSETS.model("slim".equals(player.getModelName())) != null;
+                && !player.isVisuallySwimming() && player.getSwimAmount(delta) == 0
+                && PlayerAnimationClient.ASSETS.model(slim) != null;
     }
 
     public static boolean rendering(Entity entity) { return renderingPlayer == entity; }
@@ -40,10 +47,10 @@ public final class FirstPersonBody {
                 || player.getOffhandItem().is(Items.FILLED_MAP) || player.isScoping();
     }
 
-    public static boolean visible(Entity entity, BoneId bone) {
+    public static boolean visible(EntityFrame.PlayerParts parts, BoneId bone) {
         // 只限制这一趟本地身体绘制，第三人称和物品栏预览保留完整头部。
-        return !rendering(entity) || bone != BoneId.HEAD
-                && (!bone.arm() || !vanillaHands(renderingPlayer));
+        return !parts.firstPersonPass() || bone != BoneId.HEAD
+                && (!bone.arm() || !parts.vanillaHands());
     }
 
     static Vec3 bodyOffset(float yawDegrees, boolean crouching) {
@@ -53,27 +60,28 @@ public final class FirstPersonBody {
         return new Vec3(Math.sin(radians) * distance, 0, -Math.cos(radians) * distance);
     }
 
-    public static void render(WorldRenderContext context) {
+    public static void render(LevelRenderContext context) {
         Minecraft client = Minecraft.getInstance();
-        if (!(context.camera().getEntity() instanceof AbstractClientPlayer player)
-                || context.camera().isDetached() || !active(player)) {
+        Camera camera = client.gameRenderer.mainCamera();
+        if (!(camera.entity() instanceof AbstractClientPlayer player) || camera.isDetached() || !active(player)) {
             return;
         }
-        float delta = context.tickDelta();
-        var dispatcher = client.getEntityRenderDispatcher();
-        PlayerRenderer renderer = (PlayerRenderer) dispatcher.getRenderer(player);
-        Vec3 position = player.getPosition(delta).subtract(context.camera().getPosition())
-                .add(renderer.getRenderOffset(player, delta))
-                .add(bodyOffset(Mth.rotLerp(delta, player.yBodyRotO, player.yBodyRot),
-                        player.isCrouching()));
-        var matrices = context.matrixStack();
+        float delta = client.getDeltaTracker().getGameTimeDeltaPartialTick(false);
+        AvatarRenderer<AbstractClientPlayer> renderer = client.getEntityRenderDispatcher().getPlayerRenderer(player);
+        CameraRenderState cameraState = context.levelState().cameraRenderState;
+        PoseStack matrices = context.poseStack();
         matrices.pushPose();
         renderingPlayer = player;
         try {
+            // 状态在本趟标记下提取，帧数据据此隐藏头部与近裁面附近的装饰。
+            AvatarRenderState state = renderer.createRenderState(player, delta);
+            Vec3 position = player.getPosition(delta).subtract(cameraState.pos)
+                    .add(renderer.getRenderOffset(state))
+                    .add(bodyOffset(Mth.rotLerp(delta, player.yBodyRotO, player.yBodyRot),
+                            player.isCrouching()));
             // 直接调用玩家渲染器，沿用皮肤、骨架、装备和持物；不补画影子或碰撞箱。
             matrices.translate(position.x, position.y, position.z);
-            renderer.render(player, player.getViewYRot(delta), delta, matrices, context.consumers(),
-                    dispatcher.getPackedLightCoords(player, delta));
+            renderer.submit(state, matrices, context.submitNodeCollector(), cameraState);
         } finally {
             renderingPlayer = null;
             matrices.popPose();

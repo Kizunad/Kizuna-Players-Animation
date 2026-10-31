@@ -3,13 +3,12 @@ package dev.kizuna.playeranimation.server;
 import com.mojang.brigadier.suggestion.Suggestion;
 import java.util.List;
 import java.util.Set;
-import net.fabricmc.fabric.api.gametest.v1.FabricGameTest;
+import net.fabricmc.fabric.api.gametest.v1.GameTest;
 import net.minecraft.commands.CommandSourceStack;
-import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 
-public final class KpaServerCommandGameTest implements FabricGameTest {
-    @GameTest(template = FabricGameTest.EMPTY_STRUCTURE)
+public final class KpaServerCommandGameTest {
+    @GameTest
     public void animationArgumentsCompleteFromBuiltInIndex(GameTestHelper context) {
         // 补全来自模组自带索引：基础运动与原版动作都要在列，play 与 stop 列出同一份 id。
         List<String> ids = ServerPlayerAnimations.animationIds();

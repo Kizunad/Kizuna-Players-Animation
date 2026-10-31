@@ -11,23 +11,18 @@ import dev.kizuna.playeranimation.model.SkinnedMesh;
 import java.io.IOException;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import net.fabricmc.fabric.api.resource.SimpleSynchronousResourceReloadListener;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.ResourceManager;
+import net.minecraft.server.packs.resources.ResourceManagerReloadListener;
 
-public final class PlayerAssets implements SimpleSynchronousResourceReloadListener {
+public final class PlayerAssets implements ResourceManagerReloadListener {
     public record Model(Skeleton skeleton, SkinnedMesh mesh) { }
     private Model classic;
     private Model slim;
     private Map<String, AnimationEntry> animations = Map.of();
 
-    @Override
-    public ResourceLocation getFabricId() {
-        return id("player_assets");
-    }
-
-    public static ResourceLocation id(String path) {
-        return new ResourceLocation(PlayerAnimationClient.ID, path);
+    public static Identifier id(String path) {
+        return Identifier.fromNamespaceAndPath(PlayerAnimationClient.ID, path);
     }
 
     public Model model(boolean thinArms) {
@@ -44,8 +39,8 @@ public final class PlayerAssets implements SimpleSynchronousResourceReloadListen
         classic = null;
         slim = null;
         animations = Map.of();
-        ResourceLocation geometryId = id("geo/player_skeleton.geo.json");
-        ResourceLocation indexId = id("player_anim_index.json");
+        Identifier geometryId = id("geo/player_skeleton.geo.json");
+        Identifier indexId = id("player_anim_index.json");
         if (manager.getResource(geometryId).isEmpty() && manager.getResource(indexId).isEmpty()) {
             PlayerAnimationClient.LOG.info("尚未提供玩家骨架和动画资源，保留原版玩家渲染");
             return;
@@ -57,12 +52,12 @@ public final class PlayerAssets implements SimpleSynchronousResourceReloadListen
             Model newClassic = new Model(classicSkeleton, new SkinnedMesh(classicSkeleton));
             Model newSlim = new Model(slimSkeleton, new SkinnedMesh(slimSkeleton));
             Map<String, AnimationEntry> entries = new LinkedHashMap<>();
-            Map<ResourceLocation, JsonObject> files = new LinkedHashMap<>();
+            Map<Identifier, JsonObject> files = new LinkedHashMap<>();
             JsonObject index = read(manager, indexId);
             for (var element : JsonInput.array(index, "animations")) {
                 JsonObject raw = element.getAsJsonObject();
                 String name = JsonInput.string(raw, "id");
-                ResourceLocation file = id(JsonInput.string(raw, "file"));
+                Identifier file = id(JsonInput.string(raw, "file"));
                 // 同文件的多个动作只解析一次 JSON，但各自保持独立播放参数。
                 if (!files.containsKey(file)) {
                     files.put(file, read(manager, file));
@@ -84,7 +79,7 @@ public final class PlayerAssets implements SimpleSynchronousResourceReloadListen
         }
     }
 
-    private static JsonObject read(ResourceManager manager, ResourceLocation id) throws IOException {
+    private static JsonObject read(ResourceManager manager, Identifier id) throws IOException {
         // Reader 与资源生命周期在加载边界关闭，不在渲染线程持有文件句柄。
         try (var reader = manager.getResourceOrThrow(id).openAsReader()) {
             return JsonParser.parseReader(reader).getAsJsonObject();

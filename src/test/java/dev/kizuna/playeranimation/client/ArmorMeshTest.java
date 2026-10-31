@@ -3,6 +3,7 @@ package dev.kizuna.playeranimation.client;
 import com.google.gson.JsonParser;
 import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.blaze3d.vertex.PoseStack;
+import dev.kizuna.playeranimation.VanillaPlayerFixture;
 import dev.kizuna.playeranimation.model.BoneId;
 import dev.kizuna.playeranimation.model.Pose;
 import dev.kizuna.playeranimation.model.Rig;
@@ -14,16 +15,17 @@ import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import net.minecraft.client.model.HumanoidArmorModel;
-import net.minecraft.client.model.PlayerModel;
+import net.minecraft.client.model.HumanoidModel;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.model.geom.builders.CubeDeformation;
+import net.minecraft.client.model.geom.builders.LayerDefinition;
+import net.minecraft.client.model.player.PlayerModel;
+import net.minecraft.client.renderer.entity.ArmorModelSet;
 import net.minecraft.client.renderer.texture.SpriteContents;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
-import net.minecraft.client.resources.metadata.animation.AnimationMetadataSection;
 import net.minecraft.client.resources.metadata.animation.FrameSize;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.entity.EquipmentSlot;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
 import org.junit.jupiter.api.Test;
@@ -41,14 +43,40 @@ class ArmorMeshTest {
         }
     }
 
-    private static HumanoidArmorModel<LivingEntity> armor(float dilation) {
-        return new HumanoidArmorModel<>(HumanoidArmorModel.createBodyLayer(new CubeDeformation(dilation))
-                .getRoot().bake(64, 32));
+    private static ArmorModelSet<PlayerModel> armorSet(boolean slim) {
+        // 与原版玩家盔甲层同一套网格：每槽一个模型，未保留的部件为空节点；护腿用内层膨胀。
+        return PlayerModel.createArmorMeshSet(new CubeDeformation(0.5f), new CubeDeformation(1))
+                .map(mesh -> new PlayerModel(LayerDefinition.create(mesh, 64, 32).bakeRoot(), slim));
     }
 
-    private static ModelPart part(HumanoidArmorModel<?> armor, SkinnedMesh.Surface surface) {
+    private static List<PlayerModel> armorSlots(boolean slim) {
+        ArmorModelSet<PlayerModel> set = armorSet(slim);
+        return List.of(set.head(), set.chest(), set.legs(), set.feet());
+    }
+
+    private static void copyPose(PlayerModel player, HumanoidModel<?> armor) {
+        // 26.2 去掉了 copyPropertiesTo，按部件复制当前姿态；帽层是头的子节点，随头移动。
+        armor.head.loadPose(player.head.storePose());
+        armor.body.loadPose(player.body.storePose());
+        armor.rightArm.loadPose(player.rightArm.storePose());
+        armor.leftArm.loadPose(player.leftArm.storePose());
+        armor.rightLeg.loadPose(player.rightLeg.storePose());
+        armor.leftLeg.loadPose(player.leftLeg.storePose());
+    }
+
+    private static void setAllVisible(HumanoidModel<?> armor, boolean visible) {
+        armor.head.visible = visible;
+        armor.hat.visible = visible;
+        armor.body.visible = visible;
+        armor.rightArm.visible = visible;
+        armor.leftArm.visible = visible;
+        armor.rightLeg.visible = visible;
+        armor.leftLeg.visible = visible;
+    }
+
+    private static ModelPart part(HumanoidModel<?> armor, SkinnedMesh.Surface surface) {
         return switch (surface.bone()) {
-            case HEAD -> surface.outer() ? armor.hat : armor.head;
+            case HEAD -> armor.head;
             case PELVIS -> armor.body;
             case R_UPPER_ARM -> armor.rightArm;
             case L_UPPER_ARM -> armor.leftArm;
@@ -62,11 +90,11 @@ class ArmorMeshTest {
     void bindAndVanillaPosesPreserveRealArmorGeometryUvsAndMirroredNormals() throws Exception {
         for (boolean slim : new boolean[]{false, true}) {
             PlayerAssets.Model assets = assets(slim);
-            for (float dilation : new float[]{0.5f, 1}) {
+            for (EquipmentSlot slot : new EquipmentSlot[]{EquipmentSlot.HEAD, EquipmentSlot.CHEST,
+                    EquipmentSlot.LEGS, EquipmentSlot.FEET}) {
                 for (boolean posed : new boolean[]{false, true}) {
-                    var armor = armor(dilation);
-                    PlayerModel<LivingEntity> player = new PlayerModel<>(PlayerModel
-                            .createMesh(CubeDeformation.NONE, slim).getRoot().bake(64, 64), slim);
+                    var armor = armorSet(slim).get(slot);
+                    PlayerModel player = VanillaPlayerFixture.legacyPivotPlayer(slim);
                     if (posed) {
                         // 原版蹲伏、抬手与走路的混合姿态，包括非零枢轴位移和三轴旋转。
                         player.body.xRot = 0.4f;
@@ -80,23 +108,25 @@ class ArmorMeshTest {
                         player.rightLeg.xRot = 0.6f;
                         player.leftLeg.xRot = -0.6f;
                     }
-                    player.hat.copyFrom(player.head);
-                    player.copyPropertiesTo(armor);
+                    copyPose(player, armor);
                     ArmorMesh mesh = new ArmorMesh(armor, assets);
                     var frame = new PlayerMeshRenderer.Frame(assets, Rig.matrices(assets.skeleton(),
                             PlayerMeshRenderer.basePose(assets.skeleton(), player, false, slim)));
                     for (var surface : mesh.surfaces()) {
-                        var expected = new ArmorMesh.QuadCollector();
-                        part(armor, surface).render(new PoseStack(), expected, 0, 0);
+                        var expected = expected(armor, surface);
                         var actual = new ArmorMesh.QuadCollector();
-                        PlayerMeshRenderer.draw(frame, List.of(surface), new PoseStack(), actual,
-                                0, 0, 1, 1, 1, 1, ignored -> true);
-                        assertFalse(expected.corners.isEmpty());
+                        PlayerMeshRenderer.draw(frame, List.of(surface), new PoseStack().last(), actual,
+                                0, 0, -1, ignored -> true);
+                        // 本槽未保留的部件在原版是空节点，PA 网格也必须为空。
+                        if (expected.corners.isEmpty()) {
+                            assertTrue(actual.corners.isEmpty(), () -> "空部件多出网格: " + slot + " " + surface.bone());
+                            continue;
+                        }
                         assertTrue(actual.corners.size() > expected.corners.size());
                         for (var vertex : actual.corners) {
                             assertTrue(onVanillaFace(vertex, expected.corners),
                                     () -> "原版几何/UV 不一致: " + surface.bone() + " slim=" + slim
-                                            + " dilation=" + dilation + " posed=" + posed + " " + vertex);
+                                            + " slot=" + slot + " posed=" + posed + " " + vertex);
                         }
                         // 细分不能漏掉原版面的角点，帽层及镜像左侧同样参与比较。
                         for (var corner : expected.corners) {
@@ -106,6 +136,20 @@ class ArmorMeshTest {
                 }
             }
         }
+    }
+
+    private static ArmorMesh.QuadCollector expected(HumanoidModel<?> armor, SkinnedMesh.Surface surface) {
+        // 26.2 的帽层挂在头下：头表面关掉帽层只画头，帽表面跳过头自身方块、带着头的变换画帽。
+        var collector = new ArmorMesh.QuadCollector();
+        if (surface.bone() == BoneId.HEAD && surface.outer()) {
+            armor.head.skipDraw = true;
+        } else if (surface.bone() == BoneId.HEAD) {
+            armor.hat.visible = false;
+        }
+        part(armor, surface).render(new PoseStack(), collector, 0, 0);
+        armor.head.skipDraw = false;
+        armor.hat.visible = true;
+        return collector;
     }
 
     private static boolean onVanillaFace(ArmorMesh.Corner vertex, List<ArmorMesh.Corner> faces) {
@@ -134,7 +178,8 @@ class ArmorMeshTest {
     @Test
     void armorTrimKeepsAtlasUvsThroughVanillaSpriteConsumer() throws Exception {
         var assets = assets(false);
-        var mesh = new ArmorMesh(armor(1), assets);
+        // 胸甲槽带身体与双臂，覆盖前臂弯折。
+        var mesh = new ArmorMesh(armorSet(false).chest(), assets);
         Pose[] pose = Rig.zeroPose();
         pose[BoneId.R_FOREARM.ordinal()] = new Pose(Vec3.ZERO, new Vec3(75, 10, 5));
         var frame = new PlayerMeshRenderer.Frame(assets, Rig.matrices(assets.skeleton(), pose));
@@ -142,24 +187,26 @@ class ArmorMeshTest {
         stack.translate(0.3, 0.7, -0.4);
         stack.scale(-1, -1, 1);
         var plain = new ArmorMesh.QuadCollector();
-        PlayerMeshRenderer.draw(frame, mesh.surfaces(), stack, plain, 0, 0, 1, 1, 1, 1, surface -> true);
+        PlayerMeshRenderer.draw(frame, mesh.surfaces(), stack.last(), plain, 0, 0, -1, surface -> true);
         // 真实图集包装器的单属性调用会返回底层缓冲；链式提交不能绕过它的 UV 映射。
         try (var image = new NativeImage(64, 32, false)) {
-            var contents = new SpriteContents(new ResourceLocation("kpa_test", "trim"), new FrameSize(64, 32),
-                    image, AnimationMetadataSection.EMPTY);
-            var sprite = new TextureAtlasSprite(new ResourceLocation("kpa_test", "atlas"), contents, 512, 256, 128, 64) { };
+            var contents = new SpriteContents(Identifier.fromNamespaceAndPath("kpa_test", "trim"),
+                    new FrameSize(64, 32), image);
+            var sprite = new TextureAtlasSprite(Identifier.fromNamespaceAndPath("kpa_test", "atlas"), contents,
+                    512, 256, 128, 64, 0) { };
             var trimmed = new ArmorMesh.QuadCollector();
-            PlayerMeshRenderer.draw(frame, mesh.surfaces(), stack, sprite.wrap(trimmed),
-                    0, 0, 1, 1, 1, 1, surface -> true);
+            PlayerMeshRenderer.draw(frame, mesh.surfaces(), stack.last(), sprite.wrap(trimmed),
+                    0, 0, -1, surface -> true);
             assertEquals(plain.corners.size(), trimmed.corners.size());
             for (int i = 0; i < plain.corners.size(); i++) {
                 var source = plain.corners.get(i);
                 var actual = trimmed.corners.get(i);
                 assertTrue(near(source.position(), actual.position()));
                 assertTrue(near(source.normal(), actual.normal()));
-                assertEquals(sprite.getU(source.u() * 16), actual.u(), 0.00001,
+                // 26.2 的图集偏移按 0..1 计，不再乘 16。
+                assertEquals(sprite.getU(source.u()), actual.u(), 0.00001,
                         "纹饰 U 必须经过图集映射");
-                assertEquals(sprite.getV(source.v() * 16), actual.v(), 0.00001,
+                assertEquals(sprite.getV(source.v()), actual.v(), 0.00001,
                         "纹饰 V 必须经过图集映射");
             }
         }
@@ -195,7 +242,9 @@ class ArmorMeshTest {
     void bentArmorKeepsClosedSeamsAndRespondsToIndependentJoints() throws Exception {
         for (boolean slim : new boolean[]{false, true}) {
             var assets = assets(slim);
-            var mesh = new ArmorMesh(armor(1), assets);
+            // 四个槽位合起来覆盖腰胸、双臂与双腿的全部关节。
+            List<SkinnedMesh.Surface> surfaces = armorSlots(slim).stream()
+                    .flatMap(armor -> new ArmorMesh(armor, assets).surfaces().stream()).toList();
             Pose[] pose = Rig.zeroPose();
             for (BoneId bone : new BoneId[]{BoneId.WAIST, BoneId.CHEST, BoneId.R_FOREARM, BoneId.L_FOREARM,
                     BoneId.R_HAND, BoneId.L_HAND, BoneId.R_SHIN, BoneId.L_SHIN, BoneId.R_FOOT, BoneId.L_FOOT,
@@ -203,7 +252,7 @@ class ArmorMeshTest {
                 pose[bone.ordinal()] = new Pose(Vec3.ZERO, new Vec3(bone.arm() ? 85 : 35, 10, 5));
             }
             Matrix4f[] matrices = Rig.matrices(assets.skeleton(), pose);
-            for (var surface : mesh.surfaces()) {
+            for (var surface : surfaces) {
                 Map<Edge, Integer> edges = new HashMap<>();
                 var vertices = surface.vertices();
                 for (int i = 0; i < vertices.size(); i += 4) {
@@ -223,7 +272,7 @@ class ArmorMeshTest {
                 Pose[] isolated = Rig.zeroPose();
                 isolated[joint.ordinal()] = new Pose(Vec3.ZERO, new Vec3(75, 0, 0));
                 var transforms = Rig.matrices(assets.skeleton(), isolated);
-                assertTrue(mesh.surfaces().stream().flatMap(s -> s.vertices().stream()).anyMatch(vertex -> {
+                assertTrue(surfaces.stream().flatMap(s -> s.vertices().stream()).anyMatch(vertex -> {
                     // 必须存在实际受该独立关节驱动的盔甲顶点，刚体跟随肩/髋无法通过。
                     Vector3f moved = SkinnedMesh.deform(vertex.position(), vertex.weights(), transforms, false, new Vector3f());
                     return vertex.weights()[joint.ordinal()] > 0.99 && moved.distance(vertex.position().x(),
@@ -236,15 +285,15 @@ class ArmorMeshTest {
     @Test
     void slotVisibilityAndResourceReloadDoNotLeakBetweenDraws() throws Exception {
         var assets = assets(false);
-        var armor = armor(1);
+        var armor = armorSet(false).feet();
         ArmorMesh mesh = ArmorMesh.cached(armor, assets);
         assertSame(mesh, ArmorMesh.cached(armor, assets));
         // 模拟穿靴事件与第一人称隐藏：缓存几何不能记住某次绘制的显隐。
-        armor.setAllVisible(false);
+        setAllVisible(armor, false);
         armor.rightLeg.visible = true;
         assertEquals(List.of(BoneId.R_THIGH), mesh.surfaces().stream()
                 .filter(surface -> ArmorMesh.visible(armor, surface)).map(SkinnedMesh.Surface::bone).toList());
-        armor.setAllVisible(true);
+        setAllVisible(armor, true);
         assertEquals(7, mesh.surfaces().stream().filter(surface -> ArmorMesh.visible(armor, surface)).count());
         assertNotSame(mesh, ArmorMesh.cached(armor, assets(true)));
         var reloaded = ArmorMesh.cached(armor, assets);

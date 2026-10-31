@@ -33,27 +33,19 @@ public final class ClientAnimationNetworking {
             REPLIES.clear();
         });
         ClientTickEvents.END_CLIENT_TICK.register(ClientAnimationNetworking::tick);
-        ClientPlayNetworking.registerGlobalReceiver(AnimationPackets.PLAY, (client, handler, buffer, sender) -> {
+        // 26.2 的收包回调已在客户端主线程、且属于当前连接，解码后直接处理，不再排队。
+        ClientPlayNetworking.registerGlobalReceiver(AnimationPackets.PLAY, (payload, context) -> {
             try {
-                PlayRequest request = AnimationPackets.read(buffer, PlayRequest.parser());
-                client.execute(() -> {
-                    // 排队期间可能断线并加入另一个世界，不把旧连接的包带过去。
-                    if (client.getConnection() == handler) {
-                        reply(play(client, request));
-                    }
-                });
+                PlayRequest request = AnimationPackets.read(payload, PlayRequest.parser());
+                reply(play(context.client(), request));
             } catch (InvalidProtocolBufferException | IllegalArgumentException exception) {
                 PlayerAnimationClient.LOG.error("动画播放包无法解码: {}", exception.getMessage());
             }
         });
-        ClientPlayNetworking.registerGlobalReceiver(AnimationPackets.STOP, (client, handler, buffer, sender) -> {
+        ClientPlayNetworking.registerGlobalReceiver(AnimationPackets.STOP, (payload, context) -> {
             try {
-                StopRequest request = AnimationPackets.read(buffer, StopRequest.parser());
-                client.execute(() -> {
-                    if (client.getConnection() == handler) {
-                        reply(stop(request));
-                    }
-                });
+                StopRequest request = AnimationPackets.read(payload, StopRequest.parser());
+                reply(stop(request));
             } catch (InvalidProtocolBufferException | IllegalArgumentException exception) {
                 PlayerAnimationClient.LOG.error("动画停止包无法解码: {}", exception.getMessage());
             }
@@ -123,7 +115,7 @@ public final class ClientAnimationNetworking {
                 return;
             }
             for (Result result : REPLIES) {
-                ClientPlayNetworking.send(AnimationPackets.RESULT, AnimationPackets.write(result));
+                ClientPlayNetworking.send(AnimationPackets.write(AnimationPackets.RESULT, result));
             }
             REPLIES.clear();
         } catch (IllegalStateException missingChannels) {

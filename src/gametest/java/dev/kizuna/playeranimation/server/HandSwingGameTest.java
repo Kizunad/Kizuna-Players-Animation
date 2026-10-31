@@ -1,8 +1,7 @@
 package dev.kizuna.playeranimation.server;
 
 import java.util.List;
-import net.fabricmc.fabric.api.gametest.v1.FabricGameTest;
-import net.minecraft.gametest.framework.GameTest;
+import net.fabricmc.fabric.api.gametest.v1.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
@@ -11,26 +10,26 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.GameType;
 
-public final class HandSwingGameTest implements FabricGameTest {
-    @GameTest(template = FabricGameTest.EMPTY_STRUCTURE)
+public final class HandSwingGameTest {
+    @GameTest
     public void offHandBlockSwingMustSelectOffHandPlacement(GameTestHelper context) throws ReflectiveOperationException {
         // 主手剑不能把副手方块的挥动误判成攻击。
         assertScheduledSwing(context, InteractionHand.OFF_HAND, Items.DIAMOND_SWORD, Items.STONE, "place_block_off");
     }
 
-    @GameTest(template = FabricGameTest.EMPTY_STRUCTURE)
+    @GameTest
     public void mainHandBlockSwingMustSelectMainHandPlacement(GameTestHelper context) throws ReflectiveOperationException {
         // 上次使用过副手物品，不应影响随后主手方块的挥动。
         assertScheduledSwing(context, InteractionHand.MAIN_HAND, Items.STONE, Items.DIAMOND_SWORD, "place_block");
     }
 
-    @GameTest(template = FabricGameTest.EMPTY_STRUCTURE)
+    @GameTest
     public void mainHandAttackMustSelectMainHandAttack(GameTestHelper context) throws ReflectiveOperationException {
         // 副手方块不能改变主手剑的动作分类。
         assertScheduledSwing(context, InteractionHand.MAIN_HAND, Items.DIAMOND_SWORD, Items.STONE, "attack_main");
     }
 
-    @GameTest(template = FabricGameTest.EMPTY_STRUCTURE)
+    @GameTest
     public void offHandAttackMustSelectOffHandAttack(GameTestHelper context) throws ReflectiveOperationException {
         // 主手方块不能改变副手剑的动作分类。
         assertScheduledSwing(context, InteractionHand.OFF_HAND, Items.STONE, Items.DIAMOND_SWORD, "attack_off");

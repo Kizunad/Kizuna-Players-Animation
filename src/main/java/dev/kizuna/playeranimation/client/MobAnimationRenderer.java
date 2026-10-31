@@ -1,61 +1,54 @@
 package dev.kizuna.playeranimation.client;
 
-import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.VertexConsumer;
 import dev.kizuna.playeranimation.animation.AnimationPlayer;
 import dev.kizuna.playeranimation.model.BoneId;
 import dev.kizuna.playeranimation.model.Pose;
 import dev.kizuna.playeranimation.model.Rig;
 import dev.kizuna.playeranimation.model.SkinnedMesh;
 import dev.kizuna.playeranimation.model.Vec3;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.EntityModel;
 import net.minecraft.client.model.HumanoidModel;
-import net.minecraft.client.model.IllagerModel;
-import net.minecraft.client.model.VillagerModel;
+import net.minecraft.client.model.Model;
 import net.minecraft.client.model.geom.ModelPart;
-import net.minecraft.client.renderer.ItemInHandRenderer;
-import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.model.monster.illager.IllagerModel;
+import net.minecraft.client.model.npc.VillagerModel;
+import net.minecraft.client.renderer.entity.HumanoidMobRenderer;
+import net.minecraft.client.renderer.entity.state.HumanoidRenderState;
+import net.minecraft.client.renderer.entity.state.LivingEntityRenderState;
+import net.minecraft.client.renderer.item.ItemModelResolver;
+import net.minecraft.client.renderer.item.ItemStackRenderState;
 import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import org.joml.Matrix4f;
-import org.joml.Matrix3f;
 
 /** 使用 PA 24 骨蒙皮网格替换已注册生物的本体绘制。 */
 public final class MobAnimationRenderer {
     private static final float RADIANS_PER_DEGREE = (float) (Math.PI / 180);
     private static final float CROSSED_SHOULDER_DEGREES = -43;
     private static final float CROSSED_ELBOW_DEGREES = -90;
-    private static final Map<Integer, Frame> FRAMES = new HashMap<>();
-
-    public record Frame(MobAnimationRegistry.Model model, Matrix4f[] matrices) { }
 
     private MobAnimationRenderer() { }
 
-    public static void begin(int entityId) {
-        FRAMES.remove(entityId);
-    }
-
-    public static void restore(int entityId) {
-        FRAMES.remove(entityId);
-    }
-
-    public static void frame(LivingEntity entity, EntityModel<?> vanilla, float tickDelta) {
+    public static EntityFrame extract(LivingEntity entity, LivingEntityRenderState state, EntityModel<?> vanilla,
+                                      float tickDelta) {
         // 自动层完全替代原版姿态；显式动作最后混合，结束后回到持续推进的移动层。
         int entityId = entity.getId();
         AnimationPlayer animation = PlayerAnimationClient.PLAYBACK.entity(entityId);
         AnimationPlayer automatic = PlayerAnimationClient.PLAYBACK.automaticEntity(entityId);
         MobAnimationRegistry.Model model = MobAnimationRegistry.model(entity);
         if (animation == null && automatic == null || model == null) {
-            return;
+            return null;
         }
         double now = PlayerPlayback.now(tickDelta);
         boolean crouching = entity.isCrouching();
         Pose[] base;
         if (automatic == null) {
+            // 底层取原版本帧姿态；提交阶段原版还会再套一次，不影响原版自己的绘制。
+            setupAnim(vanilla, state);
             base = basePose(vanilla);
         } else {
             base = automatic.sample(Rig.zeroPose(), now, false /* firstPerson */, crouching);
@@ -65,58 +58,64 @@ public final class MobAnimationRenderer {
             sampled = animation.sample(base, now, false /* firstPerson */, crouching);
         }
         Matrix4f[] matrices = Rig.matrices(model.body().skeleton(), sampled);
-        FRAMES.put(entityId, new Frame(model, matrices));
-    }
-
-    public static Frame frame(int entityId) {
-        return FRAMES.get(entityId);
-    }
-
-    public record ItemDraw(ItemStack item, ItemDisplayContext mode, HumanoidArm arm, PoseStack matrices,
-                           MultiBufferSource buffers, int light) { }
-
-    public static boolean item(LivingEntity entity, ItemDraw draw, ItemInHandRenderer renderer) {
-        Frame frame = FRAMES.get(entity.getId());
-        ItemStack item = draw.item();
-        if (frame == null || item.isEmpty()) {
-            return false;
+        PlayerMeshRenderer.Frame pose = new PlayerMeshRenderer.Frame(model.body(), matrices);
+        HumanoidRenderState armor = null;
+        if (!(vanilla instanceof HumanoidModel<?>)) {
+            armor = armorState(entity, state, tickDelta);
         }
-        // 物品在原版实体变换之内，再应用同帧手骨变换。
-        HumanoidArm arm = draw.arm();
+        EntityFrame frame = EntityFrame.mob(pose, new EntityFrame.MobParts(model.overlay(),
+                items(entity, pose), armor));
+        if (armor != null) {
+            armor.setData(EntityFrame.KEY, frame);
+        }
+        return frame;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static void setupAnim(EntityModel<?> vanilla, LivingEntityRenderState state) {
+        // 渲染器的模型总是接受自己创建的状态类型。
+        ((EntityModel<LivingEntityRenderState>) vanilla).setupAnim(state);
+    }
+
+    private static List<EntityFrame.HeldItem> items(LivingEntity entity, PlayerMeshRenderer.Frame pose) {
+        // 原版会按举斧、交叉臂等状态跳过持物，这里始终从同帧 PA 手骨绘制双手。
+        List<EntityFrame.HeldItem> items = new ArrayList<>();
+        HumanoidArm mainArm = entity.getMainArm();
+        addItem(items, entity, entity.getMainHandItem(), mainArm, pose);
+        addItem(items, entity, entity.getOffhandItem(), mainArm.getOpposite(), pose);
+        return List.copyOf(items);
+    }
+
+    private static void addItem(List<EntityFrame.HeldItem> items, LivingEntity entity, ItemStack stack,
+                                HumanoidArm arm, PlayerMeshRenderer.Frame pose) {
+        if (stack.isEmpty()) {
+            return;
+        }
+        // 左右手保持原版物品展示模式，具体位置由独立 item 骨提供。
+        ItemStackRenderState item = new ItemStackRenderState();
+        Minecraft.getInstance().getItemModelResolver().updateForLiving(item, stack,
+                PlayerMeshRenderer.displayContext(arm), entity);
         BoneId socket = arm == HumanoidArm.RIGHT ? BoneId.R_ITEM : BoneId.L_ITEM;
-        Matrix4f transform = Rig.itemTransform(frame.model().body().skeleton(), frame.matrices(), socket);
-        PoseStack matrices = draw.matrices();
-        matrices.pushPose();
-        matrices.last().pose().mul(transform);
-        matrices.last().normal().mul(new Matrix3f(transform));
-        renderer.renderItem(entity, item, draw.mode(), arm == HumanoidArm.LEFT,
-                matrices, draw.buffers(), draw.light());
-        matrices.popPose();
-        return true;
+        Matrix4f transform = Rig.itemTransform(pose.model().skeleton(), pose.matrices(), socket);
+        items.add(new EntityFrame.HeldItem(item, transform));
     }
 
-    public record Draw(PoseStack matrices, VertexConsumer vertices, int light, int overlay,
-                       float red, float green, float blue, float alpha) { }
-
-    public static void draw(Frame frame, Draw draw, EntityModel<?> vanilla) {
-        // 顶点提交与玩家共用实现，保留原版层选择和部件显隐。
-        draw(frame, frame.model().body().mesh(), draw, vanilla);
+    private static HumanoidRenderState armorState(LivingEntity entity, LivingEntityRenderState state,
+                                                  float tickDelta) {
+        // 非人形原版模型没有盔甲层，按人形状态补一份，材质与纹饰仍由原版盔甲层选择。
+        ItemModelResolver resolver = Minecraft.getInstance().getItemModelResolver();
+        HumanoidRenderState armor = new HumanoidRenderState();
+        HumanoidMobRenderer.extractHumanoidRenderState(entity, armor, tickDelta, resolver);
+        armor.entityType = state.entityType;
+        armor.isBaby = state.isBaby;
+        armor.lightCoords = state.lightCoords;
+        armor.outlineColor = state.outlineColor;
+        return armor;
     }
 
-    public static void overlay(Frame frame, Draw draw, EntityModel<?> vanilla) {
-        draw(frame, frame.model().overlay(), draw, vanilla);
-    }
-
-    private static void draw(Frame frame, SkinnedMesh mesh, Draw draw, EntityModel<?> vanilla) {
-        PlayerMeshRenderer.Frame shared = new PlayerMeshRenderer.Frame(frame.model().body(), frame.matrices());
-        PlayerMeshRenderer.draw(shared, mesh.surfaces(), draw.matrices(), draw.vertices(), draw.light(),
-                draw.overlay(), draw.red(), draw.green(), draw.blue(), draw.alpha(),
-                surface -> visible(vanilla, surface));
-    }
-
-    private static boolean visible(EntityModel<?> model, SkinnedMesh.Surface surface) {
+    public static boolean visible(Model<?> model, SkinnedMesh.Surface surface) {
         String path = surface.part();
-        if (model instanceof VillagerModel<?> villager) {
+        if (model instanceof VillagerModel villager) {
             return visible(villager.root(), path);
         }
         if (model instanceof IllagerModel<?> illager) {
@@ -134,6 +133,10 @@ public final class MobAnimationRenderer {
 
     private static boolean visible(HumanoidModel<?> biped, String path) {
         String[] children = path.split("/");
+        // 26.2 的 hat 挂在 head 下，头部隐藏时帽层一并隐藏。
+        if (children[0].equals("hat") && (!biped.head.visible || biped.head.skipDraw)) {
+            return false;
+        }
         ModelPart part = switch (children[0]) {
             case "head" -> biped.head;
             case "hat" -> biped.hat;
@@ -183,7 +186,7 @@ public final class MobAnimationRenderer {
             setRotation(pose, BoneId.L_THIGH, biped.leftLeg);
             return pose;
         }
-        if (model instanceof VillagerModel<?> villager) {
+        if (model instanceof VillagerModel villager) {
             ModelPartAccess parts = ModelPartAccess.villager(villager);
             setRotation(pose, BoneId.CHEST, parts.body());
             setRotation(pose, BoneId.HEAD, parts.head());
@@ -228,7 +231,7 @@ public final class MobAnimationRenderer {
                                    ModelPart leftArm,
                                    ModelPart rightLeg,
                                    ModelPart leftLeg) {
-        static ModelPartAccess villager(VillagerModel<?> model) {
+        static ModelPartAccess villager(VillagerModel model) {
             ModelPart root = model.root();
             return new ModelPartAccess(root.getChild("body"), root.getChild("head"), null, null,
                     root.getChild("right_leg"), root.getChild("left_leg"));

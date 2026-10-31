@@ -23,16 +23,17 @@ public final class ArmorMesh {
     private record Cached(Skeleton skeleton, ArmorMesh mesh) { }
     private record Binding(BoneId bone, Skeleton.Cube cube) { }
     record Corner(Vec3 position, Vec3 normal, float u, float v) { }
+    private static final String HAT_PATH = "/hat";
     private final List<SkinnedMesh.Surface> surfaces;
 
     public ArmorMesh(HumanoidModel<?> armor, PlayerAssets.Model player) {
         List<SkinnedMesh.Surface> result = new ArrayList<>();
-        // 原版盔甲内外层都是六部件几何；hat 与 head 保留各自 UV 和显隐。
+        // 原版盔甲每槽一套六部件几何；hat 挂在 head 下，与 head 保留各自 UV 和显隐。
         for (BoneId region : new BoneId[]{BoneId.HEAD, BoneId.PELVIS, BoneId.R_UPPER_ARM,
                 BoneId.L_UPPER_ARM, BoneId.R_THIGH, BoneId.L_THIGH}) {
             bakePart(part(armor, region, false), region, false, player, result);
         }
-        bakePart(armor.hat, BoneId.HEAD, true, player, result);
+        bakePart(armor.head, BoneId.HEAD, true, player, result);
         surfaces = List.copyOf(result);
     }
 
@@ -51,8 +52,15 @@ public final class ArmorMesh {
     public List<SkinnedMesh.Surface> surfaces() { return surfaces; }
 
     public static boolean visible(HumanoidModel<?> armor, SkinnedMesh.Surface surface) {
-        ModelPart part = part(armor, surface.bone(), surface.outer());
-        return part.visible && !part.skipDraw;
+        ModelPart part = part(armor, surface.bone(), false);
+        if (!part.visible || part.skipDraw) {
+            return false;
+        }
+        // 帽层是 head 的子节点，父节点可见时再看自己的开关。
+        if (surface.outer()) {
+            return armor.hat.visible && !armor.hat.skipDraw;
+        }
+        return true;
     }
 
     private static ModelPart part(HumanoidModel<?> armor, BoneId region, boolean hat) {
@@ -82,18 +90,22 @@ public final class ArmorMesh {
         }
         List<SkinnedMesh.Vertex> vertices = new ArrayList<>();
         part.visit(new PoseStack(), (ignored, path, index, cuboid) -> {
+            // head 的自身方块与 hat 子节点分开烘焙；其余部件只有自身方块（皮肤外层子节点在盔甲里为空）。
+            if (hat != HAT_PATH.equals(path)) {
+                return;
+            }
             // visit 的矩阵带当前动画；这里只读方块，绑定矩阵另取默认姿态。
             Matrix4f bind = bindTransform(part, path);
             if (region.arm()) {
-                // 细臂原版复制姿态后肩部降低半像素，盔甲本身仍保持四像素宽。
+                // 盔甲手臂对齐 PA 骨架的肩部枢轴（细臂肩部低半像素），盔甲本身仍保持四像素宽。
                 Vec3 shoulder = player.skeleton().bone(region).pivot();
                 PartPose original = part.getInitialPose();
-                bind.m30(bind.m30() + shoulder.x() - original.x);
-                bind.m31(bind.m31() + Rig.MODEL_ORIGIN_HEIGHT - shoulder.y() - original.y);
-                bind.m32(bind.m32() + shoulder.z() - original.z);
+                bind.m30(bind.m30() + shoulder.x() - original.x());
+                bind.m31(bind.m31() + Rig.MODEL_ORIGIN_HEIGHT - shoulder.y() - original.y());
+                bind.m32(bind.m32() + shoulder.z() - original.z());
             }
             QuadCollector collector = new QuadCollector();
-            cuboid.compile(new PoseStack().last(), collector, 0, 0, 1, 1, 1, 1);
+            cuboid.compile(new PoseStack().last(), collector, 0, 0, -1);
             bakeCuboid(cuboid, collector.corners, bind, bindings, player.mesh(), vertices);
         });
         result.add(new SkinnedMesh.Surface(region, hat, List.copyOf(vertices)));
@@ -115,7 +127,7 @@ public final class ArmorMesh {
 
     private static void appendBind(Matrix4f matrix, PartPose bind) {
         // 此处使用原版模型像素坐标（Y 向下），提交蒙皮前统一转换到骨架空间。
-        matrix.translate(bind.x, bind.y, bind.z).rotateZYX(bind.zRot, bind.yRot, bind.xRot);
+        matrix.translate(bind.x(), bind.y(), bind.z()).rotateZYX(bind.zRot(), bind.yRot(), bind.xRot());
     }
 
     private static void bakeCuboid(ModelPart.Cube cuboid, List<Corner> corners, Matrix4f bind,
@@ -193,38 +205,27 @@ public final class ArmorMesh {
 
     static final class QuadCollector implements VertexConsumer {
         final List<Corner> corners = new ArrayList<>();
-        private Vec3 position;
-        private Vec3 normal;
-        private float u;
-        private float v;
 
         @Override
-        public VertexConsumer vertex(double x, double y, double z) {
-            // 原版提交方块单位，烘焙与玩家骨架统一使用像素单位。
-            position = new Vec3((float) x * Rig.PIXELS_PER_BLOCK, (float) y * Rig.PIXELS_PER_BLOCK,
-                    (float) z * Rig.PIXELS_PER_BLOCK);
-            return this;
+        public void addVertex(float x, float y, float z, int color, float u, float v, int overlay, int light,
+                              float normalX, float normalY, float normalZ) {
+            // 原版提交方块单位，烘焙与玩家骨架统一使用像素单位；材质和光照由每次原版绘制传入。
+            corners.add(new Corner(new Vec3(x * Rig.PIXELS_PER_BLOCK, y * Rig.PIXELS_PER_BLOCK,
+                    z * Rig.PIXELS_PER_BLOCK), new Vec3(normalX, normalY, normalZ), u, v));
         }
 
-        @Override
-        public VertexConsumer uv(float u, float v) {
-            this.u = u;
-            this.v = v;
-            return this;
-        }
+        // 方块只走完整顶点入口；单属性入口不会被调用。
+        @Override public VertexConsumer addVertex(float x, float y, float z) { throw unsupported(); }
+        @Override public VertexConsumer setColor(int r, int g, int b, int a) { throw unsupported(); }
+        @Override public VertexConsumer setColor(int color) { throw unsupported(); }
+        @Override public VertexConsumer setUv(float u, float v) { throw unsupported(); }
+        @Override public VertexConsumer setUv1(int u, int v) { throw unsupported(); }
+        @Override public VertexConsumer setUv2(int u, int v) { throw unsupported(); }
+        @Override public VertexConsumer setNormal(float x, float y, float z) { throw unsupported(); }
+        @Override public VertexConsumer setLineWidth(float width) { throw unsupported(); }
 
-        @Override
-        public VertexConsumer normal(float x, float y, float z) {
-            normal = new Vec3(x, y, z);
-            return this;
+        private static UnsupportedOperationException unsupported() {
+            return new UnsupportedOperationException("盔甲烘焙只接受完整顶点");
         }
-
-        @Override public void endVertex() { corners.add(new Corner(position, normal, u, v)); }
-        // 材质和光照由每次原版绘制传入，缓存只记录几何与 UV。
-        @Override public VertexConsumer color(int r, int g, int b, int a) { return this; }
-        @Override public VertexConsumer overlayCoords(int u, int v) { return this; }
-        @Override public VertexConsumer uv2(int u, int v) { return this; }
-        @Override public void defaultColor(int r, int g, int b, int a) { }
-        @Override public void unsetDefaultColor() { }
     }
 }

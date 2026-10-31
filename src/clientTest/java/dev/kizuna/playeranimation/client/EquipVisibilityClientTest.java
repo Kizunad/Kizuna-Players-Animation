@@ -62,7 +62,7 @@ final class EquipVisibilityClientTest {
     void restorePlayer() {
         // 测试之间不继承播放、装备、惯用手和时钟状态。
         playback.clear();
-        client.level.setGameTime(savedTime);
+        client.level.setTimeFromServer(savedTime);
         client.player.setItemSlot(EquipmentSlot.CHEST, savedChest);
         client.player.setItemSlot(EquipmentSlot.FEET, savedBoots);
         client.player.setMainArm(savedMainArm);
@@ -71,7 +71,7 @@ final class EquipVisibilityClientTest {
     @Test
     void lateJoinAfterEquipEventMustShowChestplate() {
         // 当前进度为 1 秒，已经越过真实资源中 0.8 秒的 equip 事件。
-        client.level.setGameTime(START_TICK + AFTER_FIRST_EQUIP_TICKS);
+        client.level.setTimeFromServer(START_TICK + AFTER_FIRST_EQUIP_TICKS);
         playback.play(playerId, CHESTPLATE, START_TICK, "late-join");
         assertFalse(playback.shouldHideArmor(playerId, EquipmentSlot.CHEST));
         assertTrue(playback.equipItem(playerId).isEmpty());
@@ -83,12 +83,12 @@ final class EquipVisibilityClientTest {
     @Test
     void repeatedSynchronizationMustKeepChestplateVisible() {
         // 事件前入场，正常显示胸甲后再次接收相同起点与请求 ID。
-        client.level.setGameTime(START_TICK + 1);
+        client.level.setTimeFromServer(START_TICK + 1);
         playback.play(playerId, CHESTPLATE, START_TICK, "same-request");
         playback.tick(client);
         assertTrue(playback.shouldHideArmor(playerId, EquipmentSlot.CHEST));
 
-        client.level.setGameTime(START_TICK + AFTER_FIRST_EQUIP_TICKS);
+        client.level.setTimeFromServer(START_TICK + AFTER_FIRST_EQUIP_TICKS);
         playback.tick(client);
         assertFalse(playback.shouldHideArmor(playerId, EquipmentSlot.CHEST));
 
@@ -103,14 +103,14 @@ final class EquipVisibilityClientTest {
     @Test
     void newPlaybackMustHideChestplateAgain() {
         // 新请求与本地重播都应重新演出，不能被重复同步的去重逻辑吞掉。
-        client.level.setGameTime(START_TICK + AFTER_FIRST_EQUIP_TICKS);
+        client.level.setTimeFromServer(START_TICK + AFTER_FIRST_EQUIP_TICKS);
         playback.play(playerId, CHESTPLATE, START_TICK, "first-request");
         playback.tick(client);
         playback.play(playerId, CHESTPLATE, client.level.getGameTime(), "new-request");
         playback.tick(client);
         assertTrue(playback.shouldHideArmor(playerId, EquipmentSlot.CHEST));
 
-        client.level.setGameTime(START_TICK + AFTER_SECOND_EQUIP_TICKS);
+        client.level.setTimeFromServer(START_TICK + AFTER_SECOND_EQUIP_TICKS);
         playback.tick(client);
         assertFalse(playback.shouldHideArmor(playerId, EquipmentSlot.CHEST));
         playback.play(playerId, CHESTPLATE);
@@ -121,7 +121,7 @@ final class EquipVisibilityClientTest {
     @Test
     void completedLatePlaybackMustKeepArmorVisible() {
         // 整段动画与淡出都已结束，处理补发不能产生一帧隐藏的胸甲。
-        client.level.setGameTime(START_TICK + AFTER_ANIMATION_TICKS);
+        client.level.setTimeFromServer(START_TICK + AFTER_ANIMATION_TICKS);
         playback.play(playerId, CHESTPLATE, START_TICK, "completed");
         assertFalse(playback.shouldHideArmor(playerId, EquipmentSlot.CHEST));
         playback.tick(client);
@@ -135,7 +135,7 @@ final class EquipVisibilityClientTest {
     void lateJoinBetweenBootEventsMustRestoreFirstBoot(String animation, HumanoidArm mainArm, HumanoidArm firstBoot) {
         // 两次 equip 之间只有第一只靴子可见，手中仍持有第二只。
         client.player.setMainArm(mainArm);
-        client.level.setGameTime(START_TICK + AFTER_FIRST_EQUIP_TICKS);
+        client.level.setTimeFromServer(START_TICK + AFTER_FIRST_EQUIP_TICKS);
         playback.play(playerId, animation, START_TICK, "late-first-boot");
         assertBoots(Set.of(firstBoot));
         assertFalse(playback.equipItem(playerId).isEmpty());
@@ -143,7 +143,7 @@ final class EquipVisibilityClientTest {
         assertBoots(Set.of(firstBoot));
         assertTrue(EVENTS.isEmpty());
 
-        client.level.setGameTime(START_TICK + AFTER_SECOND_EQUIP_TICKS);
+        client.level.setTimeFromServer(START_TICK + AFTER_SECOND_EQUIP_TICKS);
         playback.tick(client);
         assertBoots(Set.of(HumanoidArm.RIGHT, HumanoidArm.LEFT));
         assertTrue(playback.equipItem(playerId).isEmpty());
@@ -155,7 +155,7 @@ final class EquipVisibilityClientTest {
     void lateJoinAfterBothBootEventsMustShowBothBoots(String animation, HumanoidArm mainArm) {
         // 已越过两次事件时，左右靴子及手中物品应一次恢复到当前进度。
         client.player.setMainArm(mainArm);
-        client.level.setGameTime(START_TICK + AFTER_SECOND_EQUIP_TICKS);
+        client.level.setTimeFromServer(START_TICK + AFTER_SECOND_EQUIP_TICKS);
         playback.play(playerId, animation, START_TICK, "late-both-boots");
         assertBoots(Set.of(HumanoidArm.RIGHT, HumanoidArm.LEFT));
         assertTrue(playback.equipItem(playerId).isEmpty());
@@ -170,19 +170,19 @@ final class EquipVisibilityClientTest {
     void repeatedSynchronizationMustKeepBootSidesAndFinishSecondBoot(String animation, HumanoidArm mainArm, HumanoidArm firstBoot) {
         // 同一请求在两次事件前后补发，都不能重置已经恢复的一侧或重复计数。
         client.player.setMainArm(mainArm);
-        client.level.setGameTime(START_TICK + 1);
+        client.level.setTimeFromServer(START_TICK + 1);
         playback.play(playerId, animation, START_TICK, "same-boots");
         playback.tick(client);
         assertBoots(Set.of());
 
-        client.level.setGameTime(START_TICK + AFTER_FIRST_EQUIP_TICKS);
+        client.level.setTimeFromServer(START_TICK + AFTER_FIRST_EQUIP_TICKS);
         playback.tick(client);
         assertBoots(Set.of(firstBoot));
         playback.play(playerId, animation, START_TICK, "same-boots");
         playback.tick(client);
         assertBoots(Set.of(firstBoot));
 
-        client.level.setGameTime(START_TICK + AFTER_SECOND_EQUIP_TICKS);
+        client.level.setTimeFromServer(START_TICK + AFTER_SECOND_EQUIP_TICKS);
         playback.tick(client);
         playback.play(playerId, animation, START_TICK, "same-boots");
         playback.tick(client);

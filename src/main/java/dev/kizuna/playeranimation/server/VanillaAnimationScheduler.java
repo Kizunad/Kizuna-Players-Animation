@@ -10,14 +10,14 @@ import java.util.Set;
 import java.util.UUID;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.tags.ItemTags;
 import net.minecraft.world.InteractionHand;
-import net.minecraft.world.item.ArmorItem;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.BowItem;
 import net.minecraft.world.item.CrossbowItem;
-import net.minecraft.world.item.DiggerItem;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.UseAnim;
+import net.minecraft.world.item.ItemUseAnimation;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraft.world.phys.Vec3;
 
@@ -431,7 +431,7 @@ final class VanillaAnimationScheduler {
             attacks.remove(id);
             ItemStack stack = player.getUseItem();
             InteractionHand hand = player.getUsedItemHand();
-            UseAnim useAction = stack.getItem().getUseAnimation(stack);
+            ItemUseAnimation useAction = stack.getUseAnimation();
             String action = armPoseAction(stack, hand, useAction);
             if (action != null) {
                 float progress = armPoseProgress(player, stack, action);
@@ -465,7 +465,8 @@ final class VanillaAnimationScheduler {
         }
         if (base.equals("trident_charge")) {
             // 激流在水中或雨中发动时原版旋转整身，不播投掷跟随；不足 10 tick 原版不投掷。
-            boolean riptide = EnchantmentHelper.getRiptide(stack) > 0 && player.isInWaterOrRain();
+            boolean riptide = EnchantmentHelper.getTridentSpinAttackStrength(stack, player) > 0
+                    && player.isInWaterOrRain();
             boolean throwsTrident = used >= TRIDENT_MIN_THROW_TICKS && !riptide;
             releases.computeIfAbsent(player.getUUID(), ignored -> new ReleaseTail())
                     .using(action, throwsTrident, TRIDENT_HOLD_END_SECONDS, TRIDENT_CLIP_SECONDS, TRIDENT_CLIP_SECONDS);
@@ -500,7 +501,7 @@ final class VanillaAnimationScheduler {
         // 挥动手独立于持续使用物品的手，由原版 swing 更新。
         InteractionHand hand = player.swingingArm;
         ItemStack swung = player.getItemInHand(hand);
-        boolean mining = swung.getItem() instanceof DiggerItem;
+        boolean mining = isDigger(swung);
         boolean placing = swung.getItem() instanceof BlockItem;
         String action = handAction(placing ? "place_block" : mining ? "mine_main" : "attack_main",
                 placing ? "place_block_off" : mining ? "mine_off" : "attack_off", hand);
@@ -568,7 +569,7 @@ final class VanillaAnimationScheduler {
     }
 
     private static int usedTicks(ServerPlayer player, ItemStack stack) {
-        return Math.max(0, stack.getUseDuration() - player.getUseItemRemainingTicks());
+        return Math.max(0, stack.getUseDuration(player) - player.getUseItemRemainingTicks());
     }
 
     static float clipSecondsProgress(float seconds, float duration) {
@@ -591,7 +592,7 @@ final class VanillaAnimationScheduler {
             case "spyglass" -> loopedSecondsProgress(used, 2.35f, 0.35f, 2.35f);
             case "toot_horn" -> clipSecondsProgress(Math.min(used / 20f, 2.60f), 2.60f);
             case "crossbow_charge" -> {
-                int pullTime = Math.max(1, CrossbowItem.getChargeDuration(stack));
+                int pullTime = Math.max(1, CrossbowItem.getChargeDuration(stack, player));
                 yield clipSecondsProgress(1.25f * clampProgress(used / (float) pullTime), 1.25f);
             }
             case "brush" -> loopedSecondsProgress(used * TOOL_PLAYBACK_SPEED, 0.925f, 0.30f, 0.80f);
@@ -603,11 +604,11 @@ final class VanillaAnimationScheduler {
             case "block_shield" -> loopedSecondsProgress(used, SHIELD_CLIP_SECONDS, SHIELD_LOOP_START_SECONDS,
                     SHIELD_CLIP_SECONDS);
             case "drink" -> clipSecondsProgress(Math.min(used / 20f, DRINK_CLIP_SECONDS), DRINK_CLIP_SECONDS);
-            default -> useProgress(player.getUseItemRemainingTicks(), stack.getUseDuration());
+            default -> useProgress(player.getUseItemRemainingTicks(), stack.getUseDuration(player));
         };
     }
 
-    private static String armPoseAction(ItemStack stack, InteractionHand hand, UseAnim useAction) {
+    private static String armPoseAction(ItemStack stack, InteractionHand hand, ItemUseAnimation useAction) {
         if (stack.getItem() instanceof CrossbowItem) {
             return handAction("crossbow_charge", "crossbow_charge_off", hand);
         }
@@ -619,7 +620,7 @@ final class VanillaAnimationScheduler {
             case DRINK -> handAction("drink", "drink_off", hand);
             case BLOCK -> handAction("block_shield", "block_shield_off", hand);
             case BOW -> handAction("bow_draw", "bow_draw_off", hand);
-            case SPEAR -> handAction("trident_charge", "trident_charge_off", hand);
+            case TRIDENT -> handAction("trident_charge", "trident_charge_off", hand);
             default -> handAction("use_item", "use_item_off", hand);
         };
     }
@@ -638,7 +639,7 @@ final class VanillaAnimationScheduler {
             return;
         }
         for (int slot = 0; slot < 4; slot++) {
-            if (armorTransition(previous.equipped(slot), !player.getInventory().getArmor(slot).isEmpty()) != Transition.START) {
+            if (armorTransition(previous.equipped(slot), !armor(player, slot).isEmpty()) != Transition.START) {
                 continue;
             }
             String part = switch (slot) {
@@ -654,15 +655,39 @@ final class VanillaAnimationScheduler {
         }
     }
 
+    private static ItemStack armor(ServerPlayer player, int slot) {
+        // 槽序沿用旧背包盔甲数组：0 靴、1 护腿、2 胸甲、3 头盔（26.2 去掉了按类型与序号取槽的方法）。
+        EquipmentSlot equipment = switch (slot) {
+            case 0 -> EquipmentSlot.FEET;
+            case 1 -> EquipmentSlot.LEGS;
+            case 2 -> EquipmentSlot.CHEST;
+            case 3 -> EquipmentSlot.HEAD;
+            default -> throw new IllegalArgumentException("未知盔甲槽: " + slot);
+        };
+        return player.getItemBySlot(equipment);
+    }
+
+    private static boolean isArmor(ItemStack stack) {
+        // 26.2 去掉了盔甲物品类，四个部位标签正是旧版盔甲物品的集合，鞘翅和南瓜头不算。
+        return stack.is(ItemTags.HEAD_ARMOR) || stack.is(ItemTags.CHEST_ARMOR) || stack.is(ItemTags.LEG_ARMOR)
+                || stack.is(ItemTags.FOOT_ARMOR);
+    }
+
+    private static boolean isDigger(ItemStack stack) {
+        // 26.2 去掉了挖掘工具类，镐、斧、锹、锄四个标签对应旧版挖掘工具，剑和剪刀不算。
+        return stack.is(ItemTags.PICKAXES) || stack.is(ItemTags.AXES) || stack.is(ItemTags.SHOVELS)
+                || stack.is(ItemTags.HOES);
+    }
+
     private record ArmorSnapshot(boolean[] slots, boolean mainHandArmor, boolean offHandArmor) {
         static ArmorSnapshot capture(ServerPlayer player) {
             boolean[] slots = new boolean[4];
             for (int slot = 0; slot < slots.length; slot++) {
-                slots[slot] = !player.getInventory().getArmor(slot).isEmpty();
+                slots[slot] = !armor(player, slot).isEmpty();
             }
             ItemStack main = player.getMainHandItem();
             ItemStack off = player.getOffhandItem();
-            return new ArmorSnapshot(slots, main.getItem() instanceof ArmorItem, off.getItem() instanceof ArmorItem);
+            return new ArmorSnapshot(slots, isArmor(main), isArmor(off));
         }
 
         boolean equipped(int slot) {

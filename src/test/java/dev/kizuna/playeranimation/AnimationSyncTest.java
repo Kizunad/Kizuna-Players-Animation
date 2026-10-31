@@ -74,25 +74,25 @@ class AnimationSyncTest {
     @Test
     void fabricPayloadContainsOnlyProtobufAndRejectsOversizeOrTruncation() throws Exception {
         PlayRequest request = play("meditate", 400);
-        FriendlyByteBuf buffer = AnimationPackets.write(request);
+        AnimationPackets.Payload payload = AnimationPackets.write(AnimationPackets.PLAY, request);
+        // 线上只有 Protobuf 字节，不带长度前缀；解码读回同一请求。
+        FriendlyByteBuf buffer = new FriendlyByteBuf(Unpooled.buffer());
         try {
+            AnimationPackets.codec(AnimationPackets.PLAY).encode(buffer, payload);
             byte[] bytes = new byte[buffer.readableBytes()];
             buffer.getBytes(0, bytes);
             assertArrayEquals(request.toByteArray(), bytes);
-            assertEquals(request, AnimationPackets.read(buffer, PlayRequest.parser()));
+            AnimationPackets.Payload decoded = AnimationPackets.codec(AnimationPackets.PLAY).decode(buffer);
+            assertEquals(request, AnimationPackets.read(decoded, PlayRequest.parser()));
         } finally {
             buffer.release();
         }
-        FriendlyByteBuf oversized = new FriendlyByteBuf(Unpooled.wrappedBuffer(new byte[AnimationPackets.MAX_BYTES + 1]));
-        FriendlyByteBuf truncated = new FriendlyByteBuf(Unpooled.wrappedBuffer(new byte[]{10, 5, 1}));
-        try {
-            assertThrows(IllegalArgumentException.class, () -> AnimationPackets.read(oversized, PlayRequest.parser()));
-            assertThrows(InvalidProtocolBufferException.class, () -> AnimationPackets.read(truncated, PlayRequest.parser()));
-        } finally {
-            oversized.release();
-            truncated.release();
-        }
-        assertThrows(IllegalArgumentException.class, () -> AnimationPackets.write(request.toBuilder()
-                .setAnimationId("a".repeat(AnimationPackets.MAX_BYTES)).build()));
+        var oversized = new AnimationPackets.Payload(AnimationPackets.PLAY, new byte[AnimationPackets.MAX_BYTES + 1]);
+        var truncated = new AnimationPackets.Payload(AnimationPackets.PLAY, new byte[]{10, 5, 1});
+        assertThrows(IllegalArgumentException.class, () -> AnimationPackets.read(oversized, PlayRequest.parser()));
+        assertThrows(InvalidProtocolBufferException.class,
+                () -> AnimationPackets.read(truncated, PlayRequest.parser()));
+        assertThrows(IllegalArgumentException.class, () -> AnimationPackets.write(AnimationPackets.PLAY,
+                request.toBuilder().setAnimationId("a".repeat(AnimationPackets.MAX_BYTES)).build()));
     }
 }

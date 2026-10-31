@@ -26,7 +26,6 @@ public final class PlayerPlayback {
     private final Map<UUID, AnimationPlayer> players = new HashMap<>();
     private final Map<Integer, AnimationPlayer> entities = new HashMap<>();
     private final Map<Integer, AutomaticAnimationPlayer> automaticEntities = new HashMap<>();
-    private final Map<UUID, PlayerMeshRenderer.Frame> frames = new HashMap<>();
     private final Map<EquipKey, EquipVisual> equipVisuals = new HashMap<>();
     private ClientLevel world;
 
@@ -208,8 +207,6 @@ public final class PlayerPlayback {
 
     public void tick(Minecraft client) {
         prepareWorld(client);
-        // 渲染帧只在同一次本体与物品绘制之间共享，不持有离开视野的实体。
-        frames.clear();
         if (client.level == null) {
             clear();
             return;
@@ -221,7 +218,6 @@ public final class PlayerPlayback {
             UUID id = entry.getKey();
             if (client.level.getPlayerByUUID(id) == null) {
                 players.remove(id);
-                frames.remove(id);
                 equipVisuals.keySet().removeIf(key -> key.player().equals(id));
                 continue;
             }
@@ -272,18 +268,16 @@ public final class PlayerPlayback {
     }
 
     public void clear() {
-        // 断线与资源重载必须同时清理动画和用于挂载手持物的帧数据。
+        // 断线与资源重载必须同时清理动画与穿戴显隐。
         players.clear();
         entities.clear();
         automaticEntities.clear();
-        frames.clear();
         equipVisuals.clear();
     }
 
     public void remove(UUID player) {
         // 实体卸载立即清理，防止同一 tick 重入视野时继承旧实例。
         players.remove(player);
-        frames.remove(player);
         equipVisuals.keySet().removeIf(key -> key.player().equals(player));
     }
 
@@ -300,10 +294,6 @@ public final class PlayerPlayback {
             world = client.level;
         }
     }
-
-    public void beginRender(UUID id) { frames.remove(id); }
-    public void frame(UUID id, PlayerMeshRenderer.Frame frame) { frames.put(id, frame); }
-    public PlayerMeshRenderer.Frame frame(UUID id) { return frames.get(id); }
 
     private static LivingEntity living(Entity entity) {
         return entity instanceof LivingEntity value ? value : null;

@@ -29,7 +29,7 @@ import java.util.Set;
 import java.util.UUID;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
-import net.fabricmc.fabric.api.entity.event.v1.ServerEntityWorldChangeEvents;
+import net.fabricmc.fabric.api.entity.event.v1.ServerEntityLevelChangeEvents;
 import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
 import net.fabricmc.fabric.api.event.Event;
 import net.fabricmc.fabric.api.event.EventFactory;
@@ -37,7 +37,7 @@ import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.networking.v1.EntityTrackingEvents;
 import net.fabricmc.fabric.api.networking.v1.PlayerLookup;
-import net.fabricmc.fabric.api.networking.v1.S2CPlayChannelEvents;
+import net.fabricmc.fabric.api.networking.v1.ClientboundPlayChannelEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.fabricmc.loader.api.FabricLoader;
@@ -46,7 +46,7 @@ import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import org.slf4j.Logger;
@@ -83,19 +83,20 @@ public final class ServerPlayerAnimations implements ModInitializer {
     @Override
     public void onInitialize() {
         // 通用入口不引用任何 net.minecraft.client 类型，独立服务端也能加载。
-        ServerPlayNetworking.registerGlobalReceiver(AnimationPackets.RESULT, (server, viewer, handler, buffer, sender) -> {
+        AnimationPackets.register();
+        // 26.2 的收包回调已在服务端主线程，解码后直接核对待回执。
+        ServerPlayNetworking.registerGlobalReceiver(AnimationPackets.RESULT, (payload, context) -> {
+            ServerPlayer viewer = context.player();
             try {
-                Result result = AnimationPackets.read(buffer, Result.parser());
-                server.execute(() -> {
-                    if (PENDING.remove(new Receipt(viewer.getUUID(), result.getRequestId())) == null) {
-                        return;
-                    }
-                    if (result.getCode() != Result.Code.OK) {
-                        LOG.warn("客户端 {} 动画请求 {} 返回 {}: {}", viewer.getUUID(), result.getRequestId(),
-                                result.getCode(), result.getDetail());
-                    }
-                    RESULT.invoker().onResult(viewer, result);
-                });
+                Result result = AnimationPackets.read(payload, Result.parser());
+                if (PENDING.remove(new Receipt(viewer.getUUID(), result.getRequestId())) == null) {
+                    return;
+                }
+                if (result.getCode() != Result.Code.OK) {
+                    LOG.warn("客户端 {} 动画请求 {} 返回 {}: {}", viewer.getUUID(), result.getRequestId(),
+                            result.getCode(), result.getDetail());
+                }
+                RESULT.invoker().onResult(viewer, result);
             } catch (InvalidProtocolBufferException | IllegalArgumentException exception) {
                 LOG.warn("客户端 {} 的动画回执无法解码: {}", viewer.getUUID(), exception.getMessage());
             }
@@ -108,8 +109,8 @@ public final class ServerPlayerAnimations implements ModInitializer {
         });
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) ->
                 CONNECTIONS.putIfAbsent(handler.player.getUUID(), new RequiredAnimationChannels(server.getTickCount())));
-        S2CPlayChannelEvents.REGISTER.register((handler, sender, server, channels) -> {
-            if (channels.contains(AnimationPackets.PLAY) || channels.contains(AnimationPackets.STOP)) {
+        ClientboundPlayChannelEvents.REGISTER.register((handler, sender, server, channels) -> {
+            if (channels.contains(AnimationPackets.PLAY.id()) || channels.contains(AnimationPackets.STOP.id())) {
                 server.execute(() -> {
                     for (UUID target : STATE.players()) {
                         SYNC.add(new TrackingPair(target, handler.player.getUUID()));
@@ -128,7 +129,7 @@ public final class ServerPlayerAnimations implements ModInitializer {
             PENDING.keySet().removeIf(receipt -> receipt.viewer.equals(id));
             CONNECTIONS.remove(id);
         }));
-        ServerEntityWorldChangeEvents.AFTER_PLAYER_CHANGE_WORLD.register((player, origin, destination) -> {
+        ServerEntityLevelChangeEvents.AFTER_PLAYER_CHANGE_LEVEL.register((player, origin, destination) -> {
             VANILLA.clear(player.getUUID());
             stopAll(player);
         });
@@ -259,7 +260,8 @@ public final class ServerPlayerAnimations implements ModInitializer {
         return requestId;
     }
 
-    private static void broadcast(ServerPlayer target, ResourceLocation channel, MessageLite message, String requestId) {
+    private static void broadcast(ServerPlayer target, CustomPacketPayload.Type<AnimationPackets.Payload> channel,
+                                  MessageLite message, String requestId) {
         Set<ServerPlayer> viewers = new HashSet<>(PlayerLookup.tracking(target));
         viewers.add(target);
         // tracking 本身限制维度和可见范围；集合避免本人被重复发送。
@@ -276,10 +278,12 @@ public final class ServerPlayerAnimations implements ModInitializer {
         }
     }
 
-    private static void send(ServerPlayer viewer, ResourceLocation channel, MessageLite message, String requestId) {
+    private static void send(ServerPlayer viewer, CustomPacketPayload.Type<AnimationPackets.Payload> channel,
+                             MessageLite message, String requestId) {
         // 调用点已完成整组通道校验，不在实际发送处吞掉缺接线错误。
-        PENDING.put(new Receipt(viewer.getUUID(), requestId), viewer.getServer().getTickCount() + RECEIPT_TIMEOUT_TICKS);
-        ServerPlayNetworking.send(viewer, channel, AnimationPackets.write(message));
+        int deadline = viewer.level().getServer().getTickCount() + RECEIPT_TIMEOUT_TICKS;
+        PENDING.put(new Receipt(viewer.getUUID(), requestId), deadline);
+        ServerPlayNetworking.send(viewer, AnimationPackets.write(channel, message));
     }
 
     private static void tick(MinecraftServer server) {
@@ -354,15 +358,15 @@ public final class ServerPlayerAnimations implements ModInitializer {
     private static boolean channelsReady(ServerPlayer viewer) {
         // 网络回调与 JOIN 的先后不固定，第一次使用同一连接时建立一次握手期限。
         RequiredAnimationChannels channels = CONNECTIONS.computeIfAbsent(viewer.getUUID(),
-                ignored -> new RequiredAnimationChannels(viewer.getServer().getTickCount()));
+                ignored -> new RequiredAnimationChannels(viewer.level().getServer().getTickCount()));
         boolean complete = ServerPlayNetworking.canSend(viewer, AnimationPackets.PLAY)
                 && ServerPlayNetworking.canSend(viewer, AnimationPackets.STOP);
-        return channels.ready(viewer.getServer().getTickCount(), complete);
+        return channels.ready(viewer.level().getServer().getTickCount(), complete);
     }
 
     private static void requireServerThread(ServerPlayer player) {
         // 公共状态仅由服务端主线程持有，调用方异步任务应使用 server.execute。
-        if (!player.getServer().isSameThread()) {
+        if (!player.level().getServer().isSameThread()) {
             throw new IllegalStateException("动画同步必须在服务端主线程调用");
         }
     }
@@ -381,7 +385,8 @@ public final class ServerPlayerAnimations implements ModInitializer {
             List<String> animations = animationIds();
             SuggestionProvider<CommandSourceStack> suggestAnimations =
                     (context, builder) -> SharedSuggestionProvider.suggest(animations, builder);
-            dispatcher.register(Commands.literal("kpa_server").requires(source -> source.hasPermission(2))
+            dispatcher.register(Commands.literal("kpa_server")
+                    .requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
                     .then(Commands.literal("play")
                             .then(Commands.argument("player", EntityArgument.player())
                                     .then(Commands.argument("animation", StringArgumentType.word())

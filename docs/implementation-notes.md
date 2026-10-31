@@ -30,8 +30,8 @@
 - 潜行操作的腿部由原版底层或 `crouch_work` 承担，工具动作动态使用 `upper` 遮罩，底层晚于工具启动也有效。静止判断取服务端相邻 tick 的实际水平位置差；开始移动时停止锁脚支撑。支撑关键帧在制作时求解，运行时沿用已有分层，不引入 IK 系统或并行骨架定义。
 - 望远镜托臂接触通过双肩共轴旋转保持；先把 Minecraft 俯仰取反到模型空间，再左乘共同旋转，避免分别增加局部欧拉 X 导致双臂分离。号角和持弩也沿用同一坐标符号转换。
 - 穿戴视觉状态按装备槽边沿建立，`equip` 时间线事件切换盔甲层；头盔为 `0.00–0.28 s` 单手、胸甲为 `0.00–0.30 s` 单手、护腿为 `0.00–0.34 s` 单手，靴子为 `0.00–0.30 s` 单手，之后直到事件均取两挂点中点。护腿事件在 `2.02 s`；靴子由第一个/第二个 `equip` 事件分别恢复右/左靴（副手动作顺序交换），不使用固定第二事件时间。`ArmorFeatureRendererMixin` 对头、胸、腿和左右靴子部分分别隐藏，事件后交回原版层。
-- `FirstPersonBody` 在 Fabric `AFTER_ENTITIES` 中调用同一个玩家渲染器，复用完整姿态和持物帧；渲染上下文用 `try/finally` 收回。只过滤本地这一趟的头部和近相机附加层，不修改实体位置或相机。关闭全身通道仍保留既有 `fpv` 入口；地图和望远镜使用原版专用手部显示。
-- 玩家持物拦截位于 `PlayerItemInHandLayer.renderArmWithItem`，在原版望远镜专属分支之前统一处理。仅拦截父类 `ItemInHandLayer` 会漏过正在使用的望远镜，导致全身第一人称额外绘制头部镜筒，第三人称也无法使用同帧手掌挂点。主副手和左右惯用手复用同一处理，不另加望远镜绘制路径。
+- `FirstPersonBody` 在 Fabric `LevelRenderEvents.COLLECT_SUBMITS` 中为本地玩家提取渲染状态，再交给同一个玩家渲染器提交，复用完整姿态和持物帧；渲染上下文用 `try/finally` 收回。只过滤本地这一趟的头部和近相机附加层，不修改实体位置或相机。关闭全身通道仍保留既有 `fpv` 入口；地图和望远镜使用原版专用手部显示。
+- 玩家持物拦截位于 `PlayerItemInHandLayer.submitArmWithItem`，在原版望远镜专属分支之前统一处理。仅拦截父类 `ItemInHandLayer` 会漏过正在使用的望远镜，导致全身第一人称额外绘制头部镜筒，第三人称也无法使用同帧手掌挂点。主副手和左右惯用手复用同一处理，不另加望远镜绘制路径。
 
 ## Vanilla 盔甲适配调查
 
@@ -49,11 +49,21 @@ Bendy-Lib 的复制路径另核对本地 Maven 源码包 `io.github.kosmx.bendy-
 
 本轮实现限于 Vanilla 盔甲：`ArmorMesh` 通过原版 `Cube.compile` 读取绑定几何与 UV，按原始像素细分；权重在未膨胀位置选取皮肤分段骨，再复用 `SkinnedMesh.weights`，避免盔甲厚度挪动关节。细臂肩高来自骨架，袖子保留原版四像素宽。头盔随头刚性运动，胸甲与袖子随胸腰/肘腕，护腿与靴子随膝踝。
 
-`ArmorFeatureRendererMixin` 只替换 `renderModel`、`renderTrim`、`renderGlint` 的最终模型提交，所有材质、染色、图集 UV 包装与显隐继续由原版提供；蒙皮绘制复用皮肤的提交路径及同一个 `Frame.matrices`。帧取样移到原版 `setupAnim` 之后、皮肤可见性判断之前，隐身玩家的盔甲/持物也能读取新姿态。几何按实际模型和骨架缓存，资源重载时清空；不新增动画、材质表或另一套骨架。
+`ArmorFeatureRendererMixin` 包住 `HumanoidArmorLayer.renderArmorPiece` 对 `EquipmentLayerRenderer.renderLayers` 的调用，只登记该槽位的盔甲模型实例；所有材质、染色、纹饰、附魔光效、图集 UV 包装与显隐继续由原版逐层提交，绘制阶段再把该模型的顶点换成同一帧骨骼的蒙皮网格。帧取样在 `EntityRenderer.createRenderState` 返回时完成，早于皮肤可见性判断，隐身玩家的盔甲/持物也能读取新姿态。几何按实际模型和骨架缓存，资源重载时清空；不新增动画、材质表或另一套骨架。
 
 纹饰提交必须保留 `SpriteCoordinateExpander`：其单属性方法返回底层缓冲，连续调用 `vertex(...).color(...).uv(...)` 会绕过图集 UV 映射，采样到其他纹饰区域。用户反馈彩色碎片与细线后，真实原版包装器回归复现了 UV 错误；现统一转换位置和法线后，一次向原包装器提交完整顶点。几何正确及启动无异常不能证明材质路径正确，该回归独立验证图集坐标。
 
 验收需要包含：原版零姿态几何与 64×32 盔甲 UV 对照；粗/细臂与左右主手；潜行挖掘、望远镜、跳跃极限姿态；皮革染色、纹饰、附魔及穿戴事件；第一人称头盔隐藏和第三人称恢复。与皮肤使用相同矩阵能消除姿态失配，但弯折内侧的厚度挤压、相邻护甲片相交仍需实际游戏观察，不能承诺完全不穿模。
+
+## 26.2 渲染接入
+
+26.2 把实体渲染拆成提取、提交和绘制三段。PA 不另建提交路径，只在原版提交的模型上替换顶点：
+
+- `EntityRendererMixin` 在 `createRenderState` 返回时，为玩家和已登记生物算好本帧骨骼、装备显隐与挂点矩阵，存成 `EntityFrame` 挂在渲染状态上（Fabric `RenderStateDataKey`）。
+- 本体、`RenderLayer.renderColoredCutoutModel` 覆盖层与盔甲照原版提交，提交时按模型实例和渲染类型登记到 `EntityFrame`；发光描边的二次提交一并登记。
+- `ModelFeatureRendererMixin` 在 `prepareModel` 调用 `Model.renderToBuffer` 处查登记，命中则画蒙皮网格，否则交回原版。材质、染色、纹饰、附魔光效与 UV 包装都来自原版选好的缓冲。
+- 玩家持物在 `PlayerItemInHandLayer.submitArmWithItem` 入口按挂点矩阵提交；生物持物与补画盔甲在 `LivingEntityRenderer.submit` 判断本体可见性处提交。第一人称手臂在 `ItemInHandRenderer.submitHandsWithItems` 入口接管，全身第一人称见上文。
+- 26.2 原版对不剔除背面的实体与盔甲管线启用逐面光照（`PER_FACE_LIGHTING`），背面按反向法线取光；1.20.1 的背面沿用正面光照。PA 提交的顶点与法线与 1.20.1 相同，袖子内侧和纹饰弯折处的明暗差来自原版这一变化。
 
 ## 已发现并处理的边界
 
