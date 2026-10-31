@@ -1,17 +1,29 @@
 package dev.kizuna.playeranimation.server;
 
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.MessageLite;
 import com.mojang.brigadier.arguments.StringArgumentType;
+import com.mojang.brigadier.suggestion.SuggestionProvider;
 import dev.kizuna.playeranimation.network.AnimationPackets;
 import dev.kizuna.playeranimation.network.AnimationRequests;
 import dev.kizuna.playeranimation.network.RequiredAnimationChannels;
+import dev.kizuna.playeranimation.animation.JsonInput;
 import dev.kizuna.playeranimation.animation.PlayerAnimationAction;
 import dev.kizuna.playeranimation.protocol.pb.PlayerAnimationProtocol.PlayRequest;
 import dev.kizuna.playeranimation.protocol.pb.PlayerAnimationProtocol.Result;
 import dev.kizuna.playeranimation.protocol.pb.PlayerAnimationProtocol.StopRequest;
+import java.io.IOException;
+import java.io.Reader;
+import java.io.UncheckedIOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -28,7 +40,10 @@ import net.fabricmc.fabric.api.networking.v1.PlayerLookup;
 import net.fabricmc.fabric.api.networking.v1.S2CPlayChannelEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import net.fabricmc.loader.api.FabricLoader;
+import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
+import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -60,6 +75,7 @@ public final class ServerPlayerAnimations implements ModInitializer {
     private static final Map<PlaybackKey, Long> FINITE_EXPIRIES = new HashMap<>();
     private static final VanillaAnimationScheduler VANILLA = new VanillaAnimationScheduler();
     private static final int RECEIPT_TIMEOUT_TICKS = 20 * 30;
+    private static final String ANIMATION_INDEX = "assets/" + AnimationPackets.MOD_ID + "/player_anim_index.json";
     private record TrackingPair(UUID target, UUID viewer) { }
     private record Receipt(UUID viewer, String request) { }
     private record PlaybackKey(UUID player, String animation) { }
@@ -186,6 +202,24 @@ public final class ServerPlayerAnimations implements ModInitializer {
 
     public static String scrub(ServerPlayer player, PlayerAnimationAction action, float normalizedProgress) {
         return scrub(player, action.id(), normalizedProgress);
+    }
+
+    /** 本模组内置动画索引中的全部 id，按索引顺序；供服务端指令补全，播放请求不据此校验。 */
+    public static List<String> animationIds() {
+        // 服务端不读取客户端资源包，补全直接取模组自带的索引；缺失或格式错误说明打包已损坏，直接报错。
+        Path index = FabricLoader.getInstance().getModContainer(AnimationPackets.MOD_ID)
+                .flatMap(mod -> mod.findPath(ANIMATION_INDEX))
+                .orElseThrow(() -> new IllegalStateException("缺少内置动画索引: " + ANIMATION_INDEX));
+        try (Reader reader = Files.newBufferedReader(index)) {
+            JsonObject root = JsonParser.parseReader(reader).getAsJsonObject();
+            List<String> ids = new ArrayList<>();
+            for (JsonElement entry : JsonInput.array(root, "animations")) {
+                ids.add(JsonInput.string(entry.getAsJsonObject(), "id"));
+            }
+            return List.copyOf(ids);
+        } catch (IOException exception) {
+            throw new UncheckedIOException("读取内置动画索引失败: " + ANIMATION_INDEX, exception);
+        }
     }
 
     public static String stop(ServerPlayer player, String animation) {
@@ -342,28 +376,35 @@ public final class ServerPlayerAnimations implements ModInitializer {
 
     private static void registerCommands() {
         // 调试广播只开放给管理员，不允许普通客户端控制其他玩家。
-        CommandRegistrationCallback.EVENT.register((dispatcher, registry, environment) -> dispatcher.register(
-                Commands.literal("kpa_server").requires(source -> source.hasPermission(2))
-                        .then(Commands.literal("play")
-                                .then(Commands.argument("player", EntityArgument.player())
-                                        .then(Commands.argument("animation", StringArgumentType.word())
-                                                .executes(context -> {
-                                                    String id = play(EntityArgument.getPlayer(context, "player"),
-                                                            StringArgumentType.getString(context, "animation"));
-                                                    context.getSource().sendSuccess(() -> Component.literal("已发送动画播放请求: " + id), false);
-                                                    return 1;
-                                                }))))
-                        .then(Commands.literal("stop")
-                                .then(Commands.argument("player", EntityArgument.player())
-                                        .executes(context -> {
-                                            stopAll(EntityArgument.getPlayer(context, "player"));
-                                            return 1;
-                                        })
-                                        .then(Commands.argument("animation", StringArgumentType.word())
-                                                .executes(context -> {
-                                                    stop(EntityArgument.getPlayer(context, "player"),
-                                                            StringArgumentType.getString(context, "animation"));
-                                                    return 1;
-                                                }))))));
+        CommandRegistrationCallback.EVENT.register((dispatcher, registry, environment) -> {
+            // 每次注册读一次内置索引，play 与 stop 的动画参数补全同一份 id。
+            List<String> animations = animationIds();
+            SuggestionProvider<CommandSourceStack> suggestAnimations =
+                    (context, builder) -> SharedSuggestionProvider.suggest(animations, builder);
+            dispatcher.register(Commands.literal("kpa_server").requires(source -> source.hasPermission(2))
+                    .then(Commands.literal("play")
+                            .then(Commands.argument("player", EntityArgument.player())
+                                    .then(Commands.argument("animation", StringArgumentType.word())
+                                            .suggests(suggestAnimations)
+                                            .executes(context -> {
+                                                String id = play(EntityArgument.getPlayer(context, "player"),
+                                                        StringArgumentType.getString(context, "animation"));
+                                                context.getSource().sendSuccess(() -> Component.literal("已发送动画播放请求: " + id), false);
+                                                return 1;
+                                            }))))
+                    .then(Commands.literal("stop")
+                            .then(Commands.argument("player", EntityArgument.player())
+                                    .executes(context -> {
+                                        stopAll(EntityArgument.getPlayer(context, "player"));
+                                        return 1;
+                                    })
+                                    .then(Commands.argument("animation", StringArgumentType.word())
+                                            .suggests(suggestAnimations)
+                                            .executes(context -> {
+                                                stop(EntityArgument.getPlayer(context, "player"),
+                                                        StringArgumentType.getString(context, "animation"));
+                                                return 1;
+                                            })))));
+        });
     }
 }

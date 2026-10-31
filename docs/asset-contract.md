@@ -176,7 +176,7 @@
 
 服务端只保存每位玩家每个动作的最后一次播放请求，不读取客户端资源包，也不运行骨架。`PlayerAnimationAction` 目录中的一次性动作同时登记资源时长，到期后由服务端走统一停止协议并移除；循环、保持和目录外动作由玩法显式停止。补发保留最后一次调用顺序；不重建停止前的淡出实例。时钟精度沿用 Minecraft 世界时间同步，不承诺逐帧一致。
 
-`ServerPlayerAnimations.play(player, id)`、`stop(player, id)`、`stopAll(player)` 必须在服务端主线程调用，返回本次请求 ID。`ServerPlayerAnimations.RESULT` 提供接收客户端与其上报结果；只接收发给该客户端且尚在 30 秒（600 tick）回执窗口内的请求结果。每个实际收到请求的客户端分别回应，不做全体成功聚合、自动重试或玩法判定；补发仍可产生原 ID 的新回执。无法解码的包记录错误并丢弃；可解码但业务字段无效的请求返回 `INVALID_REQUEST`。服务器不接收 C2S 播放／停止请求。管理员可用 `/kpa_server play <player> <id>`、`/kpa_server stop <player> [id]` 验证广播，权限等级为 2；已有 `/kpa` 命令仍仅用于本地预览。
+`ServerPlayerAnimations.play(player, id)`、`stop(player, id)`、`stopAll(player)` 必须在服务端主线程调用，返回本次请求 ID。`ServerPlayerAnimations.RESULT` 提供接收客户端与其上报结果；只接收发给该客户端且尚在 30 秒（600 tick）回执窗口内的请求结果。每个实际收到请求的客户端分别回应，不做全体成功聚合、自动重试或玩法判定；补发仍可产生原 ID 的新回执。无法解码的包记录错误并丢弃；可解码但业务字段无效的请求返回 `INVALID_REQUEST`。服务器不接收 C2S 播放／停止请求。管理员可用 `/kpa_server play <player> <id>`、`/kpa_server stop <player> [id]` 验证广播，权限等级为 2；已有 `/kpa` 命令仍仅用于本地预览。`ServerPlayerAnimations.animationIds()` 按索引顺序返回本模组自带 `player_anim_index.json` 中的全部 id，供服务端指令补全（`/kpa_server` 的 id 参数即取此列表）；资源包不影响它，播放请求也不据此校验，模组内缺少该索引时直接报错。
 
 同一 v1 内只添加兼容字段；删除字段或枚举值必须同时 `reserved` 原编号和名称，禁止复用。新增必需语义或改变既有字段含义时升级包版本。未知字段可保留并忽略，未知结果码与零值不能按成功处理；未来新增的停止目标也不能在旧接收端退化成停止全部。
 

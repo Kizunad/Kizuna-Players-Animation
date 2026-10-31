@@ -4,6 +4,9 @@
   "version": "1.0.0",
   "environment": "*",
   "entrypoints": {
-    "fabric-gametest": ["dev.kizuna.playeranimation.server.HandSwingGameTest"]
+    "fabric-gametest": [
+      "dev.kizuna.playeranimation.server.HandSwingGameTest",
+      "dev.kizuna.playeranimation.server.KpaServerCommandGameTest"
+    ]
   }
 }
