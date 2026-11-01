@@ -18,6 +18,7 @@ import net.minecraft.world.item.BowItem;
 import net.minecraft.world.item.CrossbowItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.ItemUseAnimation;
+import net.minecraft.world.item.SwingAnimationType;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraft.world.phys.Vec3;
 
@@ -431,8 +432,7 @@ final class VanillaAnimationScheduler {
             attacks.remove(id);
             ItemStack stack = player.getUseItem();
             InteractionHand hand = player.getUsedItemHand();
-            ItemUseAnimation useAction = stack.getUseAnimation();
-            String action = armPoseAction(stack, hand, useAction);
+            String action = armPoseAction(stack.getUseAnimation(), hand);
             if (action != null) {
                 float progress = armPoseProgress(player, stack, action);
                 syncScrub(player, action, progress, desired);
@@ -503,8 +503,12 @@ final class VanillaAnimationScheduler {
         ItemStack swung = player.getItemInHand(hand);
         boolean mining = isDigger(swung);
         boolean placing = swung.getItem() instanceof BlockItem;
-        String action = handAction(placing ? "place_block" : mining ? "mine_main" : "attack_main",
-                placing ? "place_block_off" : mining ? "mine_off" : "attack_off", hand);
+        String action = swingAction(swung.getSwingAnimation().type(), placing, mining, hand);
+        if (action == null) {
+            // 交还原版挥臂时丢掉上一次挥手的状态，刺完或换到矛后不再补播旧剪辑的收势。
+            attacks.remove(id);
+            return;
+        }
         AttackState state = attacks.computeIfAbsent(id, ignored -> new AttackState());
         state.durationTicks = Math.max(1, ((LivingEntityAccessor) (Object) player).kpa$getHandSwingDuration());
         if (!action.equals(state.action)) {
@@ -608,10 +612,9 @@ final class VanillaAnimationScheduler {
         };
     }
 
-    private static String armPoseAction(ItemStack stack, InteractionHand hand, ItemUseAnimation useAction) {
-        if (stack.getItem() instanceof CrossbowItem) {
-            return handAction("crossbow_charge", "crossbow_charge_off", hand);
-        }
+    static String armPoseAction(ItemUseAnimation useAction, InteractionHand hand) {
+        // 每个原版使用动画都显式决定、不设 default：升级 Minecraft 新增的值在编译期暴露，不再静默落到通用剪辑。
+        // 返回 null 表示不请求自定义动作，保留原版姿态。
         return switch (useAction) {
             case SPYGLASS -> handAction("spyglass", "spyglass_off", hand);
             case TOOT_HORN -> handAction("toot_horn", "toot_horn_off", hand);
@@ -621,7 +624,24 @@ final class VanillaAnimationScheduler {
             case BLOCK -> handAction("block_shield", "block_shield_off", hand);
             case BOW -> handAction("bow_draw", "bow_draw_off", hand);
             case TRIDENT -> handAction("trident_charge", "trident_charge_off", hand);
-            default -> handAction("use_item", "use_item_off", hand);
+            // 原版按使用动画给弩装填姿态，弩物品恒为 CROSSBOW。
+            case CROSSBOW -> handAction("crossbow_charge", "crossbow_charge_off", hand);
+            // NONE 与 26.2 新增的 BUNDLE（收纳袋按住倒出物品）在原版第三人称都没有专属 ArmPose，用通用剪辑。
+            case NONE, BUNDLE -> handAction("use_item", "use_item_off", hand);
+            // 26.2 新增的矛蓄力冲刺：原版用 SpearAnimations 摆臂并另加手持物变换，PA 尚无矛剪辑，交还原版。
+            case SPEAR -> null;
+        };
+    }
+
+    static String swingAction(SwingAnimationType swing, boolean placing, boolean mining, InteractionHand hand) {
+        // 按物品的挥手类型显式决定；返回 null 表示保留原版挥臂。
+        return switch (swing) {
+            case WHACK -> handAction(placing ? "place_block" : mining ? "mine_main" : "attack_main",
+                    placing ? "place_block_off" : mining ? "mine_off" : "attack_off", hand);
+            // 数据组件声明不摆臂时原版只扭身体，PA 不叠挥臂剪辑。
+            case NONE -> null;
+            // 26.2 新增的矛戳刺由原版 SpearAnimations 驱动整臂，PA 尚无戳刺剪辑，交还原版。
+            case STAB -> null;
         };
     }
 

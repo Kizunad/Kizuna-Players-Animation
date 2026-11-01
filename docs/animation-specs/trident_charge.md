@@ -7,9 +7,9 @@
 
 ## 1. 动作目的与触发
 
-- **用途**：`UseAnim.SPEAR`（三叉戟）持续使用。原版 `ArmPose.THROW_SPEAR`：持戟臂 `pitch × 0.5 − π`（举过头顶），`yaw 0`，
+- **用途**：`ItemUseAnimation.TRIDENT`（三叉戟；1.20.1 名为 `UseAnim.SPEAR`）持续使用。原版 `ArmPose.THROW_TRIDENT`：持戟臂 `pitch × 0.5 − π`（举过头顶），`yaw 0`，
   身体不动。
-- **触发**：`armPoseAction` 的 `SPEAR` 分支；主手 `trident_charge`，副手 [trident_charge_off](trident_charge_off.md)。
+- **触发**：`armPoseAction` 的 `TRIDENT` 分支（26.2 新增的矛 `ItemUseAnimation.SPEAR` 不映射到本动作）；主手 `trident_charge`，副手 [trident_charge_off](trident_charge_off.md)。
 - **原版进度来源**：最大使用时间 72000 tick；`TridentItem.releaseUsing` 要求**已使用 ≥ 10 tick** 才投掷（或激流），
   不随蓄力继续增强。
 - **驱动**：`t = min(已使用 / 20, 0.50)`；`≥ 0.50`（10 tick，可投掷）后在 `loop_region [0.50, 1.70]` 回绕。
@@ -65,9 +65,9 @@
 
 ## 8. 接口缺口
 
-1. `armPoseAction` 的 `SPEAR` → `trident_charge(_off)`；`armPoseProgress`：`loopedSecondsProgress(min(used, …), 2.10, 0.50, 1.70)`。
+1. `armPoseAction` 的 `TRIDENT` → `trident_charge(_off)`；`armPoseProgress`：`loopedSecondsProgress(min(used, …), 2.10, 0.50, 1.70)`。
 2. 投掷尾段：与 `bow_draw` 共用“停止使用后按真实时间推进尾段”的调度状态；激流（`isAutoSpinAttack()`）时不播尾段。
-3. 视线：原版 THROW_SPEAR 臂不跟视线；本资源头轨道仍需 `head_follow` 叠加。
+3. 视线：原版 THROW_TRIDENT 臂不跟视线；本资源头轨道仍需 `head_follow` 叠加。
 4. 目录、`upperOverlay`、`GRIP_IDS` 同其他持物动作。
 
 ## 9. 门禁预期（首版原型实测，classic）

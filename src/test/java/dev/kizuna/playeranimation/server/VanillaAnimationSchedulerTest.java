@@ -1,12 +1,18 @@
 package dev.kizuna.playeranimation.server;
 
+import java.util.EnumMap;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 import dev.kizuna.playeranimation.animation.PlayerAnimationAction;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.item.ItemUseAnimation;
+import net.minecraft.world.item.SwingAnimationType;
 import net.minecraft.world.phys.Vec3;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class VanillaAnimationSchedulerTest {
     @Test
@@ -84,6 +90,50 @@ class VanillaAnimationSchedulerTest {
         // 原版已使用 10 tick 才能投掷：剪辑 0.50 秒后引到位，之后在 0.50–1.70 秒回绕，不进入投掷跟随段。
         assertEquals(0.50f, VanillaAnimationScheduler.loopedSecondsProgress(10, 2.15f, 0.50f, 1.70f) * 2.15f, 0.0001f);
         assertEquals(0.60f, VanillaAnimationScheduler.loopedSecondsProgress(36, 2.15f, 0.50f, 1.70f) * 2.15f, 0.0001f);
+    }
+
+    @Test
+    void everyVanillaUseAnimationHasAnExplicitDecision() {
+        // 26.2 新增 BUNDLE、SPEAR：每个值都要在此写明决定（null 为保留原版姿态），映射到的动作必须在目录中登记。
+        Map<ItemUseAnimation, String> expected = new EnumMap<>(ItemUseAnimation.class);
+        expected.put(ItemUseAnimation.NONE, "use_item");
+        expected.put(ItemUseAnimation.EAT, "eat");
+        expected.put(ItemUseAnimation.DRINK, "drink");
+        expected.put(ItemUseAnimation.BLOCK, "block_shield");
+        expected.put(ItemUseAnimation.BOW, "bow_draw");
+        expected.put(ItemUseAnimation.TRIDENT, "trident_charge");
+        expected.put(ItemUseAnimation.CROSSBOW, "crossbow_charge");
+        expected.put(ItemUseAnimation.SPYGLASS, "spyglass");
+        expected.put(ItemUseAnimation.TOOT_HORN, "toot_horn");
+        expected.put(ItemUseAnimation.BRUSH, "brush");
+        expected.put(ItemUseAnimation.BUNDLE, "use_item");
+        expected.put(ItemUseAnimation.SPEAR, null);
+        for (ItemUseAnimation animation : ItemUseAnimation.values()) {
+            assertTrue(expected.containsKey(animation), "未决定的使用动画：" + animation);
+            String main = expected.get(animation);
+            String off = main == null ? null : main + "_off";
+            assertEquals(main, VanillaAnimationScheduler.armPoseAction(animation, InteractionHand.MAIN_HAND), animation.name());
+            assertEquals(off, VanillaAnimationScheduler.armPoseAction(animation, InteractionHand.OFF_HAND), animation.name());
+            if (main != null) {
+                assertNotNull(PlayerAnimationAction.find(main), main);
+                assertNotNull(PlayerAnimationAction.find(off), off);
+            }
+        }
+    }
+
+    @Test
+    void onlyWhackSwingsRequestTheHandSwingTemplates() {
+        // 矛戳刺（STAB）与不摆臂（NONE）交还原版，即使物品同时算作工具；WHACK 仍按物品选放置、挖掘或攻击。
+        for (SwingAnimationType swing : SwingAnimationType.values()) {
+            String expected = swing == SwingAnimationType.WHACK ? "attack_main" : null;
+            assertEquals(expected, VanillaAnimationScheduler.swingAction(swing, false, false, InteractionHand.MAIN_HAND),
+                    swing.name());
+        }
+        assertEquals("mine_main", VanillaAnimationScheduler.swingAction(SwingAnimationType.WHACK, false, true,
+                InteractionHand.MAIN_HAND));
+        assertEquals("place_block_off", VanillaAnimationScheduler.swingAction(SwingAnimationType.WHACK, true, false,
+                InteractionHand.OFF_HAND));
+        assertNull(VanillaAnimationScheduler.swingAction(SwingAnimationType.STAB, false, true, InteractionHand.MAIN_HAND));
     }
 
     @Test

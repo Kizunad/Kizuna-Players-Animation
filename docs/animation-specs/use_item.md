@@ -5,8 +5,8 @@
 
 ## 1. 动作目的与触发
 
-- **用途**：`UseAnim.NONE` 等没有专属姿势的持续使用（模组物品为主）。
-- **触发**：`armPoseAction` 的 `default` 分支，主手 `use_item`、副手 `use_item_off`。
+- **用途**：原版第三人称没有专属 ArmPose 的持续使用：`ItemUseAnimation.NONE`（模组物品为主）与 26.2 新增的 `BUNDLE`（收纳袋按住倒出物品）。
+- **触发**：`armPoseAction` 的 `NONE`、`BUNDLE` 分支（调度不设兜底分支，新的使用动画须显式决定），主手 `use_item`、副手 `use_item_off`。
 - **驱动**：剪辑时间取**已使用时长**：`t = min(已使用 tick / 20, 0.40)`，之后保持末帧；不按最大使用时间归一化（通用物品常为 72000 tick）。
 - **结束**：停止使用淡出 0.15 s。
 

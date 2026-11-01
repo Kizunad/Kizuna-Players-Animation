@@ -76,9 +76,9 @@
 
 ## 原版 ArmPose 使用动作
 
-调度按原版 `PlayerRenderer.getArmPose` 的语义选 ID：`UseAnim.SPYGLASS → spyglass`、
-`TOOT_HORN → toot_horn`、`EAT → eat`、`DRINK → drink`、`BLOCK → block_shield`、`BOW → bow_draw`、`SPEAR → trident_charge`、使用中的弩 `→ crossbow_charge`、持已上弦且未使用的弩 `→ crossbow_hold`、
-`BRUSH → brush`；其余持续使用 `→ use_item`。
+调度按原版 `AvatarRenderer.getArmPose` 的语义选 ID：`ItemUseAnimation.SPYGLASS → spyglass`、
+`TOOT_HORN → toot_horn`、`EAT → eat`、`DRINK → drink`、`BLOCK → block_shield`、`BOW → bow_draw`、`TRIDENT → trident_charge`、使用中的弩 `→ crossbow_charge`、持已上弦且未使用的弩 `→ crossbow_hold`、
+`BRUSH → brush`、`NONE` / `BUNDLE → use_item`；26.2 新增的 `SPEAR`（矛蓄力）以及挥手类型 `STAB`（矛戳刺）、`NONE`（不摆臂）不请求动作，保留原版姿态（矛的现状与待办见[资产契约](../asset-contract.md)）。
 物品在副手时选对应 `*_off`。驱动方式（已使用时长、装填进度、循环段）见各设计稿第 1 节。
 
 | 来源 → 目标 | 淡入 / 淡出 | 触发 | 约束 |
