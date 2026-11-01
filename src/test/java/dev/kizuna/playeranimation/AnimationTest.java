@@ -362,6 +362,25 @@ class AnimationTest {
         AnimationEntry entry = AnimationEntry.parse(raw, rotationClip("[0,0,0]", ""));
         assertEquals(0.1f, entry.loopRegionStart(), 0.0001f);
         assertEquals(0.8f, entry.loopRegionEnd(), 0.0001f);
-        assertEquals(0.2f, entry.impactWindowEnd(), 0.0001f);
+        assertEquals(List.of(new AnimationEntry.Window(0.0f, 0.2f)), entry.impactWindows());
+    }
+
+    @Test
+    void indexAcceptsMultiSegmentImpactWindowForTripleKick() {
+        // 千里腿连环三下各一段打击时段；段序颠倒或重叠直接拒绝。
+        String template = """
+                {"id":"peddler_triple_kick","file":"animations/peddler_triple_kick.animation.json","mask":"full",
+                 "priority":24,"blend_in":0.1,"blend_out":0.25,"hand":"main","fpv":false,
+                 "impact_window":%s}
+                """;
+        AnimationClip clip = rotationClip("[0,0,0]", "");
+        AnimationEntry entry = AnimationEntry.parse(JsonParser.parseString(
+                template.formatted("[[0.1,0.2],[0.3,0.4],[0.5,0.6]]")).getAsJsonObject(), clip);
+        assertEquals(3, entry.impactWindows().size());
+        assertEquals(0.5f, entry.impactWindows().get(2).start(), 0.0001f);
+        assertThrows(IllegalArgumentException.class, () -> AnimationEntry.parse(JsonParser.parseString(
+                template.formatted("[[0.3,0.4],[0.1,0.2]]")).getAsJsonObject(), clip));
+        assertThrows(IllegalArgumentException.class, () -> AnimationEntry.parse(JsonParser.parseString(
+                template.formatted("[[0.1,0.35],[0.3,0.4]]")).getAsJsonObject(), clip));
     }
 }

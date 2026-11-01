@@ -82,11 +82,11 @@
 | `blend_in` / `blend_out` | 非负秒数；一次性结束后冻结末帧并淡出，停止保持或循环动画也使用淡出 |
 | `hand` | `main`、`off`、`both`、`none`；main 模板按右主手，off 模板按左副手；none 固定解剖左右 |
 | `fpv` | 布尔，仅此标记为真的动画参与独立第一人称手臂播放；全身第一人称直接复用第三人称姿态，不受此标记限制 |
-| `impact_window` | 可选，`[开始秒, 结束秒]`，剪辑时间。只供门禁声明打击时段，运行时不读取；当前白名单为 `attack_main/off`、`mine_main/off`、`door_breaker_knock(_off)`、`door_breaker_cleave(_off)`、`door_breaker_ram(_off)`、`door_breaker_hook(_off)`、`door_breaker_close(_off)`、`door_breaker_chain(_off)`、`door_breaker_finale(_off)` |
+| `impact_window` | 可选，`[开始秒, 结束秒]`，或多段 `[[开始秒, 结束秒], ...]`（多击的式每击一段，各段按时间先后、互不重叠），剪辑时间。只供门禁声明打击时段（角速度差分的末帧落在任一段内即按打击上限），运行时不读取；当前白名单为 `attack_main/off`、`mine_main/off`、`door_breaker_knock(_off)`、`door_breaker_cleave(_off)`、`door_breaker_ram(_off)`、`door_breaker_hook(_off)`、`door_breaker_close(_off)`、`door_breaker_chain(_off)`、`door_breaker_finale(_off)` 与千里腿八式 `peddler_snap_kick`、`peddler_push_kick`、`peddler_roundhouse`、`peddler_triple_kick`、`peddler_mule_kick`、`peddler_flying_kick`、`peddler_axe_kick`、`peddler_whirlwind`（蹲马步不打击） |
 | `loop_region` | 可选，`[开始秒, 结束秒]`，剪辑时间。scrub 进度到达结束点后在该区间回绕；仅用于保持类的可重复动作（例如 `spyglass`、`brush`） |
 | `layer` | 可选，只接受 `look`：加性视线层。渲染器每帧按原版视线角度取样并把旋转加到已混合姿态上，不经过播放、优先级与同步；当前为 `head_follow`、`head_follow_pitch` |
-| `phases` | 可选，阶段数组或名称到 `[开始秒, 结束秒]` 的映射；仅供门禁在每个声明阶段内按主动作方向检查峰值顺序，时间必须落在剪辑范围内 |
-| `unbalanced_windows` | 可选，`[[开始秒, 结束秒], ...]`。只供门禁声明失衡时段（窗口内不查重心投影），运行时不读取；只允许 `dodge_*`、`technique_dash_*`、`door_breaker_cleave(_off)`、`door_breaker_ram(_off)`、`door_breaker_hook(_off)`、`door_breaker_sweep(_off)`、`door_breaker_close(_off)`、`door_breaker_chain(_off)`、`door_breaker_finale(_off)` |
+| `phases` | 可选，阶段数组或名称到 `[开始秒, 结束秒]` 的映射；数组元素可写成对象 `{"id", "start", "end", "chain"}`，`chain` 可选，是近端到远端至少 3 根已有骨骼（例如踢腿 `["pelvis", "l_thigh", "l_shin", "l_foot"]`），覆盖该阶段按动作 id 推断的主链。仅供门禁在每个声明阶段内按主动作方向检查峰值顺序，时间必须落在剪辑范围内；运行时不读取 |
+| `unbalanced_windows` | 可选，`[[开始秒, 结束秒], ...]`。只供门禁声明失衡时段（窗口内不查重心投影），运行时不读取；只允许 `dodge_*`、`technique_dash_*`、`door_breaker_cleave(_off)`、`door_breaker_ram(_off)`、`door_breaker_hook(_off)`、`door_breaker_sweep(_off)`、`door_breaker_close(_off)`、`door_breaker_chain(_off)`、`door_breaker_finale(_off)`、`peddler_*` |
 | `burst_windows` | 可选，`[[开始秒, 结束秒]]`，至多一段且 ≤ 0.08 s。只供门禁声明蹬伸爆发时段（窗口内角速度 / 角加加速度上限放宽到 1,500°/s、6×10⁶°/s³），运行时不读取；只允许 `dodge_*`、`technique_dash_*`、`door_breaker_ram(_off)` |
 | `slide_window` | 可选，`[开始秒, 结束秒]`。只供游戏内验收：声明该段脚底随实体在世界空间同步滑行不算穿帮，运行时不读取；当前为 `technique_dash_*` `[0.28, 1.01]`（冲刺短跑：着地脚在模型空间锁定，实体被功法推动时随之滑行）、`door_breaker_ram(_off)` `[0.80, 1.50]`（第一次冲量到冲量衰减；施放中 0.4 倍主动移动不属于冲量段，不要求锁脚）、`door_breaker_close(_off)` `[0.45, 1.10]`（冲量一到冲量二衰减，两步原地后撤）、`door_breaker_chain(_off)` `[0.80, 4.35]`（冲量一到冲量三衰减，两次垫步与弓步）、`door_breaker_finale(_off)` `[2.10, 2.90]`（起跳两次冲量到落地后实体滑停） |
 | `reaction` | 可选，只接受 `hit`，只用于 `*_hit` 受击后坐：门禁对被动动作免查反向预备，跟随与回落照查；运行时不读取 |
@@ -106,7 +106,7 @@
 
 层序为原版姿态 → 循环姿态 → 一次性／保持动作。只有动画实际包含、且在 mask 内的骨参与接管，缺失的通道继承下层。`upper` 包含腰、胸、头、双臂；`lower` 包含胯、双腿；单臂包含上臂至手指。只有 `full` 可以改变 root。
 
-`root` 目前只有横扫 `door_breaker_sweep(_off)` 在用（2026-10-30）：只转 Y（主手版 0° → −360° 左转，副手版 0° → +360° 右转，1.35–2.60 s），位置按已转角绕左踝竖线平移补偿，使转轴脚的世界位置不动；2.65 s 用跳变帧（pre ±360°、post 0°）换回 0°，末帧为 0，播完淡出不倒转。淡入淡出按欧拉角线性混合，起转后被打断时已转的角度会在淡出时倒转回去；运行时尚未做最短角度淡出。
+`root` 目前有横扫 `door_breaker_sweep(_off)`（2026-10-30）、扫堂 `peddler_ground_sweep` 和不留行 `peddler_whirlwind`（2026-10-31）在用：只转 Y，位置按已转角绕转轴竖线平移补偿，着地转时转轴取转轴脚的踝竖线，使转轴脚的世界位置不动；转满后用跳变帧（pre ±360°、post 0°）换回 0°，末帧为 0，播完淡出不倒转。横扫主手版 0° → −360° 左转、副手版 0° → +360° 右转（1.35–2.60 s，绕左踝，2.65 s 换回）；扫堂只有主手版，0° → +360° 右转（1.60–2.80 s，绕右踝，2.82 s 换回），左主手由运行时镜像成左转；不留行只有主手版，两脚都离地时 0° → −360° 左转（2.85–3.43 s，绕起转时胯水平位置所在的竖线，3.50 s 换回），左主手镜像成右转。淡入淡出按欧拉角线性混合，起转后被打断时已转的角度会在淡出时倒转回去；运行时尚未做最短角度淡出。
 
 左主手且 `hand != none` 时，交换左右骨与单臂 mask，位移 X 反号，旋转 Y/Z 反号（镜像不是把旋转 X 反号）。`step_l` / `step_r` 事件同时交换。独立 `fpv` 手臂只取手臂骨，不继承 root、腰和胸的动画位移。
 
@@ -146,6 +146,7 @@
 转到 ±50° 时头约 30°、胸 12°、腰 8°，俯仰 ±90° 时头 62°、胸 16°、腰 12°，合计等于原版角度；双臂随胸小幅反向。
 睡眠、泳姿与爬行过渡、鞘翅、激流、死亡和独立 `fpv` 手臂入口不启用；望远镜、号角、持弩、拉弓已在头部补偿俯仰，此时只叠偏航；
 饮用时俯仰层按 0.5 权重叠加。两段资源须同时存在并声明 `layer: look`，否则保持原版视线。服务端不发送视线层请求。
+`peddler_mule_kick`（千里腿尥蹶，背对目标回头看）播放期间整段不叠视线层（`PlayerMeshRenderer` 按 id 判断，2026-10-31），头由剪辑自己转；开始、结束时视线层是直接关、开，不淡入淡出（已知缺陷，见 [PROGRESS-peddler](animation-specs/PROGRESS-peddler.md)）。
 
 ## Protobuf 控制协议 v1
 

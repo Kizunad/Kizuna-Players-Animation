@@ -1869,6 +1869,394 @@
           0.14
         ]
       ]
+    },
+    {
+      "id": "peddler_snap_kick",
+      "file": "animations/peddler_snap_kick.animation.json",
+      "mask": "full",
+      "priority": 24,
+      "blend_in": 0.1,
+      "blend_out": 0.25,
+      "hand": "main",
+      "fpv": false,
+      "impact_window": [
+        0.95,
+        1.25
+      ],
+      "unbalanced_windows": [
+        [
+          1.02,
+          1.1
+        ],
+        [
+          1.35,
+          1.4
+        ]
+      ],
+      "phases": [
+        {
+          "id": "snap",
+          "start": 0.7,
+          "end": 1.08,
+          "chain": [
+            "l_thigh",
+            "l_shin",
+            "l_foot"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "peddler_push_kick",
+      "file": "animations/peddler_push_kick.animation.json",
+      "mask": "full",
+      "priority": 24,
+      "blend_in": 0.1,
+      "blend_out": 0.25,
+      "hand": "main",
+      "fpv": false,
+      "impact_window": [
+        1.8,
+        2.1
+      ],
+      "phases": [
+        {
+          "id": "push",
+          "start": 1.8,
+          "end": 2.05,
+          "chain": [
+            "pelvis",
+            "l_thigh",
+            "l_shin",
+            "l_foot"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "peddler_roundhouse",
+      "file": "animations/peddler_roundhouse.animation.json",
+      "mask": "full",
+      "priority": 24,
+      "blend_in": 0.1,
+      "blend_out": 0.25,
+      "hand": "main",
+      "fpv": false,
+      "impact_window": [
+        1.75,
+        2.15
+      ],
+      "unbalanced_windows": [
+        [
+          0.58,
+          0.77
+        ],
+        [
+          3.0,
+          3.14
+        ]
+      ],
+      "phases": [
+        {
+          "id": "wind",
+          "start": 0.9,
+          "end": 1.55
+        },
+        {
+          "id": "whip",
+          "start": 1.7,
+          "end": 2.05,
+          "chain": [
+            "pelvis",
+            "r_thigh",
+            "r_shin",
+            "r_foot"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "peddler_ground_sweep",
+      "file": "animations/peddler_ground_sweep.animation.json",
+      "mask": "full",
+      "priority": 24,
+      "blend_in": 0.1,
+      "blend_out": 0.25,
+      "hand": "main",
+      "fpv": false,
+      "unbalanced_windows": [
+        [
+          0.68,
+          0.9
+        ],
+        [
+          1.53,
+          3.1
+        ]
+      ],
+      "phases": [
+        {
+          "id": "squat",
+          "start": 0.6,
+          "end": 1.4
+        },
+        {
+          "id": "spin",
+          "start": 1.6,
+          "end": 2.8
+        },
+        {
+          "id": "rise",
+          "start": 2.82,
+          "end": 3.45
+        }
+      ]
+    },
+    {
+      "id": "peddler_triple_kick",
+      "file": "animations/peddler_triple_kick.animation.json",
+      "mask": "full",
+      "priority": 24,
+      "blend_in": 0.1,
+      "blend_out": 0.25,
+      "hand": "main",
+      "fpv": false,
+      "impact_window": [
+        [
+          1.4,
+          1.7
+        ],
+        [
+          2.0,
+          2.3
+        ],
+        [
+          2.7,
+          3.0
+        ]
+      ],
+      "phases": [
+        {
+          "id": "low",
+          "start": 1.35,
+          "end": 1.7,
+          "chain": [
+            "pelvis",
+            "l_thigh",
+            "l_shin",
+            "l_foot"
+          ]
+        },
+        {
+          "id": "mid",
+          "start": 1.85,
+          "end": 2.3,
+          "chain": [
+            "pelvis",
+            "l_thigh",
+            "l_shin",
+            "l_foot"
+          ]
+        },
+        {
+          "id": "high",
+          "start": 2.4,
+          "end": 3.0,
+          "chain": [
+            "pelvis",
+            "l_thigh",
+            "l_shin",
+            "l_foot"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "peddler_mule_kick",
+      "file": "animations/peddler_mule_kick.animation.json",
+      "mask": "full",
+      "priority": 24,
+      "blend_in": 0.1,
+      "blend_out": 0.25,
+      "hand": "main",
+      "fpv": false,
+      "impact_window": [
+        1.3,
+        1.55
+      ],
+      "unbalanced_windows": [
+        [
+          1.82,
+          1.92
+        ]
+      ],
+      "phases": [
+        {
+          "id": "bend",
+          "start": 0.3,
+          "end": 1.0,
+          "chain": [
+            "pelvis",
+            "waist",
+            "chest",
+            "head"
+          ]
+        },
+        {
+          "id": "kick",
+          "start": 1.3,
+          "end": 1.5,
+          "chain": [
+            "r_thigh",
+            "r_shin",
+            "r_foot"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "peddler_flying_kick",
+      "file": "animations/peddler_flying_kick.animation.json",
+      "mask": "full",
+      "priority": 24,
+      "blend_in": 0.1,
+      "blend_out": 0.25,
+      "hand": "main",
+      "fpv": false,
+      "impact_window": [
+        1.6,
+        1.9
+      ],
+      "slide_window": [
+        0.5,
+        2.8
+      ],
+      "unbalanced_windows": [
+        [
+          0.45,
+          1.42
+        ],
+        [
+          1.92,
+          2.35
+        ]
+      ],
+      "phases": [
+        {
+          "id": "kick",
+          "start": 1.45,
+          "end": 1.8,
+          "chain": [
+            "pelvis",
+            "r_thigh",
+            "r_shin",
+            "r_foot"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "peddler_axe_kick",
+      "file": "animations/peddler_axe_kick.animation.json",
+      "mask": "full",
+      "priority": 24,
+      "blend_in": 0.1,
+      "blend_out": 0.25,
+      "hand": "main",
+      "fpv": false,
+      "impact_window": [
+        2.3,
+        2.6
+      ],
+      "phases": [
+        {
+          "id": "raise",
+          "start": 1.7,
+          "end": 2.15,
+          "chain": [
+            "pelvis",
+            "r_thigh",
+            "r_foot"
+          ]
+        },
+        {
+          "id": "chop",
+          "start": 2.3,
+          "end": 2.5
+        }
+      ]
+    },
+    {
+      "id": "peddler_whirlwind",
+      "file": "animations/peddler_whirlwind.animation.json",
+      "mask": "full",
+      "priority": 24,
+      "blend_in": 0.1,
+      "blend_out": 0.25,
+      "hand": "main",
+      "fpv": false,
+      "impact_window": [
+        2.95,
+        3.3
+      ],
+      "unbalanced_windows": [
+        [
+          1.43,
+          1.58
+        ],
+        [
+          1.95,
+          2.05
+        ],
+        [
+          3.38,
+          3.53
+        ]
+      ],
+      "phases": [
+        {
+          "id": "wind",
+          "start": 1.2,
+          "end": 1.95
+        },
+        {
+          "id": "launch",
+          "start": 2.55,
+          "end": 2.95
+        }
+      ]
+    },
+    {
+      "id": "peddler_horse_stance",
+      "file": "animations/peddler_horse_stance.animation.json",
+      "mask": "full",
+      "priority": 24,
+      "blend_in": 0.1,
+      "blend_out": 0.25,
+      "hand": "main",
+      "fpv": false,
+      "unbalanced_windows": [
+        [
+          0.57,
+          0.7
+        ],
+        [
+          31.43,
+          31.58
+        ]
+      ],
+      "phases": [
+        {
+          "id": "squat",
+          "start": 0.7,
+          "end": 1.0
+        },
+        {
+          "id": "rise",
+          "start": 31.0,
+          "end": 31.4
+        }
+      ]
     }
   ]
 }

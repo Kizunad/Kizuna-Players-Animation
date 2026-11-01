@@ -220,3 +220,43 @@
 | --- | ---: | --- | --- |
 | stand / walk / run / jump_land / stance_idle / stance_walk_forward / stance_walk_back / stance_walk_left / stance_walk_right / stance_run → technique_leap | 0.05 / 0.10 | 跃步起跳（服务端 `START`） | 全身；0.40 s 蹬地前冲、收腿前伸后保持到落地；连跳时从 `jump` 落地段淡入首帧负载姿势 |
 | technique_leap → jump_land / stand / stance_idle / swim / ride | 0.05 / 0.10 | 落地或中断（服务端 `STOP`） | 冻结后淡出 0.10 s；玩家落地露出 `jump` 落地段 6 tick；落水、上坐骑转 `swim` / `ride`；丢失 `STOP` 时一直保持末帧，不加兜底时长 |
+
+## 千里腿（2026-10-31 制作中）
+
+规格见 [PROGRESS-peddler](PROGRESS-peddler.md) 与各段页面：九式 + 蹲马步共 10 段，资源都已交付，`stance_idle` 往返见下面四列表。
+`mask: full`、优先级 24，同破门斩：任何底层上都整段生效；`peddler_*` 不在 `AnimationPlayer` 的任何上层集合里，按索引就整段全身生效，不用改播放器。起手被伤害打断淡出 0.20 s 回架势（蹲马步另含宿主提前结束训练）。
+`stance_idle` ↔ 各式两行写在四列表（`AnimationTransitionContractTest` 解析，每式 2 条有向边，10 段交付后 494 → 514）；六列设计行不解析。承接边要从剪辑中途起播，现有回归表达不了，等承接接线时再加（同破门斩）。承接关系、起手长度、打击时刻已和服务端设计稿 16 核对（出入见 PROGRESS）。
+
+| 来源 → 目标 | 淡入 / 淡出 | 触发 | 约束 |
+| --- | ---: | --- | --- |
+| stance_idle → peddler_snap_kick | 0.10 / 0.25 | 宿主在弹腿起手时播放 | 起止姿态等于 `stance_idle` 首帧；按真实时间播 3.0 s；不作后式 |
+| peddler_snap_kick → stance_idle | 0.25 / 0.25 | 3.0 s 播完 | 淡回架势底层 |
+| stance_idle → peddler_push_kick | 0.10 / 0.25 | 宿主在正蹬起手时播放 | 起止姿态等于 `stance_idle` 首帧；按真实时间播 5.0 s；不作后式 |
+| peddler_push_kick → stance_idle | 0.25 / 0.25 | 5.0 s 播完 | 淡回架势底层 |
+| stance_idle → peddler_roundhouse | 0.10 / 0.25 | 宿主在鞭腿起手时播放 | 起止姿态等于 `stance_idle` 首帧；按真实时间播 5.0 s；承接入口 0.40 s |
+| peddler_roundhouse → stance_idle | 0.25 / 0.25 | 5.0 s 播完 | 淡回架势底层 |
+| stance_idle → peddler_ground_sweep | 0.10 / 0.25 | 宿主在扫堂起手时播放 | 起止姿态等于 `stance_idle` 首帧；按真实时间播 6.0 s；`root` 1.60–2.80 s 绕后脚向右转一整圈，转的期间打断会倒转；承接入口 0.40 s |
+| peddler_ground_sweep → stance_idle | 0.25 / 0.25 | 6.0 s 播完 | 淡回架势底层；末帧 `root` 为 0 |
+| stance_idle → peddler_triple_kick | 0.10 / 0.25 | 宿主在连环起手时播放 | 起止姿态等于 `stance_idle` 首帧；按真实时间播 6.0 s；前脚 1.00–3.40 s 不落地；承接入口 0.40 s |
+| peddler_triple_kick → stance_idle | 0.25 / 0.25 | 6.0 s 播完 | 淡回架势底层 |
+| stance_idle → peddler_mule_kick | 0.10 / 0.25 | 宿主在尥蹶起手时播放 | 起止姿态等于 `stance_idle` 首帧；按真实时间播 5.0 s；不作后式；整段关掉视线层（渲染器按 id） |
+| peddler_mule_kick → stance_idle | 0.25 / 0.25 | 5.0 s 播完 | 淡回架势底层 |
+| stance_idle → peddler_flying_kick | 0.10 / 0.25 | 宿主在飞踹起手时播放 | 起止姿态等于 `stance_idle` 首帧；按真实时间播 6.0 s；助跑原地迈步、实体由冲量推动；承接入口 0.40 s |
+| peddler_flying_kick → stance_idle | 0.25 / 0.25 | 6.0 s 播完 | 淡回架势底层 |
+| stance_idle → peddler_axe_kick | 0.10 / 0.25 | 宿主在下劈起手时播放 | 起止姿态等于 `stance_idle` 首帧；按真实时间播 6.0 s；承接入口 0.40 s |
+| peddler_axe_kick → stance_idle | 0.25 / 0.25 | 6.0 s 播完 | 淡回架势底层 |
+| stance_idle → peddler_whirlwind | 0.10 / 0.25 | 宿主在不留行起手时播放 | 起止姿态等于 `stance_idle` 首帧；按真实时间播 9.0 s；`root` 2.85–3.43 s 腾空向左转一整圈、3.50 s 换回 0°，转的期间打断会倒转；承接入口 1.20 s |
+| peddler_whirlwind → stance_idle | 0.25 / 0.25 | 9.0 s 播完 | 淡回架势底层；末帧 `root` 为 0 |
+| stance_idle → peddler_horse_stance | 0.10 / 0.25 | 宿主在蹲马步开始时播放 | 起止姿态等于 `stance_idle` 首帧；按真实时间播 32.0 s 一次性，不用 `loop_region`；不作前式、后式 |
+| peddler_horse_stance → stance_idle | 0.25 / 0.25 | 32.0 s 播完 | 淡回架势底层；末帧 `root` 为 0 |
+
+承接与打断的设计行（还没接线）：
+
+| 来源 | 目标 | 淡入 / 淡出 | 触发 | 约束 | 状态 |
+| --- | --- | ---: | --- | --- | --- |
+| peddler_snap_kick | peddler_roundhouse / peddler_triple_kick | 0.30 / 0.25 | 承接（宿主在后一式起手时切换） | 前一式淡出 0.30 s，后一式从 0.40 s 起播 | 待承接接线 |
+| peddler_mule_kick | peddler_ground_sweep | 0.30 / 0.25 | 承接 | 从 0.40 s 起播 | 待承接接线 |
+| peddler_push_kick | peddler_flying_kick | 0.30 / 0.25 | 承接 | 从 0.40 s 起播 | 待承接接线 |
+| peddler_ground_sweep | peddler_axe_kick | 0.30 / 0.25 | 承接 | 从 0.40 s 起播 | 待承接接线 |
+| peddler_roundhouse / peddler_flying_kick | peddler_whirlwind | 0.30 / 0.25 | 承接 | 从 1.20 s 起播，跳过「聚」 | 待承接接线 |
+| peddler_snap_kick / peddler_push_kick / peddler_ground_sweep / peddler_roundhouse / peddler_triple_kick / peddler_mule_kick / peddler_flying_kick / peddler_axe_kick / peddler_whirlwind / peddler_horse_stance | stance_idle | 0.20 | 起手被伤害打断（蹲马步含宿主提前结束） | 淡出中脚会滑回架势踝位；扫堂、不留行转的期间打断，已转的 `root` 角倒转回去 | 待打断接线 |
