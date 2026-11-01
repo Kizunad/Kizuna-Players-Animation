@@ -88,13 +88,13 @@
 | `phases` | 可选，阶段数组或名称到 `[开始秒, 结束秒]` 的映射；仅供门禁在每个声明阶段内按主动作方向检查峰值顺序，时间必须落在剪辑范围内 |
 | `unbalanced_windows` | 可选，`[[开始秒, 结束秒], ...]`。只供门禁声明失衡时段（窗口内不查重心投影），运行时不读取；只允许 `dodge_*`、`technique_dash_*`、`door_breaker_cleave(_off)`、`door_breaker_ram(_off)`、`door_breaker_hook(_off)`、`door_breaker_sweep(_off)`、`door_breaker_close(_off)`、`door_breaker_chain(_off)`、`door_breaker_finale(_off)` |
 | `burst_windows` | 可选，`[[开始秒, 结束秒]]`，至多一段且 ≤ 0.08 s。只供门禁声明蹬伸爆发时段（窗口内角速度 / 角加加速度上限放宽到 1,500°/s、6×10⁶°/s³），运行时不读取；只允许 `dodge_*`、`technique_dash_*`、`door_breaker_ram(_off)` |
-| `slide_window` | 可选，`[开始秒, 结束秒]`。只供游戏内验收：声明该段脚底随实体在世界空间同步滑行不算穿帮，运行时不读取；当前为 `technique_dash_*` `[0.28, 1.01]`（冲刺短跑：着地脚在模型空间锁定，实体被功法推动时随之滑行）、`door_breaker_ram(_off)` `[1.55, 2.25]`（第一次冲量到冲量衰减；施放中 0.4 倍主动移动不属于冲量段，不要求锁脚）、`door_breaker_close(_off)` `[0.75, 1.40]`（冲量一到冲量二衰减，两步原地后撤）、`door_breaker_chain(_off)` `[1.55, 5.10]`（冲量一到冲量三衰减，两次垫步与弓步）、`door_breaker_finale(_off)` `[4.05, 4.85]`（起跳两次冲量到落地后实体滑停） |
+| `slide_window` | 可选，`[开始秒, 结束秒]`。只供游戏内验收：声明该段脚底随实体在世界空间同步滑行不算穿帮，运行时不读取；当前为 `technique_dash_*` `[0.28, 1.01]`（冲刺短跑：着地脚在模型空间锁定，实体被功法推动时随之滑行）、`door_breaker_ram(_off)` `[0.80, 1.50]`（第一次冲量到冲量衰减；施放中 0.4 倍主动移动不属于冲量段，不要求锁脚）、`door_breaker_close(_off)` `[0.45, 1.10]`（冲量一到冲量二衰减，两步原地后撤）、`door_breaker_chain(_off)` `[0.80, 4.35]`（冲量一到冲量三衰减，两次垫步与弓步）、`door_breaker_finale(_off)` `[2.10, 2.90]`（起跳两次冲量到落地后实体滑停） |
 | `reaction` | 可选，只接受 `hit`，只用于 `*_hit` 受击后坐：门禁对被动动作免查反向预备，跟随与回落照查；运行时不读取 |
 
 战斗架势（2026-10-27）：`stance_*`、`dodge_*`、`technique_dash_*`、`block_*_hand(_hit)`、`technique_breath/charge` 只交付资源与 `PlayerAnimationAction` 显式接口，触发由战斗 UI / 宿主负责。
-破门斩（2026-10-28 起）：`door_breaker_knock(_off)`（叩门，3.0 s，60 tick）、`door_breaker_cleave(_off)`（破门，6.0 s，120 tick）、`door_breaker_ram(_off)`（撞门，5.0 s，100 tick）、`door_breaker_hook(_off)`（破盾，4.5 s，90 tick）、`door_breaker_sweep(_off)`（横扫，6.0 s，120 tick）、`door_breaker_close(_off)`（掩门，5.0 s，100 tick）、`door_breaker_chain(_off)`（连门，8.0 s，160 tick）与 `door_breaker_finale(_off)`（万门一斩，9.0 s，180 tick）都是 `mask: full`、优先级 24，只交付资源与 `PlayerAnimationAction` 显式接口，宿主在功法起手时按真实时间播放；
+破门斩（2026-10-28 起）：`door_breaker_knock(_off)`（叩门，2.55 s，51 tick）、`door_breaker_cleave(_off)`（破门，4.4 s，88 tick）、`door_breaker_ram(_off)`（撞门，4.25 s，85 tick）、`door_breaker_hook(_off)`（破盾，3.5 s，70 tick）、`door_breaker_sweep(_off)`（横扫，4.35 s，87 tick）、`door_breaker_close(_off)`（掩门，4.7 s，94 tick）、`door_breaker_chain(_off)`（连门，7.25 s，145 tick）与 `door_breaker_finale(_off)`（万门一斩，7.05 s，141 tick）都是 `mask: full`、优先级 24，只交付资源与 `PlayerAnimationAction` 显式接口，宿主在功法起手时按真实时间播放；2026-11-02 起手压缩（I7a）后的时长与击中时刻见 [验收记录](animation-acceptance.md#破门斩起手压缩i7a2026-11-02)；
 它们不属于下面的上层规则，任何底层上都整段生效，服务端每次打击另调的原版挥手（攻击，优先级 20）不接管任何骨。施放期间移速 ×0.4、不锁移动；撞门冲刺段、掩门两次撤步、连门两次垫步与弓步原地迈步、万门一斩起跳与腾空，位移由冲量负责。
-万门一斩时间线有两次 `hit`：`2.3` 前荡轻击、`4.85` 落地竖劈，对应目录两次 `weapon_strike`（2,300 / 4,850 ms）；同其他 `hit` 一样只是客户端通知，伤害由服务端目录结算。
+万门一斩时间线有两次 `hit`：`1.2` 前荡轻击、`2.9` 落地竖劈，对应目录两次 `weapon_strike`（1,200 / 2,900 ms）；同其他 `hit` 一样只是客户端通知，伤害由服务端目录结算。
 持物手覆盖层 `door_breaker_guard(_off)`（2026-10-30，见 [设计稿](animation-specs/door_breaker_guard.md)）：破门、连门、万门一斩是双手持斧，起手时另一只手非空，宿主在同一 tick 叠播覆盖层（主手版配 `door_breaker_guard`，`_off` 版配 `door_breaker_guard_off`）。
 覆盖层 `mask` 为 `l_arm` / `r_arm`、优先级 25、淡入 0.10 s、淡出 0.25 s、`hand` 与所配的式相同，0.40 s 把持物臂收到体侧护持（盾竖持、盾面朝外）后 `hold_on_last_frame`，不带 tick，宿主显式停止；遮罩不含 `*_item` 挂点，持物随手。
 宿主约定（归整合会话接线）：另一只手是否非空只在双手式起手那一刻判断，判为非空就同 tick 起播；破门、连门接万门一斩时覆盖层保持、不重播（同 id 重播会从 0 s 重来）；叩门、撞门承接破门时随破门起播，覆盖层从自己的 0 s 起；自然结束或被打断时先停该式，等它淡完（0.25 s，5 tick）再停覆盖层；施放中手变空时覆盖层照播，手里空握。
@@ -106,7 +106,7 @@
 
 层序为原版姿态 → 循环姿态 → 一次性／保持动作。只有动画实际包含、且在 mask 内的骨参与接管，缺失的通道继承下层。`upper` 包含腰、胸、头、双臂；`lower` 包含胯、双腿；单臂包含上臂至手指。只有 `full` 可以改变 root。
 
-`root` 目前只有横扫 `door_breaker_sweep(_off)` 在用（2026-10-30）：只转 Y（主手版 0° → −360° 左转，副手版 0° → +360° 右转，3.00–4.25 s），位置按已转角绕左踝竖线平移补偿，使转轴脚的世界位置不动；4.30 s 用跳变帧（pre ±360°、post 0°）换回 0°，末帧为 0，播完淡出不倒转。淡入淡出按欧拉角线性混合，起转后被打断时已转的角度会在淡出时倒转回去；运行时尚未做最短角度淡出。
+`root` 目前只有横扫 `door_breaker_sweep(_off)` 在用（2026-10-30）：只转 Y（主手版 0° → −360° 左转，副手版 0° → +360° 右转，1.35–2.60 s），位置按已转角绕左踝竖线平移补偿，使转轴脚的世界位置不动；2.65 s 用跳变帧（pre ±360°、post 0°）换回 0°，末帧为 0，播完淡出不倒转。淡入淡出按欧拉角线性混合，起转后被打断时已转的角度会在淡出时倒转回去；运行时尚未做最短角度淡出。
 
 左主手且 `hand != none` 时，交换左右骨与单臂 mask，位移 X 反号，旋转 Y/Z 反号（镜像不是把旋转 X 反号）。`step_l` / `step_r` 事件同时交换。独立 `fpv` 手臂只取手臂骨，不继承 root、腰和胸的动画位移。
 

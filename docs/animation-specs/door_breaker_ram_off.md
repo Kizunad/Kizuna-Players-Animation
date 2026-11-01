@@ -3,6 +3,8 @@
 > 状态：**已制作**（2026-10-29），粗臂、细臂门禁全部通过，待用户看 GIF 验收；未进游戏录制。规格随 [door_breaker_ram](door_breaker_ram.md) 审过，制作结果见第 5 节。
 > 关键姿势已用原型探针按真实斧子几何核对（`~/Code/Kizuna-remote-session/handoff/kpa-door-breaker-proto/probe_ram*.py` 的 `off` 模式）。
 
+> **起手压缩（I7a，2026-11-02）**：与主手版同一套钉点和发力段平移，现长、时间线和打击时段相同，见 [主手页](door_breaker_ram.md) 页首说明；起手段逐帧速率按副手版自己的门禁另算，中间时刻与主手版相差不超过 0.04 s。与主手版不同的现行索引：`unbalanced_windows: [[1.08, 1.28], [2.58, 2.85]]`。
+
 ## 1. 做法（同一原型，`spec(off=True)`）
 
 - **时间轴、事件、索引**：

@@ -3,6 +3,8 @@
 > 状态：**已制作**（2026-10-29），粗臂、细臂门禁全部通过，待用户看 GIF 验收；未进游戏录制。规格第三轮（C′）随 [door_breaker_cleave](door_breaker_cleave.md) 审过，制作结果与出入见第 5 节。
 > 副手版 C′ 的举与击中已用原型探针按真实斧子几何核对（`probe_cleave_coff.py`、`probe_cleave_coff2.py`、`probe_cleave_coff3.py`）。举斧那一帧没有姿势能同时满足全部自查，取最接近的一组；用户已确认接受（第 3 节）。A 案的上一版稿备份在 `kpa-door-breaker-proto/out/spec-cleave-off-A-2026-10-29.md`。
 
+> **起手压缩（I7a，2026-11-02）**：与主手版同一套钉点和发力段平移，现长、时间线和打击时段相同，见 [主手页](door_breaker_cleave.md) 页首说明；起手段逐帧速率按副手版自己的门禁另算，中间时刻与主手版相差不超过 0.04 s。现行索引与主手版相同。
+
 ## 1. 做法（同一原型，`spec(off=True)`）
 
 - **时间轴、事件、索引**：

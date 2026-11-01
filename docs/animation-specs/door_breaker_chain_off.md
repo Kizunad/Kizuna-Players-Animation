@@ -3,6 +3,8 @@
 > 状态：**规格已审**（2026-10-30，随 [door_breaker_chain](door_breaker_chain.md) 一起审过，第 3 节五条出入全部接受）；**已制作，离线门禁全部适用项通过，用户 2026-10-30 看接触表验收通过**（第 5 节）。未在游戏里验证。
 > 关键姿势已用原型探针按真实斧子几何核对（`~/Code/Kizuna-remote-session/handoff/kpa-door-breaker-proto/probe_chain_keys.py`，`python3 probe_chain_keys.py off view` 复现本页数值，出图 `build/anim-review/door-breaker/chain-probe/off_keys.png`；`python3 probe_chain_path.py off` 复现刃口领先、沿途间隙和角速度粗算；`python3 probe_chain_offyaw.py off <关键名>` 扫躯干偏航）。
 
+> **起手压缩（I7a，2026-11-02）**：与主手版同一套钉点和发力段平移，现长、时间线和打击时段相同，见 [主手页](door_breaker_chain.md) 页首说明；起手段逐帧速率按副手版自己的门禁另算，中间时刻与主手版相差不超过 0.04 s。现行索引与主手版相同。
+
 ## 1. 做法（同一原型，副手参数）
 
 - **时间轴、事件、索引**：

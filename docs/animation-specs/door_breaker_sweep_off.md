@@ -3,6 +3,8 @@
 > 状态：**规格已审**（2026-10-30，随 [door_breaker_sweep](door_breaker_sweep.md) 一起审过）；**已制作，离线门禁全部适用项通过，用户 2026-10-30 看接触表验收通过**（第 5 节）。`root` 回旋未在游戏里验证。
 > 关键姿势已用原型探针按真实斧子几何核对（`~/Code/Kizuna-remote-session/handoff/kpa-door-breaker-proto/probe_sweep3.py`，`python3 probe_sweep3.py off abs keys` 复现本页数值）。
 
+> **起手压缩（I7a，2026-11-02）**：与主手版同一套钉点和发力段平移，现长、时间线和打击时段相同，见 [主手页](door_breaker_sweep.md) 页首说明；起手段逐帧速率按副手版自己的门禁另算，中间时刻与主手版相差不超过 0.04 s。与主手版不同的现行索引：`unbalanced_windows: [[0.26, 0.38], [1.4, 1.44], [1.62, 1.72], [1.83, 1.89], [2.48, 2.6]]`。
+
 ## 1. 做法（同一原型，副手参数）
 
 - **时间轴、事件、索引**：

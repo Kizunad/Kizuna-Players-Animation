@@ -98,29 +98,29 @@ public enum PlayerAnimationAction {
      * 破门斩（docs/animation-specs/door_breaker_knock.md）。宿主起手时按真实时间播放，承接时用 start_tick
      * 前推到承接入口；整段全身，优先级高于服务端每次打击另调的原版挥手。
      */
-    DOOR_BREAKER_KNOCK("door_breaker_knock", 60),
-    DOOR_BREAKER_KNOCK_OFF("door_breaker_knock_off", 60),
-    /** 破门（docs/animation-specs/door_breaker_cleave.md）：双手右拧斜劈、嵌门晃撬，6.0 秒。 */
-    DOOR_BREAKER_CLEAVE("door_breaker_cleave", 120),
-    DOOR_BREAKER_CLEAVE_OFF("door_breaker_cleave_off", 120),
-    /** 撞门（docs/animation-specs/door_breaker_ram.md）：低身冲两步、肩撞、回身横撩，5.0 秒；冲刺段原地迈步，位移由冲量负责。 */
-    DOOR_BREAKER_RAM("door_breaker_ram", 100),
-    DOOR_BREAKER_RAM_OFF("door_breaker_ram_off", 100),
-    /** 破盾（docs/animation-specs/door_breaker_hook.md）：单手越沿一钩、撤步后坐拽回，4.5 秒；2.05 秒击中。 */
-    DOOR_BREAKER_HOOK("door_breaker_hook", 90),
-    DOOR_BREAKER_HOOK_OFF("door_breaker_hook_off", 90),
-    /** 横扫（docs/animation-specs/door_breaker_sweep.md）：单手抡斧、绕前脚原地旋身一整圈，6.0 秒；3.70 秒末击，root 3.00–4.25 秒转 360°。 */
-    DOOR_BREAKER_SWEEP("door_breaker_sweep", 120),
-    DOOR_BREAKER_SWEEP_OFF("door_breaker_sweep_off", 120),
-    /** 掩门（docs/animation-specs/door_breaker_close.md）：推掌撤两步、深蹲后坐、翻斧向前上顶撩、横斧落闩，5.0 秒；2.60 秒击中。 */
-    DOOR_BREAKER_CLOSE("door_breaker_close", 100),
-    DOOR_BREAKER_CLOSE_OFF("door_breaker_close_off", 100),
-    /** 连门（docs/animation-specs/door_breaker_chain.md）：双手叠握连斩三刀、左右来回拧，前两刀垫步、第三刀弓步横斩，8.0 秒；5.00 秒末击。 */
-    DOOR_BREAKER_CHAIN("door_breaker_chain", 160),
-    DOOR_BREAKER_CHAIN_OFF("door_breaker_chain_off", 160),
-    /** 万门一斩（docs/animation-specs/door_breaker_finale.md）：双手叠握荡斧、竖斧蹲蓄、起跳、落地竖劈、折身喘气，9.0 秒；2.30 秒前荡轻击、4.85 秒落地竖劈击中。 */
-    DOOR_BREAKER_FINALE("door_breaker_finale", 180),
-    DOOR_BREAKER_FINALE_OFF("door_breaker_finale_off", 180),
+    DOOR_BREAKER_KNOCK("door_breaker_knock", 51),
+    DOOR_BREAKER_KNOCK_OFF("door_breaker_knock_off", 51),
+    /** 破门（docs/animation-specs/door_breaker_cleave.md）：双手右拧斜劈、嵌门晃撬，4.4 秒；1.60 秒击中。 */
+    DOOR_BREAKER_CLEAVE("door_breaker_cleave", 88),
+    DOOR_BREAKER_CLEAVE_OFF("door_breaker_cleave_off", 88),
+    /** 撞门（docs/animation-specs/door_breaker_ram.md）：低身冲两步、肩撞、回身横撩，4.25 秒；1.65 秒击中；冲刺段原地迈步，位移由冲量负责。 */
+    DOOR_BREAKER_RAM("door_breaker_ram", 85),
+    DOOR_BREAKER_RAM_OFF("door_breaker_ram_off", 85),
+    /** 破盾（docs/animation-specs/door_breaker_hook.md）：单手越沿一钩、撤步后坐拽回，3.5 秒；1.05 秒击中。 */
+    DOOR_BREAKER_HOOK("door_breaker_hook", 70),
+    DOOR_BREAKER_HOOK_OFF("door_breaker_hook_off", 70),
+    /** 横扫（docs/animation-specs/door_breaker_sweep.md）：单手抡斧、绕前脚原地旋身一整圈，4.35 秒；2.05 秒末击，root 1.35–2.60 秒转 360°。 */
+    DOOR_BREAKER_SWEEP("door_breaker_sweep", 87),
+    DOOR_BREAKER_SWEEP_OFF("door_breaker_sweep_off", 87),
+    /** 掩门（docs/animation-specs/door_breaker_close.md）：推掌撤两步、深蹲后坐、翻斧向前上顶撩、横斧落闩，4.7 秒；2.30 秒击中。 */
+    DOOR_BREAKER_CLOSE("door_breaker_close", 94),
+    DOOR_BREAKER_CLOSE_OFF("door_breaker_close_off", 94),
+    /** 连门（docs/animation-specs/door_breaker_chain.md）：双手叠握连斩三刀、左右来回拧，前两刀垫步、第三刀弓步横斩，7.25 秒；4.25 秒末击。 */
+    DOOR_BREAKER_CHAIN("door_breaker_chain", 145),
+    DOOR_BREAKER_CHAIN_OFF("door_breaker_chain_off", 145),
+    /** 万门一斩（docs/animation-specs/door_breaker_finale.md）：双手叠握荡斧、竖斧蹲蓄、起跳、落地竖劈、折身喘气，7.05 秒；1.20 秒前荡轻击、2.90 秒落地竖劈击中。 */
+    DOOR_BREAKER_FINALE("door_breaker_finale", 141),
+    DOOR_BREAKER_FINALE_OFF("door_breaker_finale_off", 141),
     /**
      * 持物手覆盖层（docs/animation-specs/door_breaker_guard.md）：破门、连门、万门一斩起手时另一只手非空，
      * 与该式同起，只接管持物那条手臂（主手版 l_arm、副手版 r_arm），0.40 秒收到体侧后保持；

@@ -178,25 +178,26 @@
 
 施放期间移速 ×0.4、不锁移动（2026-10-29 用户决定）；`mask: full`、优先级 24，任何底层上都整段生效，主动缓行时底层的走步不显示，服务端每次打击另调的原版挥手（攻击 20）不接管任何骨。
 叩门、撞门起手不能被打断，没有打断边；式与式之间的承接（前一式淡出 0.30 s、后一式从承接入口起播）要从剪辑中途起播，现有切换回归只按剪辑起点模拟，等承接接线时再加。
+2026-11-02 起手压缩（I7a）后的时长、承接入口和起手打断段按下表；做法见 [验收记录](../animation-acceptance.md#破门斩起手压缩i7a2026-11-02)。
 
 | 来源 → 目标 | 淡入 / 淡出 | 触发 | 约束 |
 | --- | ---: | --- | --- |
-| stance_idle → door_breaker_knock / door_breaker_knock_off | 0.10 / 0.25 | 宿主在叩门起手时播放（副手出手播 `_off`） | 起止姿态等于 `stance_idle` 首帧；按真实时间播 3.0 s；撞门后承接从 0.30 s 起播 |
-| door_breaker_knock / door_breaker_knock_off → stance_idle | 0.25 / 0.25 | 3.0 s 播完 | 淡回架势底层 |
-| stance_idle → door_breaker_cleave / door_breaker_cleave_off | 0.10 / 0.25 | 宿主在破门起手时播放（副手出手播 `_off`） | 起止姿态等于 `stance_idle` 首帧；按真实时间播 6.0 s；起手被打断淡出 0.20 s；叩门、撞门后承接从 0.40 s 起播 |
-| door_breaker_cleave / door_breaker_cleave_off → stance_idle | 0.25 / 0.25 | 6.0 s 播完 | 淡回架势底层 |
-| stance_idle → door_breaker_ram / door_breaker_ram_off | 0.10 / 0.25 | 宿主在撞门起手时播放（副手出手播 `_off`） | 起止姿态等于 `stance_idle` 首帧；按真实时间播 5.0 s；冲刺段原地迈步、实体由冲量推动；掩门后承接从 0.40 s 起播 |
-| door_breaker_ram / door_breaker_ram_off → stance_idle | 0.25 / 0.25 | 5.0 s 播完 | 淡回架势底层 |
-| stance_idle → door_breaker_hook / door_breaker_hook_off | 0.10 / 0.25 | 宿主在破盾起手时播放（副手出手播 `_off`） | 起止姿态等于 `stance_idle` 首帧；按真实时间播 4.5 s；施放期间 0.4 倍移速走动时仍整段接管；叩门后承接从 0.40 s 起播 |
-| door_breaker_hook / door_breaker_hook_off → stance_idle | 0.25 / 0.25 | 4.5 s 播完 | 淡回架势底层 |
-| stance_idle → door_breaker_sweep / door_breaker_sweep_off | 0.10 / 0.25 | 宿主在横扫起手时播放（副手出手播 `_off`） | 起止姿态等于 `stance_idle` 首帧；按真实时间播 6.0 s；`root` 3.00–4.25 s 绕前脚原地转一整圈；起手被伤害打断淡出 0.20 s（3.00–3.35 s 打断时已转的 `root` 角会倒转回去）；叩门后承接从 0.50 s 起播 |
-| door_breaker_sweep / door_breaker_sweep_off → stance_idle | 0.25 / 0.25 | 6.0 s 播完 | 淡回架势底层；末帧 `root` 为 0，淡出不倒转 |
-| stance_idle → door_breaker_close / door_breaker_close_off | 0.10 / 0.25 | 宿主在掩门起手时播放（副手出手播 `_off`） | 起止姿态等于 `stance_idle` 首帧；按真实时间播 5.0 s；两次撤步原地迈步、实体由冲量推动（方向由目录给） |
-| door_breaker_close / door_breaker_close_off → stance_idle | 0.25 / 0.25 | 5.0 s 播完 | 淡回架势底层 |
-| stance_idle → door_breaker_chain / door_breaker_chain_off | 0.10 / 0.25 | 宿主在连门起手时播放（副手出手播 `_off`） | 起止姿态等于 `stance_idle` 首帧；按真实时间播 8.0 s；两次垫步、弓步原地做，实体由三次冲量推动（方向由目录给）；起手 0–1.55 s 被伤害打断淡出 0.20 s；万门一斩从 6.50 s 起承接，承接边等承接接线时再加 |
-| door_breaker_chain / door_breaker_chain_off → stance_idle | 0.25 / 0.25 | 8.0 s 播完 | 淡回架势底层 |
-| stance_idle → door_breaker_finale / door_breaker_finale_off | 0.10 / 0.25 | 宿主在万门一斩起手时播放（副手出手播 `_off`） | 起止姿态等于 `stance_idle` 首帧；按真实时间播 9.0 s，游戏里总作后式从 1.50 s 起播（承接接线与 `start_tick` 归整合会话）；起跳腾空由两次冲量推动；起手 0–4.05 s 被伤害打断淡出 0.20 s；破门、连门 → 万门一斩的承接边等承接接线时再加 |
-| door_breaker_finale / door_breaker_finale_off → stance_idle | 0.25 / 0.25 | 9.0 s 播完 | 淡回架势底层 |
+| stance_idle → door_breaker_knock / door_breaker_knock_off | 0.10 / 0.25 | 宿主在叩门起手时播放（副手出手播 `_off`） | 起止姿态等于 `stance_idle` 首帧；按真实时间播 2.55 s；撞门后承接从 0.10 s 起播 |
+| door_breaker_knock / door_breaker_knock_off → stance_idle | 0.25 / 0.25 | 2.55 s 播完 | 淡回架势底层 |
+| stance_idle → door_breaker_cleave / door_breaker_cleave_off | 0.10 / 0.25 | 宿主在破门起手时播放（副手出手播 `_off`） | 起止姿态等于 `stance_idle` 首帧；按真实时间播 4.4 s；起手被打断淡出 0.20 s；叩门、撞门后承接从 0.20 s 起播 |
+| door_breaker_cleave / door_breaker_cleave_off → stance_idle | 0.25 / 0.25 | 4.4 s 播完 | 淡回架势底层 |
+| stance_idle → door_breaker_ram / door_breaker_ram_off | 0.10 / 0.25 | 宿主在撞门起手时播放（副手出手播 `_off`） | 起止姿态等于 `stance_idle` 首帧；按真实时间播 4.25 s；冲刺段原地迈步、实体由冲量推动；掩门后承接从 0.20 s 起播 |
+| door_breaker_ram / door_breaker_ram_off → stance_idle | 0.25 / 0.25 | 4.25 s 播完 | 淡回架势底层 |
+| stance_idle → door_breaker_hook / door_breaker_hook_off | 0.10 / 0.25 | 宿主在破盾起手时播放（副手出手播 `_off`） | 起止姿态等于 `stance_idle` 首帧；按真实时间播 3.5 s；施放期间 0.4 倍移速走动时仍整段接管；叩门后承接从 0.20 s 起播 |
+| door_breaker_hook / door_breaker_hook_off → stance_idle | 0.25 / 0.25 | 3.5 s 播完 | 淡回架势底层 |
+| stance_idle → door_breaker_sweep / door_breaker_sweep_off | 0.10 / 0.25 | 宿主在横扫起手时播放（副手出手播 `_off`） | 起止姿态等于 `stance_idle` 首帧；按真实时间播 4.35 s；`root` 1.35–2.60 s 绕前脚原地转一整圈；起手被伤害打断淡出 0.20 s（1.35–1.70 s 打断时已转的 `root` 角会倒转回去）；叩门后承接从 0.20 s 起播 |
+| door_breaker_sweep / door_breaker_sweep_off → stance_idle | 0.25 / 0.25 | 4.35 s 播完 | 淡回架势底层；末帧 `root` 为 0，淡出不倒转 |
+| stance_idle → door_breaker_close / door_breaker_close_off | 0.10 / 0.25 | 宿主在掩门起手时播放（副手出手播 `_off`） | 起止姿态等于 `stance_idle` 首帧；按真实时间播 4.7 s；两次撤步原地迈步、实体由冲量推动（方向由目录给） |
+| door_breaker_close / door_breaker_close_off → stance_idle | 0.25 / 0.25 | 4.7 s 播完 | 淡回架势底层 |
+| stance_idle → door_breaker_chain / door_breaker_chain_off | 0.10 / 0.25 | 宿主在连门起手时播放（副手出手播 `_off`） | 起止姿态等于 `stance_idle` 首帧；按真实时间播 7.25 s；两次垫步、弓步原地做，实体由三次冲量推动（方向由目录给）；起手 0–0.80 s 被伤害打断淡出 0.20 s；万门一斩从 5.75 s 起承接，承接边等承接接线时再加 |
+| door_breaker_chain / door_breaker_chain_off → stance_idle | 0.25 / 0.25 | 7.25 s 播完 | 淡回架势底层 |
+| stance_idle → door_breaker_finale / door_breaker_finale_off | 0.10 / 0.25 | 宿主在万门一斩起手时播放（副手出手播 `_off`） | 起止姿态等于 `stance_idle` 首帧；按真实时间播 7.05 s，游戏里总作后式从 0.60 s 起播（承接接线与 `start_tick` 归整合会话）；起跳腾空由两次冲量推动；起手 0–2.10 s 被伤害打断淡出 0.20 s；破门、连门 → 万门一斩的承接边等承接接线时再加 |
+| door_breaker_finale / door_breaker_finale_off → stance_idle | 0.25 / 0.25 | 7.05 s 播完 | 淡回架势底层 |
 | door_breaker_cleave / door_breaker_chain / door_breaker_finale → door_breaker_guard | 0.10 / 0.25 | 双手式起手时另一只手非空，宿主同 tick 叠播 | 只接管左臂（左主手玩家镜像到右臂），其余骨照该式；承接时保持不重播 |
 | door_breaker_cleave_off / door_breaker_chain_off / door_breaker_finale_off → door_breaker_guard_off | 0.10 / 0.25 | 同上（副手出手） | 只接管右臂 |
 | door_breaker_guard / door_breaker_guard_off → stance_idle | 0.25 / 0.25 | 宿主在该式淡完后显式停止（[door_breaker_guard](door_breaker_guard.md) 第 9 节第 4 条） | 淡回架势持物位 |

@@ -32,9 +32,9 @@ class AnimationSetContractTest {
     private static final double SWING_LEAD_SECONDS = 0.1;
     private static final float SWING_PROGRESS = 0.3f;
     private static final Map<String, Double> DOOR_HITS = Map.of(
-            "door_breaker_knock", 1.7, "door_breaker_cleave", 3.2, "door_breaker_ram", 2.4,
-            "door_breaker_hook", 2.05, "door_breaker_sweep", 3.7, "door_breaker_close", 2.6,
-            "door_breaker_chain", 5.0, "door_breaker_finale", 4.85);
+            "door_breaker_knock", 1.25, "door_breaker_cleave", 1.6, "door_breaker_ram", 1.65,
+            "door_breaker_hook", 1.05, "door_breaker_sweep", 2.05, "door_breaker_close", 2.3,
+            "door_breaker_chain", 4.25, "door_breaker_finale", 2.9);
 
     @Test
     void everyRequestedActionIsIndexedAndParsesFromThePackagedResource() throws Exception {
