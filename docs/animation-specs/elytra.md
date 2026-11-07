@@ -4,7 +4,7 @@
 
 ## 1. 动作目的与触发
 
-- **用途**：`isFallFlying()`。`PlayerRenderer.setupRotations` 按 `k = clamp(roll² / 100, 0, 1)`（`roll` 为滑翔 tick，
+- **用途**：`isFallFlying()`。`AvatarRenderer.setupRotations` 按 `k = clamp(roll² / 100, 0, 1)`（`roll` 为滑翔 tick，
   10 tick 达到 1）把身体绕 X 转 `k × (−90° − pitch)`，再按速度与视线的夹角绕 Y 倾斜；模型头 `pitch = −45°`（`getFallFlyingTicks() > 4`），
   四肢摆动除以速度系数后几乎不动。
 - **本动作在身体空间制作**：放倒后身体空间的“上方”= 飞行方向，“后方 +Z”= 世界里朝天。

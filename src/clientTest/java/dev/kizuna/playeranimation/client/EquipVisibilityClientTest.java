@@ -88,7 +88,7 @@ final class EquipVisibilityClientTest {
         playback.tick(client);
         assertTrue(playback.shouldHideArmor(playerId, EquipmentSlot.CHEST));
 
-        client.level.setTimeFromServer(START_TICK + AFTER_FIRST_EQUIP_TICKS);
+        ClientPlaybackTestTime.advance(AFTER_FIRST_EQUIP_TICKS - 1);
         playback.tick(client);
         assertFalse(playback.shouldHideArmor(playerId, EquipmentSlot.CHEST));
 
@@ -110,7 +110,7 @@ final class EquipVisibilityClientTest {
         playback.tick(client);
         assertTrue(playback.shouldHideArmor(playerId, EquipmentSlot.CHEST));
 
-        client.level.setTimeFromServer(START_TICK + AFTER_SECOND_EQUIP_TICKS);
+        ClientPlaybackTestTime.advance(AFTER_SECOND_EQUIP_TICKS - AFTER_FIRST_EQUIP_TICKS);
         playback.tick(client);
         assertFalse(playback.shouldHideArmor(playerId, EquipmentSlot.CHEST));
         playback.play(playerId, CHESTPLATE);
@@ -143,7 +143,7 @@ final class EquipVisibilityClientTest {
         assertBoots(Set.of(firstBoot));
         assertTrue(EVENTS.isEmpty());
 
-        client.level.setTimeFromServer(START_TICK + AFTER_SECOND_EQUIP_TICKS);
+        ClientPlaybackTestTime.advance(AFTER_SECOND_EQUIP_TICKS - AFTER_FIRST_EQUIP_TICKS);
         playback.tick(client);
         assertBoots(Set.of(HumanoidArm.RIGHT, HumanoidArm.LEFT));
         assertTrue(playback.equipItem(playerId).isEmpty());
@@ -167,7 +167,8 @@ final class EquipVisibilityClientTest {
     @ParameterizedTest
     @CsvSource({"equip_boots, RIGHT, RIGHT", "equip_boots_off, RIGHT, LEFT",
             "equip_boots, LEFT, LEFT", "equip_boots_off, LEFT, RIGHT"})
-    void repeatedSynchronizationMustKeepBootSidesAndFinishSecondBoot(String animation, HumanoidArm mainArm, HumanoidArm firstBoot) {
+    void repeatedSynchronizationMustKeepBootSidesAndFinishSecondBoot(
+            String animation, HumanoidArm mainArm, HumanoidArm firstBoot) {
         // 同一请求在两次事件前后补发，都不能重置已经恢复的一侧或重复计数。
         client.player.setMainArm(mainArm);
         client.level.setTimeFromServer(START_TICK + 1);
@@ -175,14 +176,14 @@ final class EquipVisibilityClientTest {
         playback.tick(client);
         assertBoots(Set.of());
 
-        client.level.setTimeFromServer(START_TICK + AFTER_FIRST_EQUIP_TICKS);
+        ClientPlaybackTestTime.advance(AFTER_FIRST_EQUIP_TICKS - 1);
         playback.tick(client);
         assertBoots(Set.of(firstBoot));
         playback.play(playerId, animation, START_TICK, "same-boots");
         playback.tick(client);
         assertBoots(Set.of(firstBoot));
 
-        client.level.setTimeFromServer(START_TICK + AFTER_SECOND_EQUIP_TICKS);
+        ClientPlaybackTestTime.advance(AFTER_SECOND_EQUIP_TICKS - AFTER_FIRST_EQUIP_TICKS);
         playback.tick(client);
         playback.play(playerId, animation, START_TICK, "same-boots");
         playback.tick(client);

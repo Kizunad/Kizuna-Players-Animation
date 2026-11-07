@@ -144,10 +144,6 @@ public record Skeleton(List<Bone> bones, int textureWidth, int textureHeight) {
         }
         Vec3 origin = JsonInput.vector(raw.get("origin"));
         Vec3 size = JsonInput.vector(raw.get("size"));
-        // 固定骨架由有体积的像素方块组成，面 UV 已经包含皮肤方向。
-        if (size.x() <= 0 || size.y() <= 0 || size.z() <= 0) {
-            throw new IllegalArgumentException("方块尺寸必须为正数");
-        }
         if (raw.has("mirror") && JsonInput.bool(raw, "mirror")) {
             throw new IllegalArgumentException("逐面 UV 不支持额外 mirror，请在导出时烘焙");
         }
@@ -155,6 +151,7 @@ public record Skeleton(List<Bone> bones, int textureWidth, int textureHeight) {
         if (raw.has("inflate")) {
             inflate = JsonInput.nonnegative(raw, "inflate");
         }
+        validateCubeSize(size, inflate, kind);
         if (kind == GeometryKind.PLAYER && inflate != 0
                 && inflate != BODY_OUTER_INFLATE && inflate != HEAD_OUTER_INFLATE) {
             throw new IllegalArgumentException("外层 inflate 必须为 0.25 或 0.5 像素");
@@ -166,6 +163,23 @@ public record Skeleton(List<Bone> bones, int textureWidth, int textureHeight) {
             placement = placement(raw, min, size);
         }
         return new Cube(min, size, inflate, faces, placement);
+    }
+
+    private static void validateCubeSize(Vec3 size, float inflate, GeometryKind kind) {
+        // 生物可包含原版双面平面（如沼骸蘑菇）；玩家体积约束不变，线和点不作为可见几何。
+        int flatAxes = 0;
+        for (int axis = 0; axis < 3; axis++) {
+            float length = size.axis(axis);
+            if (length < 0) {
+                throw new IllegalArgumentException("方块尺寸不得为负数");
+            }
+            if (length == 0) {
+                flatAxes++;
+            }
+        }
+        if (flatAxes > 1 || (flatAxes == 1 && (kind == GeometryKind.PLAYER || inflate != 0))) {
+            throw new IllegalArgumentException("仅实体允许单轴零厚度平面，且平面不得膨胀");
+        }
     }
 
     private static Map<Face, Uv> parseFaces(JsonObject raw, JsonObject description) {

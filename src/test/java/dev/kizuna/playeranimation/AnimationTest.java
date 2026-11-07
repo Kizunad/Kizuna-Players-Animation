@@ -281,10 +281,12 @@ class AnimationTest {
                 AnimationEntry.Hand.NONE, false);
         player.scrub(entry, 0, 0, false);
         player.scrub(entry, 0.2, 0.5f, false);
-        assertEquals(25, player.sample(Rig.zeroPose(), 0.2, false)[BoneId.R_FOREARM.ordinal()].rotation().x(), 0.001,
+        assertEquals(0.5, player.active(0.2).getFirst().weight(), 0.001,
                 "连续 scrub 必须沿用原淡入进度");
+        assertEquals(0, player.sample(Rig.zeroPose(), 0.2, false)[BoneId.R_FOREARM.ordinal()].rotation().x(), 0.001,
+                "更新边界先保留可见姿态，再开始插值");
         player.scrub(entry, 0.21, 0.75f, false);
-        assertEquals(39.375, player.sample(Rig.zeroPose(), 0.21, false)[BoneId.R_FOREARM.ordinal()].rotation().x(), 0.01);
+        assertEquals(5.25, player.sample(Rig.zeroPose(), 0.21, false)[BoneId.R_FOREARM.ordinal()].rotation().x(), 0.01);
         player.stop("scrub", 0.4);
         assertEquals(37.5, player.sample(Rig.zeroPose(), 0.6, false)[BoneId.R_FOREARM.ordinal()].rotation().x(), 0.01,
                 "停止后必须保留 scrub 末姿态并淡出");

@@ -13,7 +13,7 @@
 
 ## 1. 动作目的与触发
 
-- **用途**：`UseAnim.BOW` 持续使用。原版 `ArmPose.BOW_AND_ARROW`（主手右手持弓）：右臂 `yaw = −0.1 + headYaw`、
+- **用途**：`ItemUseAnimation.BOW` 持续使用。原版 `ArmPose.BOW_AND_ARROW`（主手右手持弓）：右臂 `yaw = −0.1 + headYaw`、
   左臂 `yaw = 0.5 + headYaw`，两臂 `pitch = −90° + headPitch`，即双臂平举指向视线，左手并不后拉。
 - **触发**：`armPoseAction` 的 `BOW` 分支；弓在主手 `bow_draw`，副手 [bow_draw_off](bow_draw_off.md)。
 - **原版进度来源**：`BowItem.getPowerForTime(useTicks)`：`f = t / 20`，`pull = min((f² + 2f) / 3, 1)`，**20 tick 满弓**；

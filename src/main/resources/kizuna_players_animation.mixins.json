@@ -3,6 +3,6 @@
   "package": "dev.kizuna.playeranimation.mixin",
   "compatibilityLevel": "JAVA_25",
   "mixins": ["LivingEntityAccessor"],
-  "client": ["EntityRendererMixin", "LivingEntityRendererMixin", "ModelFeatureRendererMixin", "HeldItemFeatureRendererMixin", "HeldItemRendererMixin", "MobFeatureRendererMixin", "ArmorFeatureRendererMixin", "FirstPersonFeatureRendererMixin"],
+  "client": ["EntityRendererMixin", "LivingEntityRendererMixin", "ModelFeatureRendererMixin", "HeldItemFeatureRendererMixin", "HeldItemRendererMixin", "MobFeatureRendererMixin", "ArmorFeatureRendererMixin", "FirstPersonFeatureRendererMixin", "AnimatedItemUseMixin", "AnimatedBowPullMixin", "AnimatedCrossbowPullMixin", "AnimatedCrossbowChargeMixin", "ConditionalItemPropertiesAccess"],
   "injectors": {"defaultRequire": 1}
 }

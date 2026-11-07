@@ -378,7 +378,7 @@ final class VanillaAnimationScheduler {
 
     private void scheduleSpecialPose(ServerPlayer player, Set<String> desired) {
         // 原版特殊姿态各自独占全身：睡眠、鞘翅滑翔（与原版头部切换同为滑翔超过 4 tick）、骑乘。
-        // Entity.shouldRiderSit 只存在于客户端；原版坐骑默认都让骑手坐下，服务端按 isPassenger 判断。
+        // 26.2 原版类人渲染按 isPassenger 坐下，服务端采用同一条件。
         if (!player.isAlive() || player.isSpectator()) {
             return;
         }
@@ -628,7 +628,7 @@ final class VanillaAnimationScheduler {
             case CROSSBOW -> handAction("crossbow_charge", "crossbow_charge_off", hand);
             // NONE 与 26.2 新增的 BUNDLE（收纳袋按住倒出物品）在原版第三人称都没有专属 ArmPose，用通用剪辑。
             case NONE, BUNDLE -> handAction("use_item", "use_item_off", hand);
-            // 26.2 新增的矛蓄力冲刺：原版用 SpearAnimations 摆臂并另加手持物变换，PA 尚无矛剪辑，交还原版。
+            // 矛由客户端按本帧原版使用状态采样专属剪辑，服务端不再发送相同进度。
             case SPEAR -> null;
         };
     }
@@ -640,7 +640,7 @@ final class VanillaAnimationScheduler {
                     placing ? "place_block_off" : mining ? "mine_off" : "attack_off", hand);
             // 数据组件声明不摆臂时原版只扭身体，PA 不叠挥臂剪辑。
             case NONE -> null;
-            // 26.2 新增的矛戳刺由原版 SpearAnimations 驱动整臂，PA 尚无戳刺剪辑，交还原版。
+            // 戳刺由客户端按本帧挥手进度取样，不套普通挥砍的收势尾段。
             case STAB -> null;
         };
     }

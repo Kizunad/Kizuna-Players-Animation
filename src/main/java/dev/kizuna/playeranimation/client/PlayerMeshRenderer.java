@@ -68,8 +68,8 @@ public final class PlayerMeshRenderer {
         EntityFrame.PlayerParts parts = new EntityFrame.PlayerParts(firstPersonPass, vanillaHands, hidden,
                 PlayerAnimationClient.PLAYBACK.shouldHideBoot(id, true),
                 PlayerAnimationClient.PLAYBACK.shouldHideBoot(id, false), emptyHands,
-                heldItem(frame, player, HumanoidArm.RIGHT, state.rightHandItemState),
-                heldItem(frame, player, HumanoidArm.LEFT, state.leftHandItemState));
+                heldItem(frame, player, HumanoidArm.RIGHT, state.rightHandItemState, state),
+                heldItem(frame, player, HumanoidArm.LEFT, state.leftHandItemState, state));
         return EntityFrame.player(frame, parts);
     }
 
@@ -80,8 +80,8 @@ public final class PlayerMeshRenderer {
         if (model == null) {
             return null;
         }
-        var animation = PlayerAnimationClient.PLAYBACK.player(player.getUUID());
         double now = PlayerPlayback.now(tickDelta);
+        var animation = PlayerAnimationClient.PLAYBACK.playerForRender(player.getUUID(), state, now);
         // 先还原原版姿态，再按实际存在的轨道覆盖，未写的腿仍保持原版走路。
         // 视线层启用时底层去掉原版头部偏航/俯仰，最后由视线层统一加回，避免动作头轨道吞掉视线或重复计算。
         LookLayer.Clips look = null;
@@ -90,15 +90,21 @@ public final class PlayerMeshRenderer {
         }
         Pose[] base = basePose(model.skeleton(), vanilla, firstPerson, slim, look != null);
         Pose[] pose = base;
+        AimCompensation.Weights aim = AimCompensation.Weights.NONE;
         if (animation != null) {
             pose = animation.sample(base, now, firstPerson, state.isCrouching);
-            applyArmPosePitch(pose, model.skeleton(), animation, now, player.getViewXRot(tickDelta),
-                    player.getMainArm());
+            if (!firstPerson) {
+                SpearPoses.applyPitch(pose, animation, state, now);
+            }
+            float viewPitch = player.getViewXRot(tickDelta);
+            applyArmPosePitch(pose, model.skeleton(), animation, now, viewPitch, player.getMainArm());
+            aim = AimCompensation.weights(animation, now);
+            AimCompensation.apply(pose, model.skeleton(), aim.pitch(), viewPitch);
         }
         if (look != null) {
             float yaw = (float) Math.toDegrees(vanilla.head.yRot);
             float pitch = (float) Math.toDegrees(vanilla.head.xRot);
-            LookLayer.apply(pose, look, yaw, pitch, lookPitchWeight(animation, now));
+            LookLayer.apply(pose, look, yaw, pitch, lookPitchWeight(animation, now) * aim.lookPitchScale());
         }
         return new Frame(model, Rig.matrices(model.skeleton(), pose));
     }
@@ -152,24 +158,8 @@ public final class PlayerMeshRenderer {
         float modelPitch = -pitch;
         pose[BoneId.HEAD.ordinal()] = withPitch(pose[BoneId.HEAD.ordinal()], modelPitch);
         if (active.startsWith("spyglass") || active.startsWith("bow_draw")) {
-            // 望远镜托臂与拉弓弦手都必须保持双手相对位置：两臂绕同一肩线做刚性旋转；分别增加局部 X 欧拉角会因 Y/Z 不同而拉开托臂接触点。
-            Vec3 right = skeleton.bone(BoneId.R_UPPER_ARM).pivot();
-            Vec3 left = skeleton.bone(BoneId.L_UPPER_ARM).pivot();
-            Vec3 center = right.lerp(left, 0.5f);
-            float radians = (float) (Math.PI / 180);
-            Matrix4f turn = new Matrix4f().translate(center.x(), center.y(), center.z())
-                    .rotateX(modelPitch * radians).translate(-center.x(), -center.y(), -center.z());
-            for (BoneId upper : new BoneId[]{BoneId.R_UPPER_ARM, BoneId.L_UPPER_ARM}) {
-                Vec3 pivot = skeleton.bone(upper).pivot();
-                Pose arm = pose[upper.ordinal()];
-                Matrix4f local = new Matrix4f(turn)
-                        .translate(arm.position().x(), arm.position().y(), arm.position().z())
-                        .translate(pivot.x(), pivot.y(), pivot.z())
-                        .rotateZYX(arm.rotation().z() * radians, arm.rotation().y() * radians,
-                                arm.rotation().x() * radians)
-                        .translate(-pivot.x(), -pivot.y(), -pivot.z());
-                pose[upper.ordinal()] = Rig.localPose(local, pivot);
-            }
+            // 两臂绕同一肩线旋转，保持托掌与弦手接触。
+            AimCompensation.turnArms(pose, skeleton, modelPitch);
             return;
         }
         if (active.startsWith("crossbow_hold")) {
@@ -177,12 +167,15 @@ public final class PlayerMeshRenderer {
             pose[BoneId.L_UPPER_ARM.ordinal()] = withPitch(pose[BoneId.L_UPPER_ARM.ordinal()], modelPitch);
             return;
         }
-        HumanoidArm actionArm = active.endsWith("_off") ? mainArm.getOpposite() : mainArm;
+        HumanoidArm actionArm = mainArm;
+        if (active.endsWith("_off")) {
+            actionArm = mainArm.getOpposite();
+        }
         BoneId upper = actionArm == HumanoidArm.RIGHT ? BoneId.R_UPPER_ARM : BoneId.L_UPPER_ARM;
         pose[upper.ordinal()] = withPitch(pose[upper.ordinal()], modelPitch);
     }
 
-    private static Pose withPitch(Pose pose, float delta) {
+    static Pose withPitch(Pose pose, float delta) {
         Vec3 rotation = pose.rotation();
         return new Pose(pose.position(), new Vec3(rotation.x() + delta, rotation.y(), rotation.z()));
     }
@@ -275,7 +268,7 @@ public final class PlayerMeshRenderer {
     }
 
     static EntityFrame.HeldItem heldItem(Frame frame, AbstractClientPlayer player, HumanoidArm arm,
-                                         ItemStackRenderState own) {
+                                         ItemStackRenderState own, AvatarRenderState state) {
         double now = PlayerPlayback.now(0);
         // 穿戴动作需要暂时用装备物品替换当前手持物；装备来自物品栏时原手也可能并非空手。
         ItemStack equip = PlayerAnimationClient.PLAYBACK.equipItem(player.getUUID(), arm, now);
@@ -300,7 +293,13 @@ public final class PlayerMeshRenderer {
         } else {
             transform = Rig.itemTransform(frame.model.skeleton(), frame.matrices, socket);
         }
-        return new EntityFrame.HeldItem(rendered, transform);
+        Matrix4f itemTransform = transform;
+        if (equip.isEmpty() && !twoHanded) {
+            var animation = PlayerAnimationClient.PLAYBACK.player(player.getUUID());
+            var source = SpearItemTransforms.source(animation, arm, player.getMainArm(), now);
+            itemTransform = SpearItemTransforms.apply(transform, state, arm, source);
+        }
+        return new EntityFrame.HeldItem(rendered, itemTransform);
     }
 
     static ItemDisplayContext displayContext(HumanoidArm arm) {
@@ -336,21 +335,26 @@ public final class PlayerMeshRenderer {
                     pose, buffer, light, OverlayTexture.NO_OVERLAY, -1,
                     surface -> surface.bone().arm() && visible(model, surface.bone(), surface.outer())));
         }
-        HumanoidArm main = player.getMainArm();
-        firstPersonItem(frame, player, main, player.getMainHandItem(), stack, collector, light);
-        firstPersonItem(frame, player, main.getOpposite(), player.getOffhandItem(), stack, collector, light);
+        firstPersonItems(frame, player, state, new ItemSubmission(stack, collector, light));
         stack.popPose();
         return true;
     }
 
-    private static void firstPersonItem(Frame frame, AbstractClientPlayer player, HumanoidArm arm, ItemStack stack,
-                                        PoseStack matrices, SubmitNodeCollector collector, int light) {
-        // 与第三人称同一挂点规则，物品仍按第三人称手持方式展示。
-        ItemStackRenderState own = new ItemStackRenderState();
-        Minecraft.getInstance().getItemModelResolver().updateForLiving(own, stack, displayContext(arm), player);
-        EntityFrame.HeldItem held = heldItem(frame, player, arm, own);
-        if (held != null) {
-            held.submit(matrices, collector, light, OverlayTexture.NO_OVERLAY, 0);
+    private record ItemSubmission(PoseStack matrices, SubmitNodeCollector collector, int light) { }
+
+    private static void firstPersonItems(Frame frame, AbstractClientPlayer player, AvatarRenderState state,
+                                          ItemSubmission submission) {
+        // 复用本帧已经提取的双手物品状态，使物品模型和矛动作使用同一份时间数据。
+        for (HumanoidArm arm : HumanoidArm.values()) {
+            ItemStackRenderState own = state.rightHandItemState;
+            if (arm == HumanoidArm.LEFT) {
+                own = state.leftHandItemState;
+            }
+            EntityFrame.HeldItem held = heldItem(frame, player, arm, own, state);
+            if (held != null) {
+                held.submit(submission.matrices(), submission.collector(), submission.light(),
+                        OverlayTexture.NO_OVERLAY, 0);
+            }
         }
     }
 }

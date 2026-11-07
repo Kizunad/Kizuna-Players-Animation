@@ -4,20 +4,12 @@
 `.bbmodel` 中制作独立过渡段，不能用目标动作的第一帧硬切。上层一次性动作结束后回到
 切换发生时的底层状态，不默认回站姿。
 
-当前资源覆盖站立、步态、跳跃、冥想、攻击、挖掘、使用、放置和穿戴。潜行、游泳、攀爬、
-骑乘、睡觉、鞘翅、吃喝、拉弓、三叉戟、扭头、闪避和格挡继续使用原版姿势；潜行时的工具
-操作由 `crouch_work` 只接管支撑腿与躯干，工具动作仍按上层遮罩叠加。
+当前资源包含站立步态、原版使用动作、特殊姿态、战斗架势与各功法动作。
+底层提供移动与支撑，上层依索引遮罩覆盖；停止上层后回到仍在推进的底层。
+矛在客户端读取本帧使用和挥手状态，不增加服务端逐 tick 动画同步。
 
-2026-10-26 剩余原版动作第一阶段只写了设计稿（见下方“剩余原版动作（设计稿）”与 ArmPose 小节新增行）：
-`sneak`、`sneak_walk`、`eat`、`drink`、`bow_draw`、`block_shield`、`trident_charge`、`climb`、`swim`、`ride`、
-`sleep`、`elytra` 与视线叠加层 `head_follow`。设计稿行使用六列（末列“状态”），`AnimationTransitionContractTest` 只解析五列/ArmPose 四列的已实现行，
-阶段 2 实现某个动作时，把对应行改回五列/四列格式并同步更新测试中的边数（`sneak` / `sneak_walk`、`eat` / `drink`、`block_shield`、`bow_draw`、`trident_charge`、`ride`、`sleep`、`elytra`、`climb`、`swim` 已实现，当前 193 条有向边；2026-10-27 战斗架势 22 段资源交付后为 439 条）。
-资源尚未制作，运行时仍使用原版姿势，不能当作已实现。
-
-状态集合：`stand`、`walk`、`run`、`jump_takeoff`、`jump_air`、`jump_land`、`meditate`、
-`attack`、`mine`、`use_item`、`place_block`、`equip_helmet`、`equip_chestplate`、
-`equip_leggings`、`equip_boots`。设计中的状态：`sneak`、`sneak_walk`、`climb`、`swim`、`ride`、`sleep`、`elytra`，以及
-上层 `eat`、`drink`、`bow_draw`、`block_shield`、`trident_charge`。
+切换表中的五列行与 ArmPose 四列行由 `AnimationTransitionContractTest` 展开验证。
+已交付资源、规格和真实客户端验收分别记录，切换回归不代替视觉验收。
 
 ## 允许切换
 
@@ -78,7 +70,7 @@
 
 调度按原版 `AvatarRenderer.getArmPose` 的语义选 ID：`ItemUseAnimation.SPYGLASS → spyglass`、
 `TOOT_HORN → toot_horn`、`EAT → eat`、`DRINK → drink`、`BLOCK → block_shield`、`BOW → bow_draw`、`TRIDENT → trident_charge`、使用中的弩 `→ crossbow_charge`、持已上弦且未使用的弩 `→ crossbow_hold`、
-`BRUSH → brush`、`NONE` / `BUNDLE → use_item`；26.2 新增的 `SPEAR`（矛蓄力）以及挥手类型 `STAB`（矛戳刺）、`NONE`（不摆臂）不请求动作，保留原版姿态（矛的现状与待办见[资产契约](../asset-contract.md)）。
+`BRUSH → brush`、`NONE` / `BUNDLE → use_item`；`SPEAR` 与 `STAB` 由客户端同帧分别采样 `spear_charge(_off)`、`spear_stab(_off)`；`NONE` 保留原版不摆臂行为，详见[资产契约](../asset-contract.md)。
 物品在副手时选对应 `*_off`。驱动方式（已使用时长、装填进度、循环段）见各设计稿第 1 节。
 
 | 来源 → 目标 | 淡入 / 淡出 | 触发 | 约束 |
@@ -260,3 +252,80 @@
 | peddler_ground_sweep | peddler_axe_kick | 0.30 / 0.25 | 承接 | 从 0.40 s 起播 | 待承接接线 |
 | peddler_roundhouse / peddler_flying_kick | peddler_whirlwind | 0.30 / 0.25 | 承接 | 从 1.20 s 起播，跳过「聚」 | 待承接接线 |
 | peddler_snap_kick / peddler_push_kick / peddler_ground_sweep / peddler_roundhouse / peddler_triple_kick / peddler_mule_kick / peddler_flying_kick / peddler_axe_kick / peddler_whirlwind / peddler_horse_stance | stance_idle | 0.20 | 起手被伤害打断（蹲马步含宿主提前结束） | 淡出中脚会滑回架势踝位；扫堂、不留行转的期间打断，已转的 `root` 角倒转回去 | 待打断接线 |
+
+## 行矢（2026-10-31 起，2026-11-01 资源全部交付）
+
+规格见 [PROGRESS-wayfarer](PROGRESS-wayfarer.md) 与各段页面：弓弩九式 + 拉空弓，主副手共 20 段，资源都已交付，见下面四列表。
+`mask: full`、优先级 24，同破门斩：任何底层上都整段生效；施放期间移速 ×0.4（拉空弓为 0）、冲量照常，主动缓行时底层的走步不显示。武器在副手时宿主播 `_off`。服务端在施放期间让原版弓弩的拉弓、装填无效，弓弩外观改读动画的物品状态轨道（PROGRESS 待决定第 1 条）。
+起手被伤害打断淡出 0.20 s 回架势：满月、连珠、横风、跪射、箭雨、天地同至、拉空弓能打断；弓梢、连弩、回马起手不能打断，没有打断边。
+承接与换兵的时窗是前一式收势的后半段或收势结束后 0.5 s 内，前一式淡出 0.30 s，后一式从入口起播；关系、起手长度、撒放时刻已和服务端设计稿 14 §4、§4.2、§4.3 核对（出入见 PROGRESS）。
+每交付一式，把 `stance_idle` ↔ 该式主副手版的两行写进四列表（`AnimationTransitionContractTest` 解析，每段 2 条有向边，20 段交付完 494 → 534，2026-11-01 已到 534；和千里腿合并后在 514 上加）；六列设计行不解析。承接、换兵边要从剪辑中途起播，现有回归表达不了，等承接接线时再加（同破门斩）。
+
+| 来源 → 目标 | 淡入 / 淡出 | 触发 | 约束 |
+| --- | ---: | --- | --- |
+| stance_idle → wayfarer_full_draw / wayfarer_full_draw_off | 0.10 / 0.25 | 宿主在满月起手时播放 | 起止姿态等于 `stance_idle` 首帧；按真实时间播 6.0 s；起手 0–3.60 s 可打断 |
+| wayfarer_full_draw / wayfarer_full_draw_off → stance_idle | 0.25 / 0.25 | 6.0 s 播完 | 淡回架势底层；双脚 4.75 s 已回架势踝位 |
+| stance_idle → wayfarer_dry_draw / wayfarer_dry_draw_off | 0.10 / 0.25 | 宿主在拉空弓开始时播放（只给玩家） | 起止姿态等于 `stance_idle` 首帧；按真实时间播 32.0 s 一次性，不用 `loop_region`；起手 0–31.00 s 可打断；不作前式、后式，不换兵 |
+| wayfarer_dry_draw / wayfarer_dry_draw_off → stance_idle | 0.25 / 0.25 | 32.0 s 播完 | 淡回架势底层；右脚 31.70 s 才落回架势踝位 |
+| stance_idle → wayfarer_pearls / wayfarer_pearls_off | 0.10 / 0.25 | 宿主在连珠起手时播放 | 起止姿态等于 `stance_idle` 首帧；按真实时间播 5.0 s；起手 0–2.00 s 可打断 |
+| wayfarer_pearls / wayfarer_pearls_off → stance_idle | 0.25 / 0.25 | 5.0 s 播完 | 淡回架势底层；右脚 3.95 s 已回架势踝位 |
+| stance_idle → wayfarer_bow_strike / wayfarer_bow_strike_off | 0.10 / 0.25 | 宿主在弓梢起手时播放 | 起止姿态等于 `stance_idle` 首帧；按真实时间播 5.0 s；起手不能打断；两次撤步原地迈步、实体由冲量推动 |
+| wayfarer_bow_strike / wayfarer_bow_strike_off → stance_idle | 0.25 / 0.25 | 5.0 s 播完 | 淡回架势底层；双脚 3.55 s 已回架势踝位（收势先右后左） |
+| stance_idle → wayfarer_repeater / wayfarer_repeater_off | 0.10 / 0.25 | 宿主在连弩起手时播放 | 起止姿态等于 `stance_idle` 首帧；按真实时间播 5.0 s；起手不能打断 |
+| wayfarer_repeater / wayfarer_repeater_off → stance_idle | 0.25 / 0.25 | 5.0 s 播完 | 淡回架势底层；前脚 3.90 s 已回架势踝位 |
+| stance_idle → wayfarer_gale / wayfarer_gale_off | 0.10 / 0.25 | 宿主在横风起手时播放 | 起止姿态等于 `stance_idle` 首帧；按真实时间播 6.0 s；起手 0–2.20 s 可打断；副手版扇面先左后右，要服务端同步（PROGRESS 待决定第 13 条） |
+| wayfarer_gale / wayfarer_gale_off → stance_idle | 0.25 / 0.25 | 6.0 s 播完 | 淡回架势底层；后脚 4.90 s 已回架势踝位 |
+| stance_idle → wayfarer_kneeling / wayfarer_kneeling_off | 0.10 / 0.25 | 宿主在跪射起手时播放 | 起止姿态等于 `stance_idle` 首帧；按真实时间播 7.0 s；起手 0–2.60 s 可打断，跪着被打断在淡出里站起；跪下只是动画，碰撞箱不变 |
+| wayfarer_kneeling / wayfarer_kneeling_off → stance_idle | 0.25 / 0.25 | 7.0 s 播完 | 淡回架势底层；右脚 5.85 s 已回架势踝位 |
+| stance_idle → wayfarer_parthian / wayfarer_parthian_off | 0.10 / 0.25 | 宿主在回马起手时播放 | 起止姿态等于 `stance_idle` 首帧；按真实时间播 5.0 s；起手不能打断；三次冲量、跳起转身都原地做；主手版向左转身 175°（胯世界 +15° → −160°）、空中右转回射位，副手版方向相反，不转整圈、不用 `root`（PROGRESS 待决定第 4 条） |
+| wayfarer_parthian / wayfarer_parthian_off → stance_idle | 0.25 / 0.25 | 5.0 s 播完 | 淡回架势底层；右脚 3.00 s 已回架势踝位 |
+| stance_idle → wayfarer_arrow_rain / wayfarer_arrow_rain_off | 0.10 / 0.25 | 宿主在箭雨起手时播放 | 起止姿态等于 `stance_idle` 首帧；按真实时间播 7.0 s；起手 0–2.80 s 可打断；不作后式，总从 0 起播 |
+| wayfarer_arrow_rain / wayfarer_arrow_rain_off → stance_idle | 0.25 / 0.25 | 7.0 s 播完 | 淡回架势底层；右脚 5.40 s 已回架势踝位 |
+| stance_idle → wayfarer_convergence / wayfarer_convergence_off | 0.10 / 0.25 | 单独预览、回归 | 服务端只让满月、箭雨承接施放（从 1.20 s 起播），这条从 0 起播的边游戏里不出现；按真实时间播 9.0 s；起手 0–2.50 s 可打断 |
+| wayfarer_convergence / wayfarer_convergence_off → stance_idle | 0.25 / 0.25 | 9.0 s 播完 | 淡回架势底层；双脚 6.86 s 已回架势踝位；之后不能承接、不能换兵 |
+
+承接与换兵的设计行（还没接线；主副手各按后一式施放时武器所在的手选 `_off`）：
+
+| 来源 | 目标 | 淡入 / 淡出 | 触发 | 约束 | 状态 |
+| --- | --- | ---: | --- | --- | --- |
+| wayfarer_bow_strike | wayfarer_pearls | 0.30 / 0.25 | 承接（宿主在后一式起手时切换） | 前一式淡出 0.30 s，后一式从 0.40 s 起播 | 待承接接线 |
+| wayfarer_pearls | wayfarer_parthian | 0.30 / 0.25 | 承接 | 从 0.35 s 起播 | 待承接接线 |
+| wayfarer_repeater | wayfarer_gale | 0.30 / 0.25 | 承接 | 从 0.40 s 起播 | 待承接接线 |
+| wayfarer_full_draw / wayfarer_arrow_rain | wayfarer_convergence | 0.30 / 0.25 | 承接 | 从 1.20 s 起播，跳过「聚」；天地同至只能这样施放 | 待承接接线 |
+| wayfarer_repeater / wayfarer_gale / wayfarer_kneeling | wayfarer_full_draw / wayfarer_pearls | 0.30 / 0.25 | 换兵（弩切到弓后起手） | 从 0.40 s 起播；物品在前一式淡出的 0.30 s 里由原版换掉，交叉淡入盖住 | 待承接接线 |
+| wayfarer_repeater / wayfarer_gale / wayfarer_kneeling | wayfarer_bow_strike | 0.30 / 0.25 | 换兵 | 从 0.30 s 起播 | 待承接接线 |
+| wayfarer_full_draw / wayfarer_pearls / wayfarer_bow_strike / wayfarer_parthian / wayfarer_arrow_rain | wayfarer_repeater / wayfarer_gale / wayfarer_kneeling | 0.30 / 0.25 | 换兵（弓切到弩后起手） | 从 0.40 s 起播；天地同至之后不能换兵 | 待承接接线 |
+
+## 五脏诀（2026-11-01 已交付资源）
+
+规格与进度见 [PROGRESS-evoker](PROGRESS-evoker.md)。十七段都用下面的四列行（`AnimationTransitionContractTest` 解析，现 556 条边：十五段进出 30 条，握持覆盖层叠上 30 条、撤下 2 条）。
+十五段都是 `mask: full`、优先级 24、`hand: main`（左主手整段镜像），起止姿态等于 `stance_idle` 首帧，按真实时间播；起手被伤害打断时淡出 0.20 s 回架势。握持覆盖层优先级 25，只接管拿东西那只手的三片手指。
+
+| 来源 → 目标 | 淡入 / 淡出 | 触发 | 约束 |
+| --- | ---: | --- | --- |
+| stance_idle → evoker_water_frost / evoker_metal_edge / evoker_earth_quake / evoker_fire_burn / evoker_wood_thunder | 0.10 / 0.25 | 宿主在附伤各式起手时播放 | 起止姿态等于 `stance_idle` 首帧；按真实时间播 3.5 s；共用起手「唤」0.00–0.70，不开立；`cast` 2.00 |
+| evoker_water_frost / evoker_metal_edge / evoker_fire_burn → stance_idle | 0.25 / 0.25 | 3.5 s 播完 | 淡回架势底层；双脚整段不离架势踝位 |
+| evoker_earth_quake → stance_idle | 0.25 / 0.25 | 3.5 s 播完 | 淡回架势底层；右脚 0.80 提膝、1.95 跺地（`step_r`），2.55 提踵落回后脚位（`step_r`），之后双脚在架势踝位 |
+| evoker_wood_thunder → stance_idle | 0.25 / 0.25 | 3.5 s 播完 | 淡回架势底层；两脚跟 0.80–1.55 半提、脚趾前缘不动，1.55 起双脚在架势踝位；`clap` 1.40 |
+| stance_idle → evoker_fire_heart / evoker_metal_arms | 0.10 / 0.25 | 宿主在强身各式开始时播放 | 起止姿态等于 `stance_idle` 首帧；按真实时间播（心火 4.0 s、金臂 5.0 s）；开立右脚 `step_r`（心火 0.35、金臂 0.40） |
+| evoker_fire_heart → stance_idle | 0.25 / 0.25 | 4.0 s 播完 | 淡回架势底层；两脚跟 0.80–2.00 在开立位半提；`cast` 1.80；右脚 2.80 提踵落回后脚位（`step_r`），之后双脚在架势踝位 |
+| evoker_metal_arms → stance_idle | 0.25 / 0.25 | 5.0 s 播完 | 淡回架势底层；右脚单撑 1.00–3.20，左脚 1.95–2.12 脚尖点地；`cast` 2.60；左脚 3.20 落开立位（`step_l`），右脚 3.70 提踵落回后脚位（`step_r`），之后双脚在架势踝位 |
+| stance_idle → evoker_earth_legs / evoker_water_return / evoker_wood_sinew | 0.10 / 0.25 | 宿主在强身各式开始时播放 | 起止姿态等于 `stance_idle` 首帧；按真实时间播（厚土 6.0 s、归水 5.0 s、舒筋 5.0 s）；厚土、舒筋开立右脚 `step_r`（0.40、0.35），归水不开立、左脚 0.45 起上步 |
+| evoker_earth_legs → stance_idle | 0.25 / 0.25 | 6.0 s 播完 | 淡回架势底层；左脚 0.80 离地、1.40 落左前（`step_l`），右脚 2.10 离地、2.70 落右前（`step_r`）；`cast` 3.20；左脚 4.02 落回前脚位（`step_l`），右脚 4.70 提踵落回后脚位（`step_r`），之后双脚在架势踝位 |
+| evoker_water_return → stance_idle | 0.25 / 0.25 | 5.0 s 播完 | 淡回架势底层；左脚 0.90 脚跟着地（`step_l`），右脚整段不离地，1.30–1.90 半落跟、2.70–3.12 提回；`cast` 2.40；左脚 3.30 落回前脚位（`step_l`），之后双脚在架势踝位 |
+| evoker_wood_sinew → stance_idle | 0.25 / 0.25 | 5.0 s 播完 | 淡回架势底层；左脚 2.50 脚跟着地成虚步（`step_l`）；`cast` 2.80；左脚 3.35 落回前脚位（`step_l`），右脚 3.75 提踵落回后脚位（`step_r`），之后双脚在架势踝位 |
+| stance_idle → evoker_refine_lung / evoker_refine_spleen / evoker_refine_liver / evoker_refine_heart / evoker_refine_kidney | 0.10 / 0.25 | 宿主在炼元各式开始时播放 | 起止姿态等于 `stance_idle` 首帧；按真实时间播 32.0 s，一次性；进式右脚 0.20 离地、0.50 落开立位（`step_r`） |
+| evoker_refine_lung / evoker_refine_spleen / evoker_refine_liver / evoker_refine_heart / evoker_refine_kidney → stance_idle | 0.25 / 0.25 | 32.0 s 播完 | 淡回架势底层；0.50–31.10 两脚在开立位不动；右脚 31.10 离地、31.40 提踵落回后脚位（`step_r`），之后双脚在架势踝位；打断时两脚在淡出里滑回架势位 |
+| evoker_water_frost / evoker_metal_edge / evoker_earth_quake / evoker_fire_burn / evoker_wood_thunder → evoker_grip / evoker_grip_off | 0.10 / 0.25 | 起手时主手 / 副手有东西，宿主同 tick 叠播（两只手都有就两段都叠） | 只接管那只手的拇指和两组手指（`r_fingers` / `l_fingers`），整段保持架势握拳；手腕、手臂、挂点照主剪辑；中途不加不撤 |
+| evoker_fire_heart / evoker_metal_arms / evoker_earth_legs / evoker_water_return / evoker_wood_sinew → evoker_grip / evoker_grip_off | 0.10 / 0.25 | 同上 | 同上 |
+| evoker_refine_lung / evoker_refine_spleen / evoker_refine_liver / evoker_refine_heart / evoker_refine_kidney → evoker_grip / evoker_grip_off | 0.10 / 0.25 | 同上 | 同上；32 s 整段保持 |
+| evoker_grip / evoker_grip_off → stance_idle | 0.25 / 0.25 | 主剪辑播完或被打断时宿主同时停止 | 手指淡回下层，同为握拳，看不出变化 |
+
+## 矛的单臂覆盖层
+
+| 来源 | 目标 | 淡入 / 淡出 | 专门过渡 | 触发与约束 |
+| --- | --- | --- | --- | --- |
+| stand / walk / run / sneak / sneak_walk / ride / swim | spear_charge / spear_charge_off / spear_stab / spear_stab_off | 0.10 / 0.15 | 否 | 持矛首帧或本帧戳刺，保持下身与另一只手 |
+| spear_charge / spear_charge_off / spear_stab / spear_stab_off | stand / walk / run / sneak / sneak_walk / ride / swim | 0.10 / 0.15 | 否 | 换下矛后淡回持续推进的底层 |
+| spear_charge / spear_charge_off | spear_stab / spear_stab_off | 0.05 / 0.10 | 否 | 戳刺优先于同侧蓄力 |
+| spear_stab / spear_stab_off | spear_charge / spear_charge_off | 0.10 / 0.15 | 否 | 戳刺结束，持矛手回到当前使用时刻 |

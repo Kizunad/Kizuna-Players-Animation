@@ -31,7 +31,11 @@ public final class EquipVisibilityClientRunner implements ClientModInitializer {
         // 显式发现回归类，空测试集和中止的测试不能被当作成功。
         var request = LauncherDiscoveryRequestBuilder.request()
                 .selectors(DiscoverySelectors.selectClass(EquipVisibilityClientTest.class),
-                        DiscoverySelectors.selectClass(EntityPlaybackClientTest.class))
+                        DiscoverySelectors.selectClass(EntityPlaybackClientTest.class),
+                        DiscoverySelectors.selectClass(MobModelVariantsClientTest.class),
+                        DiscoverySelectors.selectClass(PlaybackClockClientTest.class),
+                        DiscoverySelectors.selectClass(WayfarerItemModelsClientTest.class),
+                        DiscoverySelectors.selectClass(SpearClientTest.class))
                 .build();
         var listener = new SummaryGeneratingListener();
         LauncherFactory.create().execute(request, listener);

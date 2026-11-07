@@ -78,6 +78,7 @@ tasks.register('checkAnimationGates', Exec) {
             'sneak', 'sneak_walk', 'eat', 'eat_off', 'drink', 'drink_off',
             'head_follow', 'head_follow_pitch', 'block_shield', 'block_shield_off',
             'bow_draw', 'bow_draw_off', 'trident_charge', 'trident_charge_off',
+            'spear_charge', 'spear_charge_off', 'spear_stab', 'spear_stab_off',
             'ride', 'sleep', 'elytra', 'climb', 'swim',
             'stance_idle', 'stance_enter', 'stance_exit', 'stance_walk_forward', 'stance_walk_back',
             'stance_walk_left', 'stance_walk_right', 'stance_run', 'dodge_forward', 'dodge_back',
@@ -91,17 +92,32 @@ tasks.register('checkAnimationGates', Exec) {
             'door_breaker_guard', 'door_breaker_guard_off', 'technique_leap',
             'peddler_snap_kick', 'peddler_push_kick', 'peddler_roundhouse', 'peddler_ground_sweep',
             'peddler_triple_kick', 'peddler_mule_kick', 'peddler_flying_kick',
-            'peddler_axe_kick', 'peddler_whirlwind', 'peddler_horse_stance'
+            'peddler_axe_kick', 'peddler_whirlwind', 'peddler_horse_stance',
+            'wayfarer_full_draw', 'wayfarer_full_draw_off', 'wayfarer_dry_draw', 'wayfarer_dry_draw_off',
+            'wayfarer_pearls', 'wayfarer_pearls_off', 'wayfarer_bow_strike', 'wayfarer_bow_strike_off',
+            'wayfarer_repeater', 'wayfarer_repeater_off', 'wayfarer_gale', 'wayfarer_gale_off',
+            'wayfarer_kneeling', 'wayfarer_kneeling_off', 'wayfarer_parthian', 'wayfarer_parthian_off',
+            'wayfarer_arrow_rain', 'wayfarer_arrow_rain_off', 'wayfarer_convergence', 'wayfarer_convergence_off',
+            'evoker_water_frost', 'evoker_metal_edge', 'evoker_earth_quake', 'evoker_fire_burn',
+            'evoker_wood_thunder', 'evoker_fire_heart', 'evoker_metal_arms', 'evoker_earth_legs',
+            'evoker_water_return', 'evoker_wood_sinew', 'evoker_refine_lung', 'evoker_refine_spleen',
+            'evoker_refine_liver', 'evoker_refine_heart', 'evoker_refine_kidney',
+            'evoker_grip', 'evoker_grip_off'
 }
 
 tasks.register('checkAnimationAntiForgery', Exec) {
     commandLine 'python3', 'scripts/test_animation_antiforgery.py'
 }
 
+tasks.register('checkDryBowAssets', Exec) {
+    commandLine 'python3', 'scripts/generate_dry_bow.py', '--check'
+}
+
 tasks.named('check') {
     dependsOn tasks.named('checkAnimationAssets')
     dependsOn tasks.named('checkAnimationGates')
     dependsOn tasks.named('checkAnimationAntiForgery')
+    dependsOn tasks.named('checkDryBowAssets')
 }
 
 // 开发运行默认装入完整装配；-PkpaStandalone 只装本仓与 Fabric API，供其他仓的安装 JAR 与本仓版本不一致时单独验证。

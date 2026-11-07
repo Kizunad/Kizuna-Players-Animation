@@ -211,6 +211,9 @@ public final class SkinnedMesh {
 
     private Vector3f inflated(BoneId bone, Skeleton.Cube cube, Vec3 point) {
         // 完整部件两端各外扩指定像素；内部切口按同一比例移动，既不重复也不漏缝。
+        if (cube.inflate() == 0) {
+            return new Vector3f(point.x(), point.y(), point.z());
+        }
         Bounds bounds = skinBounds.get(bone.skinPart());
         Skeleton.Placement placement = cube.placement();
         if (placement != null) {

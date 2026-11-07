@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:item/bow",
+  "textures": {
+    "layer0": "kizuna_players_animation:item/bow_dry_1"
+  }
+}

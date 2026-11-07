@@ -13,6 +13,8 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.PlayerModelType;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemUseAnimation;
 import net.minecraft.world.phys.Vec3;
 
 /** 第一人称复用世界中的玩家渲染，视线与交互位置仍由原版相机决定。 */
@@ -42,9 +44,14 @@ public final class FirstPersonBody {
     public static boolean rendering(Entity entity) { return renderingPlayer == entity; }
 
     public static boolean vanillaHands(AbstractClientPlayer player) {
-        // 地图需要原版动态内容面板，望远镜瞄准需要原版镜片遮罩。
-        return player.getMainHandItem().is(Items.FILLED_MAP)
-                || player.getOffhandItem().is(Items.FILLED_MAP) || player.isScoping();
+        // 地图、镜片、矛回弹和收纳袋倒出反馈沿用原版双手，身体仍采用同帧全身姿态。
+        return player.isScoping() || vanillaHandItem(player.getMainHandItem())
+                || vanillaHandItem(player.getOffhandItem());
+    }
+
+    private static boolean vanillaHandItem(ItemStack stack) {
+        ItemUseAnimation use = stack.getUseAnimation();
+        return stack.is(Items.FILLED_MAP) || use == ItemUseAnimation.SPEAR || use == ItemUseAnimation.BUNDLE;
     }
 
     public static boolean visible(EntityFrame.PlayerParts parts, BoneId bone) {

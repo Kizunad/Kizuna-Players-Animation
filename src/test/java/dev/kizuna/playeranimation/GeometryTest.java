@@ -141,4 +141,36 @@ class GeometryTest {
         // 行列式为负的 Y 反射必须同步反转四边形绕序。
         return new Vector3f(position.x(), 24 - position.y(), position.z());
     }
+
+    @Test
+    void entityPlanesBakeBothSidesWithoutNanAndRejectLinesOrInflation() {
+        // 原版蘑菇没有厚度；同时检查加载边界和真实顶点烘焙，防止零厚度导致除零。
+        JsonObject document = document();
+        JsonObject plane = JsonParser.parseString("""
+                {"origin":[-3,24,0],"size":[6,4,0],"part":"head/mushrooms/red_mushroom_1","uv":{
+                  "north":{"uv":[50,16],"uv_size":[6,4]},
+                  "south":{"uv":[56,16],"uv_size":[-6,4]}
+                }}
+                """).getAsJsonObject();
+        JsonArray cubes = geometry(document).getAsJsonArray("bones").get(BoneId.HEAD.ordinal())
+                .getAsJsonObject().getAsJsonArray("cubes");
+        cubes.add(plane);
+        Skeleton skeleton = Skeleton.parseEntity(document, "geometry.player.classic");
+        var surface = new SkinnedMesh(skeleton).surfaces().stream()
+                .filter(item -> item.part().equals("head/mushrooms/red_mushroom_1"))
+                .findFirst().orElseThrow();
+        assertEquals(6 * 4 * 4 * 2, surface.vertices().size());
+        for (var vertex : surface.vertices()) {
+            Vec3 position = vertex.position();
+            assertTrue(Float.isFinite(position.x()) && Float.isFinite(position.y()));
+            assertEquals(0, position.z());
+            assertEquals(1, Math.abs(vertex.normal().z()));
+        }
+        assertThrows(IllegalArgumentException.class, () -> Skeleton.parse(document, "geometry.player.classic"));
+        plane.addProperty("inflate", 0.25);
+        assertThrows(IllegalArgumentException.class, () -> Skeleton.parseEntity(document, "geometry.player.classic"));
+        plane.addProperty("inflate", 0);
+        plane.add("size", JsonParser.parseString("[6,0,0]"));
+        assertThrows(IllegalArgumentException.class, () -> Skeleton.parseEntity(document, "geometry.player.classic"));
+    }
 }

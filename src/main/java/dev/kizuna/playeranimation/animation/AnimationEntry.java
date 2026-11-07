@@ -10,11 +10,12 @@ import java.util.Set;
 public record AnimationEntry(String id, String file, Mask mask, int priority, float blendIn,
                              float blendOut, Hand hand, boolean firstPerson, AnimationClip clip,
                              List<Window> impactWindows,
-                             Float loopRegionStart, Float loopRegionEnd, boolean lookLayer) {
+                             Float loopRegionStart, Float loopRegionEnd, boolean lookLayer,
+                             ItemStates itemStates, List<AimWindow> aimWindows) {
     public AnimationEntry(String id, String file, Mask mask, int priority, float blendIn,
                           float blendOut, Hand hand, boolean firstPerson, AnimationClip clip) {
         this(id, file, mask, priority, blendIn, blendOut, hand, firstPerson, clip,
-                List.of(), null, null, false);
+                List.of(), null, null, false, null, List.of());
     }
 
     /** 剪辑时间里的一段 [start, end]（秒）。 */
@@ -22,7 +23,7 @@ public record AnimationEntry(String id, String file, Mask mask, int priority, fl
 
     public enum Hand { MAIN, OFF, BOTH, NONE }
     public enum Mask {
-        FULL, UPPER, LOWER, R_ARM, L_ARM;
+        FULL, UPPER, LOWER, R_ARM, L_ARM, R_FINGERS, L_FINGERS;
 
         public boolean includes(BoneId bone) {
             // 掩码按语义列举，避免 pelvis 的子树把上半身一起划入 lower。
@@ -35,6 +36,9 @@ public record AnimationEntry(String id, String file, Mask mask, int priority, fl
                 case LOWER -> bone == BoneId.PELVIS || bone.skinPart().endsWith("leg");
                 case R_ARM -> bone.skinPart().equals("r_arm");
                 case L_ARM -> bone.skinPart().equals("l_arm");
+                // 单手手指只接管拇指和两组手指，手掌与手腕仍听下层。
+                case R_FINGERS -> bone == BoneId.R_THUMB || bone == BoneId.R_FINGERS_A || bone == BoneId.R_FINGERS_B;
+                case L_FINGERS -> bone == BoneId.L_THUMB || bone == BoneId.L_FINGERS_A || bone == BoneId.L_FINGERS_B;
             };
         }
     }
@@ -55,6 +59,8 @@ public record AnimationEntry(String id, String file, Mask mask, int priority, fl
             case "lower" -> Mask.LOWER;
             case "r_arm" -> Mask.R_ARM;
             case "l_arm" -> Mask.L_ARM;
+            case "r_fingers" -> Mask.R_FINGERS;
+            case "l_fingers" -> Mask.L_FINGERS;
             default -> throw new IllegalArgumentException("未知 mask: " + raw.get("mask"));
         };
         Hand hand = switch (JsonInput.string(raw, "hand")) {
@@ -67,11 +73,33 @@ public record AnimationEntry(String id, String file, Mask mask, int priority, fl
         int priority = JsonInput.integer(raw.get("priority"));
         List<Window> impact = readImpactWindows(raw, clip.duration());
         validateImpactAction(id, impact);
-        Window loop = raw.has("loop_region") ? readWindow(raw.get("loop_region"), "loop_region", clip.duration()) : null;
+        Float loopStart = null;
+        Float loopEnd = null;
+        if (raw.has("loop_region")) {
+            Window loop = readWindow(raw.get("loop_region"), "loop_region", clip.duration());
+            loopStart = loop.start();
+            loopEnd = loop.end();
+        }
+        ItemStates itemStates = readItemStates(raw, hand, clip.duration());
+        List<AimWindow> aimWindows = List.of();
+        if (raw.has("aim_windows")) {
+            aimWindows = AimWindow.parse(raw.get("aim_windows"), clip.duration());
+        }
         return new AnimationEntry(id, file, mask, priority,
                 JsonInput.nonnegative(raw, "blend_in"), JsonInput.nonnegative(raw, "blend_out"),
                 hand, JsonInput.bool(raw, "fpv"), clip, impact,
-                loop == null ? null : loop.start(), loop == null ? null : loop.end(), readLookLayer(raw));
+                loopStart, loopEnd, readLookLayer(raw), itemStates, aimWindows);
+    }
+
+    private static ItemStates readItemStates(JsonObject raw, Hand hand, float duration) {
+        // 物品轨道只能绑定一只已明确的持物手，在资源加载边界校验。
+        if (!raw.has("item_states")) {
+            return null;
+        }
+        if (hand != Hand.MAIN && hand != Hand.OFF) {
+            throw new IllegalArgumentException("item_states 只能用于 hand 为 main / off 的动作");
+        }
+        return ItemStates.parse(raw.get("item_states"), duration);
     }
 
     private static List<Window> readImpactWindows(JsonObject raw, float duration) {
@@ -122,9 +150,10 @@ public record AnimationEntry(String id, String file, Mask mask, int priority, fl
                 "door_breaker_close", "door_breaker_close_off",
                 "door_breaker_chain", "door_breaker_chain_off",
                 "door_breaker_finale", "door_breaker_finale_off",
+                "wayfarer_bow_strike", "wayfarer_bow_strike_off",
                 "peddler_snap_kick", "peddler_push_kick", "peddler_roundhouse", "peddler_triple_kick",
                 "peddler_mule_kick", "peddler_flying_kick", "peddler_axe_kick", "peddler_whirlwind").contains(id)) {
-            throw new IllegalArgumentException("impact_window 只能用于攻击、挖掘、破门斩或千里腿动作");
+            throw new IllegalArgumentException("impact_window 只能用于攻击、挖掘、破门斩、弓梢或千里腿动作");
         }
     }
 

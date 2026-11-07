@@ -41,7 +41,7 @@ final class EntityPlaybackClientTest {
             client.level.setTimeFromServer(START_TICK);
             playback.playEntity(ENTITY_ID, "equip_chestplate", START_TICK, "mob-event", null);
             assertNotNull(playback.entity(ENTITY_ID));
-            client.level.setTimeFromServer(START_TICK + EVENT_TICKS);
+            ClientPlaybackTestTime.advance(EVENT_TICKS);
             playback.tick(client);
             assertTrue(EVENTS.isEmpty(), "生物不能向玩家事件发送 UUID");
             client.level.removeEntity(ENTITY_ID, Entity.RemovalReason.DISCARDED);
@@ -104,7 +104,7 @@ final class EntityPlaybackClientTest {
         client.level.setTimeFromServer(START_TICK);
         UUID player = client.player.getUUID();
         playback.play(player, "equip_chestplate", START_TICK, "player-event");
-        client.level.setTimeFromServer(START_TICK + EVENT_TICKS);
+        ClientPlaybackTestTime.advance(EVENT_TICKS);
         playback.tick(client);
         assertEquals(List.of(player), EVENTS);
     }

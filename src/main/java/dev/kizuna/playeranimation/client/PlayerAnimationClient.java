@@ -27,7 +27,9 @@ public final class PlayerAnimationClient implements ClientModInitializer {
     public void onInitializeClient() {
         // 资源和时钟使用 Fabric 生命周期，渲染入口只负责取样与提交顶点。
         PlayerAnimationHostImpl.bind(EntityAnimationApi::exchange);
+        ClientTickEvents.END_LEVEL_TICK.register(LocalAnimationClock::tick);
         ClientAnimationNetworking.register();
+        AnimationArrowProperty.register();
         LevelRenderEvents.COLLECT_SUBMITS.register(FirstPersonBody::render);
         ResourceLoader.get(PackType.CLIENT_RESOURCES).registerReloadListener(PlayerAssets.id("player_assets"), ASSETS);
         ClientTickEvents.END_CLIENT_TICK.register(PLAYBACK::tick);

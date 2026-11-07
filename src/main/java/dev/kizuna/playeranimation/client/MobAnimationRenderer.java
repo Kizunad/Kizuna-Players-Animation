@@ -17,7 +17,9 @@ import net.minecraft.client.model.monster.illager.IllagerModel;
 import net.minecraft.client.model.npc.VillagerModel;
 import net.minecraft.client.renderer.entity.HumanoidMobRenderer;
 import net.minecraft.client.renderer.entity.state.HumanoidRenderState;
+import net.minecraft.client.renderer.entity.state.ArmedEntityRenderState;
 import net.minecraft.client.renderer.entity.state.LivingEntityRenderState;
+import net.minecraft.client.renderer.entity.state.VillagerRenderState;
 import net.minecraft.client.renderer.item.ItemModelResolver;
 import net.minecraft.client.renderer.item.ItemStackRenderState;
 import net.minecraft.world.entity.HumanoidArm;
@@ -35,12 +37,40 @@ public final class MobAnimationRenderer {
 
     public static EntityFrame extract(LivingEntity entity, LivingEntityRenderState state, EntityModel<?> vanilla,
                                       float tickDelta) {
+        // 幼年村民有独立层级和 UV；渲染器到 submit 才切模型，必须按当前帧年龄保留原版绘制。
+        if (state instanceof VillagerRenderState && state.isBaby) {
+            return null;
+        }
+        MobAnimationRegistry.Model model = MobAnimationRegistry.model(entity);
+        if (model == null) {
+            return null;
+        }
+        PlayerAssets.Model body = model.body();
+        Pose[] sampled = samplePose(entity, state, vanilla, tickDelta, body);
+        if (sampled == null) {
+            return null;
+        }
+        Matrix4f[] matrices = Rig.matrices(body.skeleton(), sampled);
+        PlayerMeshRenderer.Frame pose = new PlayerMeshRenderer.Frame(body, matrices);
+        HumanoidRenderState armor = null;
+        if (!(vanilla instanceof HumanoidModel<?>)) {
+            armor = armorState(entity, state, tickDelta);
+        }
+        EntityFrame frame = EntityFrame.mob(pose, new EntityFrame.MobParts(model.overlay(),
+                items(entity, pose, state), armor));
+        if (armor != null) {
+            armor.setData(EntityFrame.KEY, frame);
+        }
+        return frame;
+    }
+
+    private static Pose[] samplePose(LivingEntity entity, LivingEntityRenderState state, EntityModel<?> vanilla,
+                                     float tickDelta, PlayerAssets.Model body) {
         // 自动层完全替代原版姿态；显式动作最后混合，结束后回到持续推进的移动层。
         int entityId = entity.getId();
         AnimationPlayer animation = PlayerAnimationClient.PLAYBACK.entity(entityId);
         AnimationPlayer automatic = PlayerAnimationClient.PLAYBACK.automaticEntity(entityId);
-        MobAnimationRegistry.Model model = MobAnimationRegistry.model(entity);
-        if (animation == null && automatic == null || model == null) {
+        if (animation == null && automatic == null) {
             return null;
         }
         double now = PlayerPlayback.now(tickDelta);
@@ -51,24 +81,22 @@ public final class MobAnimationRenderer {
             setupAnim(vanilla, state);
             base = basePose(vanilla);
         } else {
+            if (state instanceof ArmedEntityRenderState armed) {
+                SpearPoses.update(automatic, armed, now);
+            }
             base = automatic.sample(Rig.zeroPose(), now, false /* firstPerson */, crouching);
+            if (state instanceof ArmedEntityRenderState armed) {
+                SpearPoses.applyPitch(base, automatic, armed, now);
+            }
         }
-        Pose[] sampled = base;
-        if (animation != null) {
-            sampled = animation.sample(base, now, false /* firstPerson */, crouching);
+        if (animation == null) {
+            return base;
         }
-        Matrix4f[] matrices = Rig.matrices(model.body().skeleton(), sampled);
-        PlayerMeshRenderer.Frame pose = new PlayerMeshRenderer.Frame(model.body(), matrices);
-        HumanoidRenderState armor = null;
-        if (!(vanilla instanceof HumanoidModel<?>)) {
-            armor = armorState(entity, state, tickDelta);
-        }
-        EntityFrame frame = EntityFrame.mob(pose, new EntityFrame.MobParts(model.overlay(),
-                items(entity, pose), armor));
-        if (armor != null) {
-            armor.setData(EntityFrame.KEY, frame);
-        }
-        return frame;
+        Pose[] sampled = animation.sample(base, now, false /* firstPerson */, crouching);
+        // 生物显式功法复用玩家索引中的瞄准时段，物品与双臂保持同一剪辑时间。
+        AimCompensation.Weights aim = AimCompensation.weights(animation, now);
+        AimCompensation.apply(sampled, body.skeleton(), aim.pitch(), entity.getViewXRot(tickDelta));
+        return sampled;
     }
 
     @SuppressWarnings("unchecked")
@@ -77,27 +105,51 @@ public final class MobAnimationRenderer {
         ((EntityModel<LivingEntityRenderState>) vanilla).setupAnim(state);
     }
 
-    private static List<EntityFrame.HeldItem> items(LivingEntity entity, PlayerMeshRenderer.Frame pose) {
+    private static List<EntityFrame.HeldItem> items(LivingEntity entity, PlayerMeshRenderer.Frame pose,
+                                                   LivingEntityRenderState state) {
         // 原版会按举斧、交叉臂等状态跳过持物，这里始终从同帧 PA 手骨绘制双手。
         List<EntityFrame.HeldItem> items = new ArrayList<>();
-        HumanoidArm mainArm = entity.getMainArm();
-        addItem(items, entity, entity.getMainHandItem(), mainArm, pose);
-        addItem(items, entity, entity.getOffhandItem(), mainArm.getOpposite(), pose);
+        for (HumanoidArm arm : HumanoidArm.values()) {
+            EntityFrame.HeldItem item = item(entity, arm, pose, state);
+            if (item != null) {
+                items.add(item);
+            }
+        }
         return List.copyOf(items);
     }
 
-    private static void addItem(List<EntityFrame.HeldItem> items, LivingEntity entity, ItemStack stack,
-                                HumanoidArm arm, PlayerMeshRenderer.Frame pose) {
-        if (stack.isEmpty()) {
-            return;
-        }
+    private static EntityFrame.HeldItem item(LivingEntity entity, HumanoidArm arm, PlayerMeshRenderer.Frame pose,
+                                             LivingEntityRenderState state) {
         // 左右手保持原版物品展示模式，具体位置由独立 item 骨提供。
+        ItemStack stack = entity.getMainHandItem();
+        if (arm != entity.getMainArm()) {
+            stack = entity.getOffhandItem();
+        }
+        if (stack.isEmpty()) {
+            return null;
+        }
         ItemStackRenderState item = new ItemStackRenderState();
         Minecraft.getInstance().getItemModelResolver().updateForLiving(item, stack,
                 PlayerMeshRenderer.displayContext(arm), entity);
         BoneId socket = arm == HumanoidArm.RIGHT ? BoneId.R_ITEM : BoneId.L_ITEM;
         Matrix4f transform = Rig.itemTransform(pose.model().skeleton(), pose.matrices(), socket);
-        items.add(new EntityFrame.HeldItem(item, transform));
+        if (state instanceof ArmedEntityRenderState armed) {
+            Matrix4f itemTransform = SpearItemTransforms.apply(transform, armed, arm, spearSource(entity, arm));
+            return new EntityFrame.HeldItem(item, itemTransform);
+        }
+        return new EntityFrame.HeldItem(item, transform);
+    }
+
+    private static SpearItemTransforms.PoseSource spearSource(LivingEntity entity, HumanoidArm arm) {
+        // 自动矛动作与服务端显式矛动作任一接管该手，都由剪辑给出持物姿态。
+        var playback = PlayerAnimationClient.PLAYBACK;
+        double now = PlayerPlayback.now(0);
+        HumanoidArm mainArm = entity.getMainArm();
+        var automatic = SpearItemTransforms.source(playback.automaticEntity(entity.getId()), arm, mainArm, now);
+        if (automatic == SpearItemTransforms.PoseSource.CLIP) {
+            return automatic;
+        }
+        return SpearItemTransforms.source(playback.entity(entity.getId()), arm, mainArm, now);
     }
 
     private static HumanoidRenderState armorState(LivingEntity entity, LivingEntityRenderState state,

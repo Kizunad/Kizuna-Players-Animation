@@ -14,6 +14,7 @@ import java.util.UUID;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.player.AbstractClientPlayer;
+import net.minecraft.client.renderer.entity.state.ArmedEntityRenderState;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.HumanoidArm;
@@ -64,6 +65,19 @@ public final class PlayerPlayback {
     private record EquipKey(UUID player, EquipmentSlot slot) { }
 
     public AnimationPlayer player(UUID id) { return players.get(id); }
+
+    AnimationPlayer playerForRender(UUID id, ArmedEntityRenderState state, double now) {
+        // 矛沿客户端已有的挥手和使用状态取样；没有其他动画时也需要持矛覆盖层。
+        AnimationPlayer playback = players.get(id);
+        if (playback == null && SpearPoses.holding(state)) {
+            playback = new AnimationPlayer();
+            players.put(id, playback);
+        }
+        if (playback != null) {
+            SpearPoses.update(playback, state, now);
+        }
+        return playback;
+    }
 
     public AnimationPlayer entity(int id) { return entities.get(id); }
 
@@ -139,11 +153,11 @@ public final class PlayerPlayback {
             elapsedSeconds = 0;
         } else {
             double startSeconds = startTick / TICKS_PER_SECOND;
+            elapsedSeconds = (client.level.getGameTime() - startTick) / TICKS_PER_SECOND;
             PlaybackRequest request = new PlaybackRequest(startSeconds, handedness, playId, loopOverride);
-            if (!playback.synchronize(entry, time, request)) {
+            if (!playback.synchronize(entry, time, request, elapsedSeconds)) {
                 return;
             }
-            elapsedSeconds = time - startSeconds;
         }
         restartEquip(player, entry, elapsedSeconds);
     }
@@ -186,8 +200,9 @@ public final class PlayerPlayback {
             return;
         }
         double startSeconds = startTick / TICKS_PER_SECOND;
+        double elapsedSeconds = (target.entity().level().getGameTime() - startTick) / TICKS_PER_SECOND;
         PlaybackRequest request = new PlaybackRequest(startSeconds, handedness, playId, loopOverride);
-        playback.synchronize(target.entry(), time, request);
+        playback.synchronize(target.entry(), time, request, elapsedSeconds);
     }
 
     public void stop(UUID playerId, String animationId) {
@@ -259,12 +274,8 @@ public final class PlayerPlayback {
     }
 
     public static double now(float tickDelta) {
-        // 世界总 tick 不受 /time set 昼夜时间影响，暂停时也不会继续推进动画。
-        var world = Minecraft.getInstance().level;
-        if (world == null) {
-            return 0;
-        }
-        return (world.getGameTime() + tickDelta) / TICKS_PER_SECOND;
+        // 服务器起点只在收到播放请求时换算一次，正在播放的姿态不再跟随世界校时。
+        return LocalAnimationClock.now(Minecraft.getInstance().level, tickDelta);
     }
 
     public void clear() {

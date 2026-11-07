@@ -73,6 +73,15 @@ FULL_BODY_IDS = {
     "door_breaker_chain", "door_breaker_chain_off", "door_breaker_finale", "door_breaker_finale_off",
     "peddler_snap_kick", "peddler_push_kick", "peddler_ground_sweep", "peddler_roundhouse", "peddler_triple_kick",
     "peddler_mule_kick", "peddler_flying_kick", "peddler_axe_kick", "peddler_whirlwind", "peddler_horse_stance",
+    "wayfarer_full_draw", "wayfarer_full_draw_off", "wayfarer_pearls", "wayfarer_pearls_off",
+    "wayfarer_bow_strike", "wayfarer_bow_strike_off", "wayfarer_repeater", "wayfarer_repeater_off",
+    "wayfarer_gale", "wayfarer_gale_off", "wayfarer_kneeling", "wayfarer_kneeling_off",
+    "wayfarer_parthian", "wayfarer_parthian_off", "wayfarer_arrow_rain", "wayfarer_arrow_rain_off",
+    "wayfarer_convergence", "wayfarer_convergence_off", "wayfarer_dry_draw", "wayfarer_dry_draw_off",
+
+    "evoker_metal_arms", "evoker_earth_legs", "evoker_fire_heart", "evoker_water_return", "evoker_wood_sinew",
+    "evoker_metal_edge", "evoker_earth_quake", "evoker_fire_burn", "evoker_water_frost", "evoker_wood_thunder",
+    "evoker_refine_lung", "evoker_refine_spleen", "evoker_refine_heart", "evoker_refine_kidney", "evoker_refine_liver",
 }
 
 GRIP_IDS = {
@@ -88,6 +97,14 @@ GRIP_IDS = {
     "door_breaker_chain", "door_breaker_chain_off", "door_breaker_finale", "door_breaker_finale_off",
     "peddler_snap_kick", "peddler_push_kick", "peddler_ground_sweep", "peddler_roundhouse", "peddler_triple_kick",
     "peddler_mule_kick", "peddler_flying_kick", "peddler_axe_kick", "peddler_whirlwind", "peddler_horse_stance",
+    "wayfarer_full_draw", "wayfarer_full_draw_off", "wayfarer_pearls", "wayfarer_pearls_off",
+    "wayfarer_bow_strike", "wayfarer_bow_strike_off", "wayfarer_repeater", "wayfarer_repeater_off",
+    "wayfarer_gale", "wayfarer_gale_off", "wayfarer_kneeling", "wayfarer_kneeling_off",
+    "wayfarer_parthian", "wayfarer_parthian_off", "wayfarer_arrow_rain", "wayfarer_arrow_rain_off",
+    "wayfarer_convergence", "wayfarer_convergence_off", "wayfarer_dry_draw", "wayfarer_dry_draw_off",
+
+    "evoker_grip", "evoker_grip_off",
+    "spear_charge", "spear_charge_off", "spear_stab", "spear_stab_off",
 }
 
 # 跃步与 jump 同类：整段在空中，着地口径由原型自查的脚底高度代替（docs/animation-specs/technique_leap.md 第 9 节）。
@@ -103,13 +120,14 @@ LATERAL_GAIT_IDS = {"stance_walk_left", "stance_walk_right"}
 # 破门的两次前脚迈步、撞门冲刺的两步与收步、破盾后脚的三次迈步、横扫的外撤步与单脚回旋、掩门的两次撤步与收脚、
 # 连门的两次垫步、弓步与收脚、万门一斩的前迈、起跳落地与收脚是单脚支撑或腾空期
 # （docs/animation-specs/door_breaker_cleave.md、door_breaker_ram.md、door_breaker_hook.md、door_breaker_sweep.md、door_breaker_close.md、
-# door_breaker_chain.md、door_breaker_finale.md 第 4 节）；千里腿各式的单腿出腿、迈步、腾空与撑地段同理
-# （docs/animation-specs/PROGRESS-peddler.md C5）。
+# door_breaker_chain.md、door_breaker_finale.md 第 4 节）。行矢各式的射位换步、转身与跪起同样有单脚支撑期
+# （docs/animation-specs/PROGRESS-wayfarer.md C4、C9、C10）。
 UNBALANCED_WINDOW_PREFIXES = ("dodge_", "technique_dash_", "door_breaker_cleave", "door_breaker_ram", "door_breaker_hook",
                               "door_breaker_sweep", "door_breaker_close", "door_breaker_chain", "door_breaker_finale",
-                              "peddler_")
-# 爆发窗口（索引字段 burst_windows）开放给闪避、轻步与撞门的后脚蹬伸（每段至多一段、≤ 0.08 s）。
-BURST_WINDOW_PREFIXES = ("dodge_", "technique_dash_", "door_breaker_ram")
+                              "peddler_", "wayfarer_", "evoker_earth_legs", "evoker_water_return")
+# 爆发窗口（索引字段 burst_windows）开放给闪避、轻步与撞门的后脚蹬伸、弓梢的前脚蹬地后撤
+# （每段至多一段、≤ 0.08 s）。
+BURST_WINDOW_PREFIXES = ("dodge_", "technique_dash_", "door_breaker_ram", "wayfarer_bow_strike")
 # 视线叠加层（索引 layer: look）：时间轴表示视线角度而不是时间，只对这两个 ID 使用姿势层判据。
 LOOK_LAYER_IDS = {"head_follow": ("y", 50.0), "head_follow_pitch": ("x", -90.0)}
 MIN_LOOK_LAYER_BONES = 5
@@ -127,11 +145,24 @@ IMPACT_WINDOW_IDS = {"attack_main", "attack_off", "mine_main", "mine_off",
                      "door_breaker_close", "door_breaker_close_off", "door_breaker_chain", "door_breaker_chain_off",
                      "door_breaker_finale", "door_breaker_finale_off",
                      "peddler_snap_kick", "peddler_push_kick", "peddler_roundhouse", "peddler_triple_kick",
-                     "peddler_mule_kick", "peddler_flying_kick", "peddler_axe_kick", "peddler_whirlwind"}
+                     "peddler_mule_kick", "peddler_flying_kick", "peddler_axe_kick", "peddler_whirlwind",
+                     "wayfarer_bow_strike", "wayfarer_bow_strike_off"}
+# 索引 item_states 的通道（弓、弩物品模型谓词）：pull 线性取 [0, 1]，其余为 0 / 1 阶跃开关。
+ITEM_STATE_CHANNELS = {"pull", "pulling", "charged", "arrow"}
+AIM_WINDOW_MODES = {"pitch", "yaw"}
 # 单臂覆盖层（遮罩只含一条手臂，叠在双手式上，见 docs/animation-specs/door_breaker_guard.md 第 10 节）：
 # 值为覆盖臂一侧。躯干、腿、预备跟随、主链峰值、着地重心归下层的式；有效运动按覆盖臂三骨计，错峰链改为覆盖臂。
-ARM_OVERLAY_IDS = {"door_breaker_guard": "l", "door_breaker_guard_off": "r"}
+ARM_OVERLAY_IDS = {"door_breaker_guard": "l", "door_breaker_guard_off": "r",
+                   "spear_charge": "r", "spear_charge_off": "l",
+                   "spear_stab": "r", "spear_stab_off": "l"}
 MIN_ARM_OVERLAY_BONES = 3
+# 手指覆盖层（遮罩只含一只手的拇指与两组手指，见 docs/animation-specs/evoker_grip.md 第 6 节）：值为覆盖手一侧。
+# 整段保持握拳，不要求运动：三片手指旋转绝对值都不低于有效运动阈值即算参与；躯干、腿、预备跟随、错峰不适用。
+FINGER_OVERLAY_IDS = {"evoker_grip": "r", "evoker_grip_off": "l"}
+MIN_FINGER_OVERLAY_BONES = 3
+# 两手相触（索引 hand_contact_windows，见 docs/animation-specs/PROGRESS-evoker.md E9）：窗口内每帧至少一对
+# 「手 ↔ 目标」的分离轴间隙不超过该值，且所有对的穿入不超过手臂穿模容差；窗口外不查。只加要求、不放宽，不设白名单。
+MAX_HAND_CONTACT_GAP_PX = 0.5
 ARM_INTERSECTION_TOLERANCE_PX = 0.25
 MIN_PREPARATION_FOLLOW_RATIO = 0.60
 SEGMENT_MASS = {"torso": 50.0, "head": 8.0, "leg": 16.0, "arm": 5.0}
@@ -372,14 +403,17 @@ def velocity_gates(sampler: AnimationSampler, times: list[float],
     jerk_limit = MAX_CYCLIC_JERK_DEG_S3 if sampler.loop else MAX_JERK_DEG_S3
     if impact_window is not None and sampler.loop:
         raise ValueError("循环动画不能声明 impact_window")
-    if impact_window is not None:
-        speed_pass = max_speed_inside <= MAX_IMPACT_SPEED_DEG_S + 0.001 and max_speed_outside <= MAX_ANGULAR_SPEED_DEG_S + 0.001
-        jerk_pass = max_jerk_inside <= MAX_IMPACT_JERK_DEG_S3 + 1 and max_jerk_outside <= MAX_JERK_DEG_S3 + 1
-    elif bursts:
-        if sampler.loop:
-            raise ValueError("循环动画不能声明 burst_windows")
-        speed_pass = max_speed_burst <= MAX_BURST_SPEED_DEG_S + 0.001 and max_speed_outside <= MAX_ANGULAR_SPEED_DEG_S + 0.001
-        jerk_pass = max_jerk_burst <= MAX_BURST_JERK_DEG_S3 + 1 and max_jerk_outside <= MAX_JERK_DEG_S3 + 1
+    if bursts and sampler.loop:
+        raise ValueError("循环动画不能声明 burst_windows")
+    if impact_window is not None or bursts:
+        # 打击时段、爆发窗口与其余帧各按各的上限查；没声明的那类最大值为 0，自然通过。
+        # 帧同时落在两种窗口里时按打击时段归类（上面的分支先判 inside）。
+        speed_pass = (max_speed_inside <= MAX_IMPACT_SPEED_DEG_S + 0.001
+                      and max_speed_burst <= MAX_BURST_SPEED_DEG_S + 0.001
+                      and max_speed_outside <= MAX_ANGULAR_SPEED_DEG_S + 0.001)
+        jerk_pass = (max_jerk_inside <= MAX_IMPACT_JERK_DEG_S3 + 1
+                     and max_jerk_burst <= MAX_BURST_JERK_DEG_S3 + 1
+                     and max_jerk_outside <= MAX_JERK_DEG_S3 + 1)
     else:
         speed_pass = max_speed <= speed_limit + 0.001
         jerk_pass = max_jerk <= jerk_limit + 1
@@ -700,25 +734,28 @@ def _cube_obb(transform: Any, element: dict[str, Any]) -> tuple[Vec, tuple[Vec, 
     return transform.point(local_center), tuple(axes), half
 
 
-def _obb_overlap(first: tuple[Vec, tuple[Vec, Vec, Vec], Vec],
-                 second: tuple[Vec, tuple[Vec, Vec, Vec], Vec]) -> float:
+def _obb_separation(first: tuple[Vec, tuple[Vec, Vec, Vec], Vec],
+                    second: tuple[Vec, tuple[Vec, Vec, Vec], Vec]) -> float:
+    """分离轴上的最大间隙：正值为分开的距离（不小于该值），负值的绝对值为最小穿入深度。"""
     center_a, axes_a, half_a = first
     center_b, axes_b, half_b = second
     candidates = [*axes_a, *axes_b]
     candidates.extend(_cross(axis_a, axis_b) for axis_a in axes_a for axis_b in axes_b)
     delta = sub(center_b, center_a)
-    minimum = math.inf
+    maximum = -math.inf
     for candidate in candidates:
         axis = _unit(candidate)
         if axis is None:
             continue
         radius_a = sum(half_a[index] * abs(_dot(axis, axes_a[index])) for index in range(3))
         radius_b = sum(half_b[index] * abs(_dot(axis, axes_b[index])) for index in range(3))
-        overlap = radius_a + radius_b - abs(_dot(delta, axis))
-        if overlap <= 0:
-            return 0.0
-        minimum = min(minimum, overlap)
-    return minimum if math.isfinite(minimum) else 0.0
+        maximum = max(maximum, abs(_dot(delta, axis)) - radius_a - radius_b)
+    return maximum if math.isfinite(maximum) else 0.0
+
+
+def _obb_overlap(first: tuple[Vec, tuple[Vec, Vec, Vec], Vec],
+                 second: tuple[Vec, tuple[Vec, Vec, Vec], Vec]) -> float:
+    return max(0.0, -_obb_separation(first, second))
 
 
 def _obb_contains_center(box: tuple[Vec, tuple[Vec, Vec, Vec], Vec], point: Vec, tolerance: float) -> bool:
@@ -779,6 +816,75 @@ def arm_intersection_gates(sampler: AnimationSampler, times: list[float]) -> dic
         "failures": failures[:20],
         "failure_count": len(failures),
         "tolerance_px": ARM_INTERSECTION_TOLERANCE_PX,
+    }
+
+
+def hand_contact_gates(sampler: AnimationSampler, times: list[float]) -> dict[str, Any]:
+    """两手相触窗口：每帧至少一对手与目标贴合，所有手与目标对的穿入不超过容差。"""
+    windows = [tuple(map(float, window)) for window in sampler.animation.get("hand_contact_windows", [])]
+    if not windows:
+        return {"pass": True, "applicable": False, "reason": "未声明 hand_contact_windows"}
+    # 手含手掌、拇指与两组手指；目标是另一只手、另一条前臂和躯干、头、两条大腿。两只手互为目标的对只记一次。
+    hand_parts = ("hand", "thumb", "fingers_a", "fingers_b")
+    body_targets = ("head", "chest", "waist", "pelvis", "r_thigh", "l_thigh")
+    pairs = [(f"r_{first}", f"l_{second}") for first in hand_parts for second in hand_parts]
+    for side, other in (("r", "l"), ("l", "r")):
+        for part in hand_parts:
+            pairs.append((f"{side}_{part}", f"{other}_forearm"))
+            pairs.extend((f"{side}_{part}", target) for target in body_targets)
+    # 内外两层方块的定向盒相同（外层只是 inflate），只取不膨胀的皮肤内层。
+    by_bone: dict[str, list[dict[str, Any]]] = {bone: [] for pair in pairs for bone in pair}
+    for element in sampler.model.elements:
+        bone = sampler.model.element_bones.get(element.get("uuid"))
+        if bone in by_bone and element.get("type") == "cube" and not element.get("inflate"):
+            by_bone[bone].append(element)
+    failures: list[str] = []
+    max_gap = 0.0
+    max_penetration = 0.0
+    worst_gap: dict[str, Any] | None = None
+    worst_penetration: dict[str, Any] | None = None
+    checked = 0
+    for time in times:
+        if not any(start - 1e-9 <= time <= end + 1e-9 for start, end in windows):
+            continue
+        checked += 1
+        world, _ = sampler.forward_kinematics(time)
+        boxes = {bone: [_cube_obb(world[bone], element) for element in elements]
+                 for bone, elements in by_bone.items()}
+        best_gap = math.inf
+        best_pair: tuple[str, str] | None = None
+        for hand, target in pairs:
+            separation = max(_obb_separation(first, second) for first in boxes[hand] for second in boxes[target])
+            # 贴合看最近的一对；穿入对窗口里所有对都查。
+            if separation < best_gap:
+                best_gap = separation
+                best_pair = (hand, target)
+            penetration = max(0.0, -separation)
+            if penetration > max_penetration:
+                max_penetration = penetration
+                worst_penetration = {"pair": [hand, target], "time_s": time, "penetration_px": penetration}
+            if penetration > ARM_INTERSECTION_TOLERANCE_PX:
+                failures.append(f"{hand} 与 {target} 在 {time:.3f}s 穿入 {penetration:.3f}px")
+        gap = max(0.0, best_gap)
+        if worst_gap is None or gap > max_gap:
+            max_gap = gap
+            worst_gap = {"pair": list(best_pair or ()), "time_s": time, "gap_px": gap}
+        if gap > MAX_HAND_CONTACT_GAP_PX:
+            failures.append(f"{time:.3f}s 最近一对 {best_pair} 间隙 {gap:.3f}px")
+    if checked == 0:
+        failures.append("hand_contact_windows 内没有采样帧")
+    return {
+        "pass": not failures,
+        "applicable": True,
+        "reason": f"相触窗口内每帧至少一对手与目标间隙 ≤ {MAX_HAND_CONTACT_GAP_PX}px，所有对穿入 ≤ {ARM_INTERSECTION_TOLERANCE_PX}px",
+        "windows_s": windows,
+        "checked_frames": checked,
+        "max_gap_px": max_gap,
+        "worst_gap": worst_gap,
+        "max_penetration_px": max_penetration,
+        "worst_penetration": worst_penetration,
+        "failures": failures[:20],
+        "failure_count": len(failures),
     }
 
 
@@ -910,8 +1016,8 @@ def anti_forgery_peak_order_gates(sampler: AnimationSampler, times: list[float],
     animation_id = sampler.key.rsplit(".", 1)[-1]
     if animation_id == "jump":
         chain = ["r_thigh", "r_shin", "r_foot"]
-    elif animation_id.startswith("crossbow_charge") or animation_id.startswith("bow_draw"):
-        # 弩装填与拉弓的主动作在拉弦臂：主手持弓/弩时是左臂。
+    elif animation_id.startswith(("crossbow_charge", "bow_draw", "wayfarer_")):
+        # 弩装填、拉弓与行矢各式的主动作在拉弦臂（弓梢的戳、弩的推拉也在这条臂）：主手持弓/弩时是左臂。
         side = "r" if animation_id.endswith("_off") else "l"
         chain = ["waist", "chest", f"{side}_upper_arm", f"{side}_forearm", f"{side}_hand"]
     else:
@@ -1082,6 +1188,7 @@ def report(sampler: AnimationSampler, impact_window: list[tuple[float, float]] |
     angle = angle_gates(sampler, times)
     overlap = overlap_gates(sampler, times)
     arm_intersection = arm_intersection_gates(sampler, times)
+    hand_contact = hand_contact_gates(sampler, times)
     correlation = anti_forgery_correlation_gates(sampler, times, active)
     peak_order = anti_forgery_peak_order_gates(sampler, times, active)
     multi_axis = anti_forgery_multi_axis_gates(sampler, times, active, full_body and animation_id not in SLEEP_POSE_IDS)
@@ -1117,11 +1224,27 @@ def report(sampler: AnimationSampler, impact_window: list[tuple[float, float]] |
         reason = "单臂覆盖层：遮罩外的躯干与腿归下层的式，收臂到位后保持，没有主动作峰值"
         for item in (preparation, peak_order, ground):
             item.update({"pass": True, "applicable": False, "reason": reason})
-        grip.update({"pass": True, "applicable": False,
-                     "reason": "单臂覆盖层手指恒为下层双手式 0 s 握拳，由原型自查核对"})
+        if not animation_id.startswith("spear_"):
+            grip.update({"pass": True, "applicable": False,
+                         "reason": "单臂覆盖层手指恒为下层双手式 0 s 握拳，由原型自查核对"})
+    if animation_id in FINGER_OVERLAY_IDS:
+        # 手指覆盖层整段保持握拳：不要求运动，覆盖手三片手指的旋转绝对值都达到有效阈值才算参与。
+        side = FINGER_OVERLAY_IDS[animation_id]
+        fingers = [f"{side}_thumb", f"{side}_fingers_a", f"{side}_fingers_b"]
+        held = [bone for bone in fingers
+                if max_abs(bone_local_values(sampler, bone, "rotation", times)) >= EFFECTIVE_ROTATION_DEG]
+        effective_minimum = MIN_FINGER_OVERLAY_BONES
+        effective_reason = "手指覆盖层按覆盖手三片手指的保持角度计数（静止保持，不要求运动）"
+        effective_pass = len(held) >= MIN_FINGER_OVERLAY_BONES
+        torso_applicable = False
+        torso_reason = "手指覆盖层的遮罩不含躯干与头"
+        torso_pass = True
+        reason = "手指覆盖层：静止保持握拳，没有主动作峰值；遮罩不含腿"
+        for item in (preparation, overlap, peak_order, ground):
+            item.update({"pass": True, "applicable": False, "reason": reason})
     # 总结果必须包含角速度/抽搐检查，不能只在明细中报告失败却返回成功。
     gate_pass = all((item.get("pass", True) or not item.get("applicable", True))
-                    for item in (angle, preparation, overlap, arm_intersection, grip, ground, cycle,
+                    for item in (angle, preparation, overlap, arm_intersection, hand_contact, grip, ground, cycle,
                                  correlation, peak_order, multi_axis, velocity, look_layer))
     return {
         "pass": gate_pass and effective_pass and torso_pass and all_body_pass,
@@ -1144,6 +1267,7 @@ def report(sampler: AnimationSampler, impact_window: list[tuple[float, float]] |
         "preparation_follow_through": preparation,
         "overlap_and_offset": overlap,
         "arm_intersection": arm_intersection,
+        "hand_contact": hand_contact,
         "anti_forgery_correlation": correlation,
         "anti_forgery_peak_order": peak_order,
         "anti_forgery_multi_axis": multi_axis,
@@ -1165,6 +1289,51 @@ def gate_label(item: dict[str, Any]) -> str:
     return f"{status}({item.get('reason', '适用')})"
 
 
+def validate_item_states(animation_id: str, raw: dict[str, Any], duration: float) -> None:
+    """索引 item_states 在资源边界校验一次：通道名、时间在剪辑内且严格递增、pull 在 [0, 1]、开关只取 0 / 1。"""
+    states = raw["item_states"]
+    if raw.get("hand") not in ("main", "off"):
+        raise SystemExit(f"item_states 只能用于 hand 为 main / off 的动作: {animation_id}")
+    if not isinstance(states, dict) or not states:
+        raise SystemExit(f"item_states 必须是非空对象: {animation_id}")
+    for channel, keys in states.items():
+        if channel not in ITEM_STATE_CHANNELS:
+            raise SystemExit(f"item_states 未知通道 {channel}（只认 {sorted(ITEM_STATE_CHANNELS)}）: {animation_id}")
+        if not isinstance(keys, list) or not keys:
+            raise SystemExit(f"item_states.{channel} 必须是非空 [[秒, 值], ...]: {animation_id}")
+        previous = -1.0
+        for key in keys:
+            if (not isinstance(key, list) or len(key) != 2
+                    or not all(type(v) in (int, float) and math.isfinite(v) for v in key)):
+                raise SystemExit(f"item_states.{channel} 的键必须是 [秒, 值]: {animation_id}")
+            time, value = float(key[0]), float(key[1])
+            if time < 0 or not previous < time <= duration:
+                raise SystemExit(f"item_states.{channel} 时间必须在剪辑内且严格递增（{time}）: {animation_id}")
+            if channel == "pull" and not 0 <= value <= 1:
+                raise SystemExit(f"item_states.pull 必须在 [0, 1]（{value}）: {animation_id}")
+            if channel != "pull" and value not in (0, 1):
+                raise SystemExit(f"item_states.{channel} 只取 0 / 1（{value}）: {animation_id}")
+            previous = time
+
+
+def validate_aim_windows(animation_id: str, windows: Any, duration: float) -> None:
+    """索引 aim_windows 校验：start < end、在剪辑内、按时间不重叠，模式只认 pitch / yaw。"""
+    if not isinstance(windows, list) or not windows:
+        raise SystemExit(f"aim_windows 必须是非空数组: {animation_id}")
+    previous_end = 0.0
+    for window in windows:
+        if not isinstance(window, dict) or set(window) != {"start", "end", "mode"}:
+            raise SystemExit(f"aim_windows 每段必须是 {{start, end, mode}}: {animation_id}")
+        if not all(type(window[key]) in (int, float) and math.isfinite(window[key]) for key in ("start", "end")):
+            raise SystemExit(f"aim_windows 时刻必须是有限数值: {animation_id}")
+        start, end = float(window["start"]), float(window["end"])
+        if not previous_end <= start < end <= duration:
+            raise SystemExit(f"aim_windows 时段越界、倒序或重叠（{start}, {end}）: {animation_id}")
+        if window["mode"] not in AIM_WINDOW_MODES:
+            raise SystemExit(f"aim_windows 模式只认 {sorted(AIM_WINDOW_MODES)}: {animation_id}")
+        previous_end = end
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("animation", nargs="+", help="动画 ID")
@@ -1176,6 +1345,7 @@ def main() -> int:
     parser.add_argument("--json", action="store_true", help="输出完整 JSON 报告")
     args = parser.parse_args()
     index = load_json(args.index)
+    entries = {raw.get("id"): raw for raw in index.get("animations", [])}
     impact_windows: dict[str, list[tuple[float, float]]] = {}
     phase_declarations: dict[str, Any] = {}
     index_extras: dict[str, dict[str, Any]] = {}
@@ -1198,6 +1368,14 @@ def main() -> int:
             if not 0 <= start < end or end - start > MAX_BURST_WINDOW_S + 1e-9:
                 raise SystemExit(f"burst_windows 时长必须在 (0, {MAX_BURST_WINDOW_S}] s 内: {animation_id}")
             index_extras.setdefault(animation_id, {})["burst_windows"] = windows
+        if "hand_contact_windows" in raw:
+            # 相触窗口只加要求、不放宽，不设白名单；格式在资源边界校验一次。
+            windows = raw["hand_contact_windows"]
+            if not isinstance(windows, list) or not windows or any(
+                    not isinstance(window, list) or len(window) != 2 or not 0 <= float(window[0]) < float(window[1])
+                    for window in windows):
+                raise SystemExit(f"hand_contact_windows 必须是 [[开始, 结束], ...] 且开始 < 结束: {animation_id}")
+            index_extras.setdefault(animation_id, {})["hand_contact_windows"] = windows
         if "reaction" in raw:
             if raw["reaction"] != "hit" or not animation_id.endswith("_hit"):
                 raise SystemExit(f"reaction 只能为 hit，且只用于 *_hit 动作: {animation_id}")
@@ -1221,6 +1399,12 @@ def main() -> int:
         for animation_id in args.animation:
             path = args.json_dir / f"{animation_id}.animation.json"
             document = load_json(path)
+            raw_entry = entries.get(animation_id, {})
+            duration = float(next(iter(document["animations"].values()))["animation_length"])
+            if "item_states" in raw_entry:
+                validate_item_states(animation_id, raw_entry, duration)
+            if "aim_windows" in raw_entry:
+                validate_aim_windows(animation_id, raw_entry["aim_windows"], duration)
             if animation_id in phase_declarations:
                 # 阶段属于索引契约，临时注入采样文档供门禁使用；不改写资源文件。
                 for animation in document.get("animations", {}).values():
@@ -1247,6 +1431,7 @@ def main() -> int:
                   f"pre={gate_label(item['preparation_follow_through'])} "
                   f"overlap={gate_label(item['overlap_and_offset'])} "
                   f"arm_intersection={gate_label(item['arm_intersection'])} "
+                  f"hand_contact={gate_label(item['hand_contact'])} "
                   f"correlation={gate_label(item['anti_forgery_correlation'])} "
                   f"peak_order={gate_label(item['anti_forgery_peak_order'])} "
                   f"multi_axis={gate_label(item['anti_forgery_multi_axis'])} "

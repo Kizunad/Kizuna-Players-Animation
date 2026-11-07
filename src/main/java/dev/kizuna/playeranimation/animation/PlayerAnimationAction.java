@@ -48,6 +48,12 @@ public enum PlayerAnimationAction {
     /** 三叉戟蓄力 10 tick 后引到位，投掷后由调度推进跟随段再停止。 */
     TRIDENT_CHARGE("trident_charge"),
     TRIDENT_CHARGE_OFF("trident_charge_off"),
+    /** 矛持握与冲刺蓄力由客户端本帧使用状态取样，左右手各自覆盖持物臂。 */
+    SPEAR_CHARGE("spear_charge"),
+    SPEAR_CHARGE_OFF("spear_charge_off"),
+    /** 戳刺整段对应原版挥手进度，第一人称仍使用原版双手。 */
+    SPEAR_STAB("spear_stab", 23),
+    SPEAR_STAB_OFF("spear_stab_off", 23),
     USE_ITEM("use_item", 8),
     USE_ITEM_OFF("use_item_off", 8),
     PLACE_BLOCK("place_block", 10),
@@ -149,7 +155,69 @@ public enum PlayerAnimationAction {
      * 承接时不重播，宿主在该式淡完后显式停止。
      */
     DOOR_BREAKER_GUARD("door_breaker_guard"),
-    DOOR_BREAKER_GUARD_OFF("door_breaker_guard_off");
+    DOOR_BREAKER_GUARD_OFF("door_breaker_guard_off"),
+    /**
+     * 行矢弓弩九式与拉空弓（docs/animation-specs/PROGRESS-wayfarer.md）。宿主起手时按真实时间播放，承接、换兵时用 start_tick
+     * 前推到承接入口；整段全身，{@code _OFF} 为武器在副手。弓弦、箭的物品状态写在索引 item_states（运行时接线待 26.2）。
+     * <p>满月（docs/animation-specs/wayfarer_full_draw.md）：射位换步、举弓过顶、分开落到满弓、撒放后左臂打开成「一」字残心，6.0 秒；3.60 秒撒放。
+     */
+    WAYFARER_FULL_DRAW("wayfarer_full_draw", 120),
+    WAYFARER_FULL_DRAW_OFF("wayfarer_full_draw_off", 120),
+    /** 连珠（docs/animation-specs/wayfarer_pearls.md）：攥箭三连射，弦手绕小圈搭下一支，5.0 秒；2.00、2.55、3.10 秒撒放。 */
+    WAYFARER_PEARLS("wayfarer_pearls", 100),
+    WAYFARER_PEARLS_OFF("wayfarer_pearls_off", 100),
+    /** 弓梢（docs/animation-specs/wayfarer_bow_strike.md）：双手横弓上步戳击、蹬地后撤、回射一箭，5.0 秒；1.40 秒击中、2.70 秒撒放。 */
+    WAYFARER_BOW_STRIKE("wayfarer_bow_strike", 100),
+    WAYFARER_BOW_STRIKE_OFF("wayfarer_bow_strike_off", 100),
+    /** 连弩（docs/animation-specs/wayfarer_repeater.md）：抵颊瞄准、五次推拉上弦连射，5.0 秒；1.60–3.20 秒每 0.40 秒撒放。 */
+    WAYFARER_REPEATER("wayfarer_repeater", 100),
+    WAYFARER_REPEATER_OFF("wayfarer_repeater_off", 100),
+    /** 横风（docs/animation-specs/wayfarer_gale.md）：弩抵腰宽站、六发由右向左扇扫（副手版镜像），6.0 秒；2.20–3.95 秒每 0.35 秒撒放。 */
+    WAYFARER_GALE("wayfarer_gale", 120),
+    WAYFARER_GALE_OFF("wayfarer_gale_off", 120),
+    /** 跪射（docs/animation-specs/wayfarer_kneeling.md）：右脚后撤单膝跪、膝上装填、三发，7.0 秒；2.60、3.70、4.80 秒撒放。 */
+    WAYFARER_KNEELING("wayfarer_kneeling", 140),
+    WAYFARER_KNEELING_OFF("wayfarer_kneeling_off", 140),
+    /** 回马（docs/animation-specs/wayfarer_parthian.md）：向左转身背跑、起跳空中右转回身射，5.0 秒；2.05 秒撒放；位移由冲量负责。 */
+    WAYFARER_PARTHIAN("wayfarer_parthian", 100),
+    WAYFARER_PARTHIAN_OFF("wayfarer_parthian_off", 100),
+    /** 箭雨（docs/animation-specs/wayfarer_arrow_rain.md）：宽站仰身 50° 五连射、每发双膝一送，7.0 秒；2.80–4.40 秒每 0.40 秒撒放。 */
+    WAYFARER_ARROW_RAIN("wayfarer_arrow_rain", 140),
+    WAYFARER_ARROW_RAIN_OFF("wayfarer_arrow_rain_off", 140),
+    /** 天地同至（docs/animation-specs/wayfarer_convergence.md）：先仰射三发、再深弓步平射一发、弓垂到地，9.0 秒；只承接满月、箭雨施放。 */
+    WAYFARER_CONVERGENCE("wayfarer_convergence", 180),
+    WAYFARER_CONVERGENCE_OFF("wayfarer_convergence_off", 180),
+    /** 拉空弓（docs/animation-specs/wayfarer_dry_draw.md）：训练，射位上不搭箭五次慢拉慢放，32.0 秒。 */
+    WAYFARER_DRY_DRAW("wayfarer_dry_draw", 640),
+    WAYFARER_DRY_DRAW_OFF("wayfarer_dry_draw_off", 640),
+    /**
+     * 五脏诀（docs/animation-specs/PROGRESS-evoker.md）。十五段整段全身、不分主副手，左主手由运行时镜像；
+     * 宿主起手时按真实时间播放，时间线 cast 是效果开始帧，只作客户端通知。
+     * 强身五式：金臂、厚土、心火、归水、舒筋。
+     */
+    EVOKER_METAL_ARMS("evoker_metal_arms", 100),
+    EVOKER_EARTH_LEGS("evoker_earth_legs", 120),
+    EVOKER_FIRE_HEART("evoker_fire_heart", 80),
+    EVOKER_WATER_RETURN("evoker_water_return", 100),
+    EVOKER_WOOD_SINEW("evoker_wood_sinew", 100),
+    /** 附伤五式：锐金、震土、灼火、寒水、惊雷，共用 0.70 秒「唤」起手，3.5 秒。 */
+    EVOKER_METAL_EDGE("evoker_metal_edge", 70),
+    EVOKER_EARTH_QUAKE("evoker_earth_quake", 70),
+    EVOKER_FIRE_BURN("evoker_fire_burn", 70),
+    EVOKER_WATER_FROST("evoker_water_frost", 70),
+    EVOKER_WOOD_THUNDER("evoker_wood_thunder", 70),
+    /** 炼元五式：开立后同一呼吸周期练六遍，32.0 秒一次性。 */
+    EVOKER_REFINE_LUNG("evoker_refine_lung", 640),
+    EVOKER_REFINE_SPLEEN("evoker_refine_spleen", 640),
+    EVOKER_REFINE_HEART("evoker_refine_heart", 640),
+    EVOKER_REFINE_KIDNEY("evoker_refine_kidney", 640),
+    EVOKER_REFINE_LIVER("evoker_refine_liver", 640),
+    /**
+     * 握持覆盖层（docs/animation-specs/evoker_grip.md）：手里有东西时与该式同起，只接管拿东西那只手的拇指和两组手指，
+     * 整段保持架势握拳；宿主随主剪辑一起显式停止。
+     */
+    EVOKER_GRIP("evoker_grip"),
+    EVOKER_GRIP_OFF("evoker_grip_off");
 
     private final String id;
     private final int naturalDurationTicks;

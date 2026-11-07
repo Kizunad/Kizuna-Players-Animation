@@ -123,6 +123,60 @@ KEY_TIMES["peddler_whirlwind"] = (0.0, 0.60, 1.20, 1.40, 1.60, 1.90, 2.20, 2.50,
                                   3.20, 3.25, 3.35, 3.45, 3.55, 3.65, 4.20, 4.60, 5.80, 7.80, 9.0)
 KEY_TIMES["peddler_horse_stance"] = (0.0, 0.20, 0.35, 0.50, 0.60, 0.72, 0.85, 1.00, 3.00, 5.00, 15.00, 29.00, 31.00,
                                      31.20, 31.40, 31.60, 31.75, 31.85, 32.0)
+# 行矢：取帧时刻见各式规格页第 9 节「接触表」；副手版按主手版时刻取。
+KEY_TIMES["wayfarer_full_draw"] = (0.0, 0.40, 0.65, 0.80, 1.30, 1.55, 1.90, 2.10, 2.30, 2.55, 2.80, 3.10, 3.40,
+                                   3.60, 3.75, 3.92, 4.40, 4.60, 4.75, 5.40, 6.0)
+KEY_TIMES["wayfarer_dry_draw"] = (0.0, 0.30, 0.45, 0.80, 1.00, 1.75, 2.50, 4.00, 5.50, 6.25, 6.95, 8.50, 26.50,
+                                  29.50, 31.00, 31.20, 31.55, 31.70, 32.0)
+KEY_TIMES["wayfarer_pearls"] = (0.0, 0.40, 0.75, 1.00, 1.15, 1.40, 1.65, 1.95, 2.00, 2.08, 2.15, 2.20, 2.50,
+                               2.55, 2.65, 2.75, 3.05, 3.10, 3.25, 3.60, 3.95, 4.50, 5.0)
+KEY_TIMES["wayfarer_bow_strike"] = (0.0, 0.30, 0.45, 0.65, 0.80, 1.15, 1.30, 1.36, 1.40, 1.55, 1.70, 1.88, 2.05,
+                                   2.10, 2.45, 2.65, 2.70, 2.85, 3.16, 3.42, 3.55, 4.20, 5.0)
+KEY_TIMES["wayfarer_repeater"] = (0.0, 0.70, 1.20, 1.55, 1.60, 1.65, 1.78, 1.97, 2.00, 2.05, 2.18, 2.37, 2.40,
+                                  2.45, 2.58, 2.77, 2.80, 2.85, 2.98, 3.17, 3.20, 3.25, 3.90, 5.0)
+KEY_TIMES["wayfarer_gale"] = (0.0, 0.75, 1.40, 1.85, 2.15, 2.20, 2.27, 2.53, 2.55, 2.62, 2.88, 2.90, 2.97,
+                              3.23, 3.25, 3.32, 3.58, 3.60, 3.67, 3.93, 3.95, 4.20, 4.90, 6.0)
+KEY_TIMES["wayfarer_kneeling"] = (0.0, 0.40, 0.55, 0.70, 1.00, 1.20, 1.40, 1.65, 1.92, 2.40, 2.60, 2.68, 3.06,
+                                  3.50, 3.70, 3.78, 4.16, 4.60, 4.80, 4.90, 5.30, 5.60, 5.85, 7.0)
+KEY_TIMES["wayfarer_parthian"] = (0.0, 0.35, 0.50, 0.62, 0.75, 0.90, 1.00, 1.20, 1.30, 1.40, 1.55, 1.70, 1.84,
+                                  1.88, 2.00, 2.05, 2.20, 2.60, 3.00, 4.00, 5.0)
+KEY_TIMES["wayfarer_arrow_rain"] = (0.0, 0.40, 0.65, 0.85, 1.20, 1.50, 1.60, 2.20, 2.70, 2.80, 2.88, 3.00, 3.18,
+                                    3.20, 3.60, 4.00, 4.40, 4.55, 4.80, 5.40, 6.20, 7.0)
+KEY_TIMES["wayfarer_convergence"] = (0.0, 0.60, 1.20, 1.55, 1.85, 2.00, 2.45, 2.50, 2.90, 3.30, 3.46, 3.60,
+                                     3.70, 3.80, 4.40, 4.70, 4.85, 5.00, 5.17, 6.40, 6.80, 7.20, 8.00, 9.0)
+
+# 五脏诀附伤：唤（预沉、上举、颤腕）、各式主段的起落、cast 2.00、收势（各式规格第 4 节）。
+KEY_TIMES["evoker_water_frost"] = (0.0, 0.10, 0.40, 0.70, 0.86, 1.00, 1.17, 1.35, 1.58, 1.80, 2.00, 2.08,
+                                   2.50, 2.80, 3.00, 3.5)
+KEY_TIMES["evoker_metal_edge"] = (0.0, 0.10, 0.40, 0.70, 0.90, 1.10, 1.30, 1.52, 1.70, 1.90, 2.00, 2.16,
+                                  2.50, 2.80, 3.00, 3.5)
+KEY_TIMES["evoker_earth_quake"] = (0.0, 0.25, 0.40, 0.55, 0.70, 0.85, 1.10, 1.40, 1.70, 1.80, 1.90, 1.95,
+                                   2.00, 2.15, 2.35, 2.55, 3.00, 3.5)
+KEY_TIMES["evoker_fire_burn"] = (0.0, 0.25, 0.40, 0.55, 0.70, 0.85, 0.95, 0.9875, 1.1375, 1.2875, 1.4375, 1.60,
+                                 1.70, 1.78, 1.88, 2.00, 2.10, 2.45, 2.90, 3.5)
+KEY_TIMES["evoker_wood_thunder"] = (0.0, 0.25, 0.40, 0.55, 0.70, 0.85, 1.05, 1.25, 1.35, 1.40, 1.45, 1.60,
+                                    1.75, 1.90, 2.00, 2.10, 2.50, 3.00, 3.5)
+# 五脏诀强身：开立落脚、各式独有段、cast、收步落脚、收势（各式规格第 10 节接触表）。
+KEY_TIMES["evoker_fire_heart"] = (0.0, 0.35, 0.50, 0.65, 0.80, 0.95, 1.10, 1.30, 1.40, 1.55, 1.80, 1.95,
+                                  2.10, 2.30, 2.45, 2.80, 3.20, 3.60, 4.0)
+KEY_TIMES["evoker_metal_arms"] = (0.0, 0.40, 0.75, 1.00, 1.25, 1.55, 1.80, 1.95, 2.25, 2.40, 2.60, 2.90,
+                                  3.20, 3.40, 3.70, 4.20, 4.60, 5.0)
+# 厚土收步按实际落脚（左 4.02、右 4.70）取时刻。
+KEY_TIMES["evoker_earth_legs"] = (0.0, 0.40, 0.75, 0.95, 1.10, 1.30, 1.40, 1.60, 1.80, 1.95, 2.15, 2.35,
+                                  2.55, 2.70, 2.90, 3.20, 3.50, 4.02, 4.70, 5.20, 6.0)
+KEY_TIMES["evoker_water_return"] = (0.0, 0.40, 0.55, 0.75, 0.90, 1.00, 1.30, 1.60, 1.90, 2.15, 2.40, 2.60,
+                                    2.80, 3.05, 3.30, 3.70, 4.20, 5.0)
+KEY_TIMES["evoker_wood_sinew"] = (0.0, 0.35, 0.65, 0.90, 1.05, 1.20, 1.40, 1.55, 1.70, 1.85, 2.00, 2.20,
+                                  2.40, 2.50, 2.65, 2.80, 3.00, 3.35, 3.75, 4.30, 5.0)
+# 五脏诀炼元：进式、一遍里的四个手位、第二遍起点、收式（各式规格第 10 节接触表）。
+KEY_TIMES["evoker_refine_lung"] = (0.0, 0.50, 1.00, 2.00, 3.00, 4.50, 6.00, 31.10, 31.40, 32.0)
+KEY_TIMES["evoker_refine_spleen"] = (0.0, 0.50, 1.00, 2.00, 3.00, 4.00, 5.50, 31.10, 31.40, 32.0)
+KEY_TIMES["evoker_refine_liver"] = (0.0, 0.50, 1.00, 1.50, 2.50, 3.50, 5.50, 8.50, 31.10, 31.40, 32.0)
+KEY_TIMES["evoker_refine_heart"] = (0.0, 0.50, 1.00, 2.00, 3.00, 4.00, 4.45, 5.80, 31.10, 31.40, 32.0)
+KEY_TIMES["evoker_refine_kidney"] = (0.0, 0.50, 1.00, 2.00, 2.90, 3.90, 4.50, 5.20, 31.10, 31.40, 32.0)
+# 五脏诀握持覆盖层：整段同值，单独只取 0 s（叠在主剪辑上的样子另用临时探针出合成预览，evoker_grip.md 第 8 节）。
+KEY_TIMES["evoker_grip"] = (0.0,)
+KEY_TIMES["evoker_grip_off"] = (0.0,)
 
 # 手持与穿戴道具。剑刃方向由原版 handheld 第三人称 display 推算（见 conventions.md），
 # 胸甲在手中显示到“胸甲上身”时刻，之后改画穿在身上的盔甲层。
@@ -170,6 +224,29 @@ PROPS = {
 }
 
 PROPS["crossbow_hold"] = PROPS["crossbow_charge"]
+
+# 行矢：弓、弩的弦档位与箭由索引 item_states 在剪辑时间上驱动（docs/asset-contract.md「索引条目」），
+# 端点由原版 bow / crossbow 贴图逐像素经第三人称 display 与 Rig.itemTransform 换算到 r_item 局部像素。
+for _bow_id in ("full_draw", "pearls", "bow_strike", "parthian", "arrow_rain", "convergence", "dry_draw"):
+    PROPS[f"wayfarer_{_bow_id}"] = ({"kind": "bow", "bone": "r_item"},)
+for _crossbow_id in ("repeater", "gale", "kneeling"):
+    PROPS[f"wayfarer_{_crossbow_id}"] = ({"kind": "crossbow", "bone": "r_item"},)
+# 弓臂沿贴图弧线取 5 点（上梢 → 上弓臂 → 弓把 → 下弓臂 → 下梢），贴图平面法线 BOW_NORMAL。
+BOW_NORMAL = (0.985, -0.03, 0.171)
+BOW_LIMB = ((2.43, 3.2, -6.12), (1.55, -0.69, -1.74), (0.83, -1.36, 2.29), (0.08, -0.47, 6.77), (-0.37, 2.14, 9.83))
+# 弦中点（搭箭处）：未拉、原版 pulling_0 / _1 / _2 三档；箭从搭箭处指向对应档位的箭尖。
+BOW_NOCK = {"standby": (1.01, 3.13, 2.06), 0: (1.04, 5.04, 2.23), 1: (1.06, 6.3, 2.34), 2: (1.13, 7.28, 2.11)}
+BOW_ARROW_TIP = {0: (0.93, -6.03, 0.93), 1: (0.94, -4.76, 1.04), 2: (1.01, -3.78, 0.81)}
+# 弩身、弩臂沿用 crossbow_charge 的预览段；弦两端取弩臂两端，箭只在上弦（charged）时画。
+CROSSBOW_NOCK = {"standby": (-2.16, -3.61, -0.1), 0: (-1.67, -1.77, -0.1), 1: (-1.18, 0.07, -0.1), 2: (-0.68, 1.92, -0.1)}
+CROSSBOW_ARROW_TIP = (-3.81, -9.76, -0.1)
+# 原版谓词阈值：弓 pull ≥ 0.65 / 0.9 换 _1 / _2；弩 pull ≥ 0.58 / 1.0。
+BOW_TIERS = (0.65, 0.9)
+CROSSBOW_TIERS = (0.58, 1.0)
+# 未在索引里声明的通道按原版缺省预览：未拉弦、未上弦、搭着箭。
+ITEM_STATE_DEFAULTS = {"pull": 0.0, "pulling": 0.0, "charged": 0.0, "arrow": 1.0}
+# 动画 ID → 索引 item_states 原始轨道，由 main() 按 --index 读入。
+ITEM_STATES: dict[str, dict[str, list[list[float]]]] = {}
 
 # 原版平地起跳的实体高度（格，每 tick），只用于让 GIF 看得出离地。
 VANILLA_JUMP_Y = (0, 0.42, 0.7532, 1.0013, 1.166, 1.249, 1.252, 1.1766, 1.024, 0.796, 0.4943, 0.12, 0.0)
@@ -225,7 +302,8 @@ HANDLE = (110, 74, 42, 255)
 GUARD = (80, 82, 88, 255)
 DIRT = (134, 96, 67, 255)
 COPPER = (196, 120, 70, 255)
-PROP_COLORS = {"iron": IRON, "copper": COPPER, "handle": HANDLE, "iron_dark": IRON_DARK, "dirt": DIRT, "horn": (214, 200, 170, 255)}
+PROP_COLORS = {"iron": IRON, "copper": COPPER, "handle": HANDLE, "iron_dark": IRON_DARK, "dirt": DIRT, "horn": (214, 200, 170, 255),
+               "string": (58, 58, 62, 255)}
 
 
 def projection(point: tuple[float, float, float], yaw: float, center: tuple[float, float], scale: float) -> tuple[float, float, float]:
@@ -452,6 +530,56 @@ def preview_props(animation_id: str) -> tuple[dict[str, Any], ...]:
     return tuple(props)
 
 
+def item_state(animation_id: str, channel: str, time: float) -> float:
+    """与 `ItemStates.Track.sample` 相同：首键前取首值、末键后保持，pull 线性、其余阶跃；没写的通道取原版缺省。"""
+    keys = ITEM_STATES.get(animation_id, {}).get(channel)
+    if not keys:
+        return ITEM_STATE_DEFAULTS[channel]
+    if time <= keys[0][0]:
+        return keys[0][1]
+    for (t0, v0), (t1, v1) in zip(keys, keys[1:]):
+        if time < t1:
+            if channel != "pull":
+                return v0
+            return v0 + (v1 - v0) * (time - t0) / (t1 - t0)
+    return keys[-1][1]
+
+
+def launcher_prop(prop: dict[str, Any], animation_id: str, time: float) -> dict[str, Any]:
+    """把 bow / crossbow 按当前 item_states 展开成 segments：弦按原版谓词选档，箭按 arrow 通道显隐；左手镜像 X。"""
+    pulling = item_state(animation_id, "pulling", time) >= 0.5
+    pull = item_state(animation_id, "pull", time)
+    arrow = item_state(animation_id, "arrow", time) >= 0.5
+    string, shaft = "string", "handle"
+    if prop["kind"] == "bow":
+        normal = BOW_NORMAL
+        parts = [(a, b, 0.5, 0.45, "handle") for a, b in zip(BOW_LIMB, BOW_LIMB[1:])]
+        tier = sum(pull >= threshold for threshold in BOW_TIERS) if pulling else "standby"
+        nock = BOW_NOCK[tier]
+        parts += [(BOW_LIMB[0], nock, 0.12, 0.12, string), (nock, BOW_LIMB[-1], 0.12, 0.12, string)]
+        if pulling and arrow:
+            parts.append((nock, BOW_ARROW_TIP[tier], 0.25, 0.25, shaft))
+    else:
+        normal = PROPS["crossbow_charge"][0]["normal"]
+        parts = list(PROPS["crossbow_charge"][0]["parts"])
+        prod_a, prod_b = parts[1][0], parts[1][1]
+        charged = item_state(animation_id, "charged", time) >= 0.5
+        if pulling:
+            tier = sum(pull >= threshold for threshold in CROSSBOW_TIERS)
+        else:
+            tier = 2 if charged else "standby"
+        nock = CROSSBOW_NOCK[tier]
+        parts += [(prod_a, nock, 0.12, 0.12, string), (nock, prod_b, 0.12, 0.12, string)]
+        if not pulling and charged and arrow:
+            parts.append((nock, CROSSBOW_ARROW_TIP, 0.25, 0.25, shaft))
+    if prop["bone"] == "l_item":
+        # 左手 display 是右手的镜像：挂点局部 X 取反，贴图平面法线一起镜像。
+        flip = lambda v: (-v[0], v[1], v[2])
+        parts = [(flip(a), flip(b), w, t, c) for a, b, w, t, c in parts]
+        normal = flip(normal)
+    return {"kind": "segments", "bone": prop["bone"], "normal": normal, "parts": tuple(parts)}
+
+
 def active_props(model: SkeletonModel, animation_id: str, time: float, world: dict[str, Any]) -> list[tuple[dict, tuple[int, ...]]]:
     """返回当前时刻所有道具盒的世界坐标角点；open_front 的盔甲（头盔）不画正面，露出脸。"""
     boxes = []
@@ -461,6 +589,8 @@ def active_props(model: SkeletonModel, animation_id: str, time: float, world: di
         if prop["kind"] == "plate_two_hand":
             boxes.extend(two_hand_plate(model, world, prop["size"]))
             continue
+        if prop["kind"] in ("bow", "crossbow"):
+            prop = launcher_prop(prop, animation_id, time)
         for bone, corners, color in prop_boxes(model, prop):
             world_corners = {name: world[bone].point(point) for name, point in corners.items()}
             if prop.get("open_front"):
@@ -722,7 +852,13 @@ def main() -> int:
     parser.add_argument("--slim", type=Path, default=Path("models/player_skeleton_slim.bbmodel"))
     parser.add_argument("--output", type=Path, default=Path("build/anim-review"))
     parser.add_argument("--fps", type=int, default=12)
+    parser.add_argument("--index", type=Path,
+                        default=Path("src/main/resources/assets/kizuna_players_animation/player_anim_index.json"))
     args = parser.parse_args()
+    # 弓、弩预览按索引 item_states 选弦档与箭；没有该字段的动作不受影响。
+    for entry in load_json(args.index)["animations"]:
+        if "item_states" in entry:
+            ITEM_STATES[entry["id"]] = entry["item_states"]
     source = load_json(args.source)
     verify_front_orientation(SkeletonModel(source))
     print("front 自检通过：yaw=180°，观察 head_inner north(-Z) Steve 脸部 UV 8..16；r_upper_arm 位于观察者左侧")
