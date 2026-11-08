@@ -17,7 +17,7 @@ public record AnimationClip(float duration, Loop loop, Map<BoneId, Track> tracks
     public record Track(Channel position, Channel rotation) { }
     public record TimelineEvent(float seconds, String name) { }
     public static final Set<String> EVENTS = Set.of(
-            "hit", "release", "step_l", "step_r", "cancel_ok", "equip", "cast", "clap");
+            "hit", "release", "step_l", "step_r", "cancel_ok", "equip", "cast", "clap", "cork", "sip", "rub");
 
     public static AnimationClip parse(JsonObject document, String key, Consumer<String> errors) {
         // 固定读取 Bedrock 动画，明确拒绝旧格式与动态表达式。

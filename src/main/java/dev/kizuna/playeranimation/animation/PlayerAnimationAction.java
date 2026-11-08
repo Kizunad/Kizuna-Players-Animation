@@ -217,7 +217,23 @@ public enum PlayerAnimationAction {
      * 整段保持架势握拳；宿主随主剪辑一起显式停止。
      */
     EVOKER_GRIP("evoker_grip"),
-    EVOKER_GRIP_OFF("evoker_grip_off");
+    EVOKER_GRIP_OFF("evoker_grip_off"),
+    /**
+     * 行药诀（docs/animation-specs/PROGRESS-witch.md）：上卷服药、敷两臂、敷两腿，中卷掷引、泼引、噀催。
+     * 都是整段全身、不分主副手，左主手由运行时镜像；宿主起手时播放，迟滞可按倍率放慢，时间线事件只作客户端通知。
+     */
+    WITCH_IMBIBE("witch_imbibe", 100),
+    WITCH_ANOINT_ARMS("witch_anoint_arms", 80),
+    WITCH_ANOINT_LEGS("witch_anoint_legs", 80),
+    WITCH_LOB_SEED("witch_lob_seed", 44),
+    WITCH_FLING_SEED("witch_fling_seed", 36),
+    WITCH_SPRAY_TRIGGER("witch_spray_trigger", 52),
+    /** 炼药熬药（docs/animation-specs/witch_brew.md）：开立持棍搅釜、扇气、闻药，5 秒一遍练六遍，32.0 秒一次性。 */
+    WITCH_BREW("witch_brew", 640),
+    /** 熬药副手下料覆盖层：只接管左臂，0.6 秒，播完淡回熬药当前时刻的左臂。 */
+    WITCH_BREW_FEED_OFF("witch_brew_feed_off", 12),
+    /** 僵直（docs/animation-specs/status_stagger.md）：0.8 秒到位后保持，宿主显式停止；移动底层上只取上身。 */
+    STATUS_STAGGER("status_stagger");
 
     private final String id;
     private final int naturalDurationTicks;

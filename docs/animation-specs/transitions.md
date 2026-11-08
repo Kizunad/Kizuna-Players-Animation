@@ -330,19 +330,19 @@
 | spear_charge / spear_charge_off | spear_stab / spear_stab_off | 0.05 / 0.10 | 否 | 戳刺优先于同侧蓄力 |
 | spear_stab / spear_stab_off | spear_charge / spear_charge_off | 0.10 / 0.15 | 否 | 戳刺结束，持矛手回到当前使用时刻 |
 
-## 行药诀与炼药（2026-11-02 规格已审）
+## 行药诀与炼药（2026-11-08 资源接入）
 
-规格与进度见 [PROGRESS-witch](PROGRESS-witch.md)；还没有资源。下表是设计行（六列，末列为状态），`AnimationTransitionContractTest` 不解析；制作时改成四列行（同破门斩），在 B1 合并后的边数上加 25 条（七段进出 14 条，下料覆盖层叠上、撤下 2 条，副手握持覆盖层叠上 5 条，僵直进出 4 条）。
+规格与进度见 [PROGRESS-witch](PROGRESS-witch.md)。九段都用下面的四列行（`AnimationTransitionContractTest` 解析，加 25 条边：七段进出 14 条，下料覆盖层叠上、撤下 2 条，副手握持覆盖层叠上 5 条，僵直进出 4 条）。
 七段主剪辑都是 `mask: full`、优先级 24、`hand: main`（左主手整段镜像），起止姿态等于 `stance_idle` 首帧，按真实时间播，有迟滞时按倍率放慢（待决定第 3 条）；起手被伤害打断时淡出 0.20 s 回架势。敷药头颈、躯干两段先不做。
 
-| 来源 | 目标 | 淡入/淡出 | 触发 | 约束 | 状态 |
-| --- | --- | ---: | --- | --- | --- |
-| stance_idle | witch_imbibe / witch_anoint_arms / witch_anoint_legs / witch_lob_seed / witch_fling_seed / witch_spray_trigger | 0.10 / 0.25 | 宿主在行药诀各式起手时播放（敷药按部位组挑一段） | 1.8–5.0 s；不开立，两脚锁定（掷引后脚 1.05 离地、1.55 落回）；收势前半段内胯和重心回到架势 | 规格已审 |
-| stance_idle | witch_brew | 0.10 / 0.25 | 宿主在熬药式开始时播放 | 32.0 s 一次性；进式开立（`step_r` 0.50），收式撤步（`step_r` 31.40） | 规格已审 |
-| witch_imbibe / witch_anoint_arms / witch_anoint_legs / witch_lob_seed / witch_fling_seed / witch_spray_trigger | stance_idle | 0.25 / 0.25 | 播完 | 淡回架势底层 | 规格已审 |
-| witch_brew | stance_idle | 0.25 / 0.25 | 播完 | 淡回架势底层；打断时两脚在淡出里滑回架势位 | 规格已审 |
-| witch_brew | witch_brew_feed_off | 0.10 / 0.25 | 熬药中副手右键生效，宿主同 tick 叠播（每用一次叠一次） | 只接管左臂（左主手镜像到右臂），0.6 s；右手照常搅 | 规格已审 |
-| witch_brew_feed_off | witch_brew | 0.25 / 0.25 | 播完 | 左臂淡回主剪辑当前时刻 | 规格已审 |
-| witch_imbibe / witch_brew / witch_lob_seed / witch_fling_seed / witch_spray_trigger | evoker_grip_off | 0.10 / 0.25 | 起手时副手有东西，宿主同 tick 叠播 | 只接管副手的拇指和两组手指，保持架势握拳；撤下沿用五脏诀已有的 `evoker_grip_off → stance_idle`；敷药要求副手空着，不叠 | 规格已审 |
-| stand / stance_idle | status_stagger | 0.05 / 0.20 | 魅惑僵直开始，宿主播放 | 保持末帧到醒；移动底层上只取上身；`stand` 上两脚滑到架势踝位（已知） | 规格已审 |
-| status_stagger | stand / stance_idle | 0.20 / 0.20 | 醒时宿主停止 | 淡回下层 | 规格已审 |
+| 来源 → 目标 | 淡入 / 淡出 | 触发 | 约束 |
+| --- | ---: | --- | --- |
+| stance_idle → witch_imbibe / witch_anoint_arms / witch_anoint_legs / witch_lob_seed / witch_fling_seed / witch_spray_trigger | 0.10 / 0.25 | 宿主在行药诀各式起手时播放（敷药按部位组挑一段） | 1.8–5.0 s；不开立，两脚锁定（掷引后脚 1.05 离地、1.55 落回）；收势前半段内胯和重心回到架势 |
+| stance_idle → witch_brew | 0.10 / 0.25 | 宿主在熬药式开始时播放 | 32.0 s 一次性；进式开立（`step_r` 0.50），收式撤步（`step_r` 31.40） |
+| witch_imbibe / witch_anoint_arms / witch_anoint_legs / witch_lob_seed / witch_fling_seed / witch_spray_trigger → stance_idle | 0.25 / 0.25 | 播完 | 淡回架势底层 |
+| witch_brew → stance_idle | 0.25 / 0.25 | 播完 | 淡回架势底层；打断时两脚在淡出里滑回架势位 |
+| witch_brew → witch_brew_feed_off | 0.10 / 0.25 | 熬药中副手右键生效，宿主同 tick 叠播（每用一次叠一次） | 只接管左臂（左主手镜像到右臂），0.6 s；右手照常搅 |
+| witch_brew_feed_off → witch_brew | 0.25 / 0.25 | 播完 | 左臂淡回主剪辑当前时刻 |
+| witch_imbibe / witch_brew / witch_lob_seed / witch_fling_seed / witch_spray_trigger → evoker_grip_off | 0.10 / 0.25 | 起手时副手有东西，宿主同 tick 叠播 | 只接管副手的拇指和两组手指，保持架势握拳；撤下沿用五脏诀已有的 `evoker_grip_off → stance_idle`；敷药要求副手空着，不叠 |
+| stand / stance_idle → status_stagger | 0.05 / 0.20 | 魅惑僵直开始，宿主播放 | 保持末帧到醒；移动底层上只取上身；`stand` 上两脚滑到架势踝位（已知） |
+| status_stagger → stand / stance_idle | 0.20 / 0.20 | 醒时宿主停止 | 淡回下层 |

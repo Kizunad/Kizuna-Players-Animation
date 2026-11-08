@@ -3,6 +3,7 @@ package dev.kizuna.playeranimation;
 import dev.kizuna.playeranimation.protocol.pb.PlayerAnimationProtocol.PlayRequest;
 import dev.kizuna.playeranimation.protocol.pb.PlayerAnimationProtocol.Result;
 import dev.kizuna.playeranimation.protocol.pb.PlayerAnimationProtocol.StopRequest;
+import dev.kizuna.playeranimation.network.AnimationRequests;
 import java.util.HexFormat;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -34,6 +35,35 @@ class ProtocolContractTest {
         assertEquals(0, zero.getStartTick());
         assertEquals(400, timed.getStartTick());
         assertArrayEquals(HexFormat.of().parseHex("209003"), timed.toByteArray());
+    }
+
+    @Test
+    void playbackRateUsesOptionalFieldSix() throws Exception {
+        // float 字段 6 的独立线格式夹具；缺省值不能被当作显式倍率零。
+        byte[] wire = HexFormat.of().parseHex("350000003f");
+        PlayRequest halfSpeed = PlayRequest.parseFrom(wire);
+        assertTrue(halfSpeed.hasPlaybackRate());
+        assertEquals(0.5f, halfSpeed.getPlaybackRate());
+        assertArrayEquals(wire, halfSpeed.toByteArray());
+        assertFalse(PlayRequest.getDefaultInstance().hasPlaybackRate());
+    }
+
+    @Test
+    void playbackRateRejectsInvalidValuesAndScrubCombination() {
+        // 在网络边界拒绝不能形成单调自由时钟的输入，进度驱动不能再叠倍率。
+        PlayRequest valid = PlayRequest.newBuilder()
+                .setRequestId("rate")
+                .setPlayerUuid(PLAYER)
+                .setAnimationId("meditate")
+                .build();
+        for (float rate : new float[]{0, -1, Float.NaN, Float.NEGATIVE_INFINITY, Float.POSITIVE_INFINITY, 1.1f}) {
+            PlayRequest invalid = valid.toBuilder().setPlaybackRate(rate).build();
+            assertThrows(IllegalArgumentException.class, () -> AnimationRequests.validate(invalid));
+        }
+        PlayRequest slowed = valid.toBuilder().setPlaybackRate(0.8f).build();
+        assertEquals(PLAYER, AnimationRequests.validate(slowed).toString());
+        PlayRequest ambiguous = slowed.toBuilder().setNormalizedProgress(0.5f).build();
+        assertThrows(IllegalArgumentException.class, () -> AnimationRequests.validate(ambiguous));
     }
 
     @Test

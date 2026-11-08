@@ -1,20 +1,20 @@
 # 行药诀与炼药动作进度
 
-更新：2026-11-02。动作总稿在会话交接目录 `~/Code/Kizuna-remote-session/handoff/pa-cloud-anim/21-Players-Animation-Witch.md`（下称「动作稿」：服药、敷药四段、中卷三段归行药诀，熬药、副手下料覆盖层、僵直状态动作、按倍率播放归炼药）。服务端设计稿 `20-Witch-Brew-Addon.md`（行药诀）、`22-Brewing-Addon.md`（炼药）用来核对时刻、承接与起手长度。**规格已审**（2026-11-02，审阅方：19 条待决定全部按建议；与动作稿的出入都接受，最终看 GIF；按倍率播放放在第三批）。还没有关键帧，没改 Java；B1 由本会话做，审过后 rebase 再开第一批。
+更新：2026-11-08（九段资源接入 PA，待审 GIF；下文「制作实测」）。2026-11-02 原文：动作总稿在会话交接目录 `~/Code/Kizuna-remote-session/handoff/pa-cloud-anim/21-Players-Animation-Witch.md`（下称「动作稿」：服药、敷药四段、中卷三段归行药诀，熬药、副手下料覆盖层、僵直状态动作、按倍率播放归炼药）。服务端设计稿 `20-Witch-Brew-Addon.md`（行药诀）、`22-Brewing-Addon.md`（炼药）用来核对时刻、承接与起手长度。**规格已审**（2026-11-02，审阅方：19 条待决定全部按建议；与动作稿的出入都接受，最终看 GIF；按倍率播放放在第三批）。还没有关键帧，没改 Java；B1 由本会话做，审过后 rebase 再开第一批。
 
 | ID | 规格 | 卷 · 式 | 类型与时长 | 效果时刻 (s) | 状态 |
 | --- | --- | --- | --- | --- | --- |
-| `witch_imbibe` | [规格](witch_imbibe.md) | 行药诀上卷 · 服药 | 一次性 5.0 s（100 tick） | `cast` 3.20 | 规格已审 |
-| `witch_anoint_arms` | [规格](witch_anoint_arms.md) | 上卷 · 敷药 · 两臂 | 一次性 4.0 s（80 tick） | `cast` 2.60 | 规格已审 |
-| `witch_anoint_legs` | [规格](witch_anoint_legs.md) | 上卷 · 敷药 · 两腿 | 一次性 4.0 s（80 tick） | `cast` 2.60 | 规格已审 |
+| `witch_imbibe` | [规格](witch_imbibe.md) | 行药诀上卷 · 服药 | 一次性 5.0 s（100 tick） | `cast` 3.20 | 资源已接入，待审 GIF |
+| `witch_anoint_arms` | [规格](witch_anoint_arms.md) | 上卷 · 敷药 · 两臂 | 一次性 4.0 s（80 tick） | `cast` 2.60 | 资源已接入，待审 GIF |
+| `witch_anoint_legs` | [规格](witch_anoint_legs.md) | 上卷 · 敷药 · 两腿 | 一次性 4.0 s（80 tick） | `cast` 2.60 | 资源已接入，待审 GIF |
 | `witch_anoint_head` / `witch_anoint_torso` | — | 上卷 · 敷药 · 头颈 / 躯干 | 一次性 4.0 s（80 tick） | `cast` 2.60 | 暂不制作（动作稿 §1，待决定第 4 条） |
-| `witch_brew` | [规格](witch_brew.md) | 炼药 · 熬药 | 一次性 32.0 s（640 tick） | — | 规格已审 |
-| `witch_lob_seed` | [规格](witch_lob_seed.md) | 中卷 · 掷引 | 一次性 2.2 s（44 tick） | `release` 1.00 | 规格已审 |
-| `witch_fling_seed` | [规格](witch_fling_seed.md) | 中卷 · 泼引 | 一次性 1.8 s（36 tick） | `cast` 0.80 | 规格已审 |
-| `witch_spray_trigger` | [规格](witch_spray_trigger.md) | 中卷 · 噀催 | 一次性 2.6 s（52 tick） | `cast` 1.60 | 规格已审 |
-| `witch_brew_feed_off` | [规格](witch_brew_feed_off.md) | 熬药副手下料覆盖层 | 一次性 0.6 s（12 tick），`l_arm` | — | 规格已审 |
-| `status_stagger` | [规格](status_stagger.md) | 状态 · 僵直（魅惑药水） | 保持 0.8 s，不带 tick | — | 规格已审 |
-| 按倍率播放 | 本页待决定第 3 条 | 播放能力（所有功法书通用） | — | — | 规格已审 |
+| `witch_brew` | [规格](witch_brew.md) | 炼药 · 熬药 | 一次性 32.0 s（640 tick） | — | 资源已接入；扇、闻幅度低于设计，2026-11-08 用户看 GIF 后已接受（偏差见 [witch_brew](witch_brew.md)「制作实测偏差」） |
+| `witch_lob_seed` | [规格](witch_lob_seed.md) | 中卷 · 掷引 | 一次性 2.2 s（44 tick） | `release` 1.00 | 资源已接入，待审 GIF |
+| `witch_fling_seed` | [规格](witch_fling_seed.md) | 中卷 · 泼引 | 一次性 1.8 s（36 tick） | `cast` 0.80 | 资源已接入，待审 GIF |
+| `witch_spray_trigger` | [规格](witch_spray_trigger.md) | 中卷 · 噀催 | 一次性 2.6 s（52 tick） | `cast` 1.60 | 资源已接入，待审 GIF |
+| `witch_brew_feed_off` | [规格](witch_brew_feed_off.md) | 熬药副手下料覆盖层 | 一次性 0.6 s（12 tick），`l_arm` | — | 资源已接入，待审 GIF |
+| `status_stagger` | [规格](status_stagger.md) | 状态 · 僵直（魅惑药水） | 保持 0.8 s，不带 tick | — | 资源已接入，待审 GIF |
+| 按倍率播放 | 本页待决定第 3 条 | 播放能力（所有功法书通用） | — | — | 已实现，待游戏内验收 |
 
 七段主剪辑共同：`loop: false`、`mask: full`、`priority: 24`、`blend_in: 0.10`、`blend_out: 0.25`、`hand: main`、`fpv: false`。主手全程拿东西（瓶或木棍），行药诀首版只认主手，所以不分主副手，左主手玩家由运行时整段镜像（`step_l` / `step_r` 互换）。首帧、末帧等于 [stance_idle](stance_idle.md) 首帧（W1）。
 
@@ -133,7 +133,7 @@
 - `scripts/render_animation_gif.py`：`KEY_TIMES` 加 9 段接触表时刻；加 `--rate`（默认 1），出 × 0.8 对照。不加道具。
 - 原型脚本（交接目录 `kpa-door-breaker-proto/witch/`，不入库）：
   - 手贴身体滑动（服药、敷两臂、敷两腿）沿用五脏诀的锐金、肾炼求解；
-  - 新增「手画圈」（熬药）：手腕中心沿给定圆和周期走，棍方向固定；
+  - 新增「手画圈」（熬药）：`r_item` 持物挂点沿给定圆和周期走，棍方向固定（2026-11-08 主会话审定，与 P9 探针一致）；
   - 瓶口到嘴的估算（W4）；
   - 熬药按 5 s 周期生成，同炼元；开立、收步沿用五脏诀。
 
@@ -197,20 +197,26 @@
 - 按倍率放慢后节奏是否自然（× 0.8，另看 × 0.5）。
 - 僵直在 `stand` 上两脚滑一下能不能接受（第 13 条）。
 
+## 制作实测（2026-11-08）
+
+九段由 MotionBricks 试验仓（`~/Code/MotionBricks-Intergrate-Test`，`scripts/author_witch_pa.py`）从草稿重制，60 fps 逐帧导出，按名导入 classic `.bbmodel`（既有 147 段与非动画字段逐字节不变），细臂共用 classic 轨道。门禁、数值自查、GIF 与偏差逐项记录在交接报告 `~/Code/Kizuna-remote-session/handoff/anim-a2-witch-mb/REPORT.md`。
+
+- 门禁：九段双体型全部通过（阈值、窗口未改）；`export_bbmodel_animation.py --check` 156 段一致；防伪回归通过。
+- 熬药：`r_item` 圆误差 classic / slim 约 0.13 / 0.19 px，闻时停点漂移 ≤ 0.28 px，棍俯角约 29.5°，腕 Y 最大约 79.6°。**扇、闻按候选做，幅度低于本页与 [witch_brew](witch_brew.md) 的设计值**。2026-11-08 用户看过 GIF 后已接受，规格正文没改，偏差另记在 witch_brew「制作实测偏差（2026-11-08 用户已接受）」：
+
+  | 项目 | 设计 | 现资源 |
+  | --- | --- | --- |
+  | 闻时前倾 | 胯 / 腰 / 胸 4° / 3° / 3°（共 10°） | 1.2° / 0.9° / 0.9°（共 3°） |
+  | 闻时低头 | 再低 15°，另微点 2° | 再低 4.5°，无微点 |
+  | 闻时后坐 / 下降 | 0.2 px / 0.06 px | 0.06 px / 0.018 px |
+  | 搅时胯 | 只 Y 随圈 ±3° | 另随圈水平平移 0.6 px |
+  | 扇掌目标 | 约 `(3, 22.5, −9.5)` | 约 `(3.5, 21, −8.2)` |
+
+  原因（探针 `probe_brew_sniff_freedom.py`、`probe_brew_fan_target.py`）：右手停在圈的起点（离胸约 4 px），前倾超过设计的约 40% 后，右手或右前臂中心就贴到或进入胸、腰方块，放开棍俯角 20–35°、偏航 ±30°、加大后坐或把前倾挪到胸也不行；头再低约 9° 以上碰右拳。扇掌设计点在下巴高度，左臂近乎伸直（肘约 28°），左前臂与头内层方块交叠约 1.5 px。
+- 掷引出手时右腕约 `(−5.97, 22.17, −8.80)`、前臂仰角约 35°（设计 y 30、45°）；僵直头补偿 −4° → −3°（设计约 −2°）；敷两臂倒药时瓶口相对掌心有水平偏移。这几处门禁内，留看 GIF。
+
 ## 未做 / 未验证
 
-- 没有关键帧、没有导出资源、没有 GIF；没跑分析器、没跑 gradle、没进游戏。
-- 探针只用粗臂几何，只查了可达、膝角、最低点和重心；滑脚、角速度、错峰、细臂都没算。
-- 服务端时刻只对了设计稿，服务端附属和功法库的迟滞都还没写。
-- 按倍率播放只有方案，Java、协议、测试都没动；`asset-contract.md` 留到制作阶段先改。
-- `transitions.md` 只加了六列设计行，`AnimationTransitionContractTest` 没动。
-
-## 续接要点（会话交接用）
-
-- 工作区 `~/Code/.pa-witch`，分支 `anim/witch`，从 main `18a251a` 开；不碰主工作区和 `.pa-door-breaker`、`.pa-evoker`、`.pa-wayfarer`。不推送。
-- 规格一笔提交：本页、九个规格页（`witch_imbibe`、`witch_anoint_arms`、`witch_anoint_legs`、`witch_brew`、`witch_brew_feed_off`、`witch_lob_seed`、`witch_fling_seed`、`witch_spray_trigger`、`status_stagger`），`transitions.md` 末尾一节。
-- 接下来：本会话做 B1（报告末行「【B1 完成待审】」）→ 审过后 rebase → 先改文档（`asset-contract.md`）→ 制作。三批，每批 2–3 段带 GIF 提交：
-  1. 贴身三段：服药、敷两臂、敷两腿；
-  2. 中卷三段：掷引、泼引、噀催；
-  3. 熬药、下料覆盖层、僵直，加按倍率播放的 Java。
-- 末批完成后末行写「【制作完成待验收】」。之后的顺序（交接 README）：A3 袖手拳（24 / 23）→ A4 千面（26 / 25）→ A5 矛剪辑 F3 与细臂肩枢轴 A1，到时再派。
+- 没进游戏：真实持物（瓶、木棍）、左主手镜像、整体观感都没看；GIF 里的瓶和棍是规格端点估算示意。
+- 关键帧规模高于各页目标（熬药约 4.8 万帧），运行成本没测。
+- 服务端附属、Human 与功法库的映射和调用（含倍率）留给整合。

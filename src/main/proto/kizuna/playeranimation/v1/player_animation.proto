@@ -23,6 +23,9 @@ message PlayRequest {
   // 可选：原版状态驱动的归一化进度 [0,1]。存在时客户端必须 scrub 到该位置，
   // 不得按本地自由时钟推进；服务端每 tick 可更新同一动作的进度。
   optional float normalized_progress = 5;
+  // 可选：自由播放倍率，有限值 (0,1]，缺省为 1；与 normalized_progress 互斥。
+  // 剪辑与事件时间同步放慢，淡入淡出仍使用真实秒数。
+  optional float playback_rate = 6;
 }
 
 message StopRequest {

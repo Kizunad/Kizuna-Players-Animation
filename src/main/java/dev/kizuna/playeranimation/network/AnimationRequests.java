@@ -1,5 +1,6 @@
 package dev.kizuna.playeranimation.network;
 
+import dev.kizuna.playeranimation.animation.AnimationPlayer;
 import dev.kizuna.playeranimation.protocol.pb.PlayerAnimationProtocol.PlayRequest;
 import dev.kizuna.playeranimation.protocol.pb.PlayerAnimationProtocol.StopRequest;
 import java.util.UUID;
@@ -20,6 +21,12 @@ public final class AnimationRequests {
                 && (!Float.isFinite(request.getNormalizedProgress())
                 || request.getNormalizedProgress() < 0 || request.getNormalizedProgress() > 1)) {
             throw new IllegalArgumentException("normalized_progress 必须在 [0,1]");
+        }
+        if (request.hasPlaybackRate()) {
+            AnimationPlayer.validatePlaybackRate(request.getPlaybackRate());
+            if (request.hasNormalizedProgress()) {
+                throw new IllegalArgumentException("playback_rate 不能与 normalized_progress 同时设置");
+            }
         }
         return player;
     }

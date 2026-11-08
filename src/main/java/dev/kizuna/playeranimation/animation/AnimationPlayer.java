@@ -22,9 +22,26 @@ public final class AnimationPlayer {
     public enum Handedness { RIGHT, LEFT }
     private enum PlaybackMode { FREE, SCRUB }
     public record PlaybackRequest(double start, Handedness handedness, String playId,
-                                  AnimationClip.Loop loopOverride) { }
+                                  AnimationClip.Loop loopOverride, double rate) {
+        public PlaybackRequest {
+            // 本地 API 也可直接创建请求，在进入时钟之前校验倍率。
+            validatePlaybackRate(rate);
+        }
+
+        public PlaybackRequest(double start, Handedness handedness, String playId,
+                               AnimationClip.Loop loopOverride) {
+            this(start, handedness, playId, loopOverride, 1);
+        }
+    }
     /** 仍有权重的播放实例：剪辑秒与淡入淡出权重。 */
     public record ActivePlayback(AnimationEntry entry, float time, float weight, boolean mirrored) { }
+
+    public static void validatePlaybackRate(double rate) {
+        // 自由播放只允许放慢；所有入口共用这条时钟约束。
+        if (!Double.isFinite(rate) || rate <= 0 || rate > 1) {
+            throw new IllegalArgumentException("playback_rate 必须是 (0,1] 内的有限值");
+        }
+    }
 
     public void play(AnimationEntry entry, double now, boolean leftHanded) {
         Handedness handedness = leftHanded ? Handedness.LEFT : Handedness.RIGHT;
@@ -92,7 +109,7 @@ public final class AnimationPlayer {
         stop(entry.id(), now);
         Playback playback = new Playback(entry, request, sequence++, PlaybackMode.FREE, localStart);
         if (request.playId() != null && now > localStart) {
-            playback.lastEventTime = now - localStart;
+            playback.lastEventTime = (now - localStart) * request.rate();
         }
         if (playback.finished(now)) {
             return;
@@ -262,7 +279,7 @@ public final class AnimationPlayer {
 
     private static boolean stanceOverlay(String id) {
         return id.startsWith("block_one_hand") || id.startsWith("block_two_hand")
-                || id.equals("technique_breath") || id.equals("technique_charge");
+                || id.equals("technique_breath") || id.equals("technique_charge") || id.equals("status_stagger");
     }
 
     private static boolean movingStance(String id) {
@@ -288,6 +305,7 @@ public final class AnimationPlayer {
         final AnimationEntry entry;
         final double start;
         final double requestedStart;
+        final double rate;
         final boolean mirror;
         final long sequence;
         final String playId;
@@ -309,6 +327,7 @@ public final class AnimationPlayer {
             this.entry = entry;
             this.start = localStart;
             this.requestedStart = request.start();
+            this.rate = request.rate();
             this.mirror = request.handedness() == Handedness.LEFT && entry.hand() != AnimationEntry.Hand.NONE;
             this.sequence = sequence;
             this.playId = request.playId();
@@ -384,7 +403,7 @@ public final class AnimationPlayer {
             if (scrub) {
                 return scrubEventTime();
             }
-            double elapsed = Math.max(0, Math.min(now, stoppedOr(now)) - start);
+            double elapsed = Math.max(0, Math.min(now, stoppedOr(now)) - start) * rate;
             if (loop() == AnimationClip.Loop.REPEAT) {
                 return elapsed;
             }
@@ -408,7 +427,7 @@ public final class AnimationPlayer {
             // 一次性动画在长度结束后淡出；循环与保持动作只在显式停止时淡出。
             double natural = Double.POSITIVE_INFINITY;
             if (!scrub && loop() == AnimationClip.Loop.ONCE) {
-                natural = start + entry.clip().duration();
+                natural = start + entry.clip().duration() / rate;
             }
             if (Double.isNaN(stopped)) {
                 return natural;
@@ -437,7 +456,7 @@ public final class AnimationPlayer {
             if (scrub) {
                 return (float) scrubTime(now);
             }
-            double elapsed = Math.max(0, stoppedOr(now) - start);
+            double elapsed = Math.max(0, stoppedOr(now) - start) * rate;
             // 非循环动画在淡出阶段保持末帧，循环动画停止后冻结停止时的局部时间。
             if (loop() == AnimationClip.Loop.REPEAT) {
                 return (float) (elapsed % entry.clip().duration());

@@ -6,8 +6,12 @@ import com.google.gson.JsonParser;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.MessageLite;
 import com.mojang.brigadier.arguments.StringArgumentType;
+import com.mojang.brigadier.arguments.FloatArgumentType;
+import com.mojang.brigadier.context.CommandContext;
+import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
 import dev.kizuna.playeranimation.network.AnimationPackets;
+import dev.kizuna.playeranimation.animation.AnimationPlayer;
 import dev.kizuna.playeranimation.network.AnimationRequests;
 import dev.kizuna.playeranimation.network.RequiredAnimationChannels;
 import dev.kizuna.playeranimation.animation.JsonInput;
@@ -155,29 +159,41 @@ public final class ServerPlayerAnimations implements ModInitializer {
     }
 
     public static String playFrom(ServerPlayer player, String animation, long startTick) {
+        return playFrom(player, animation, startTick, 1);
+    }
+
+    public static String playFrom(ServerPlayer player, String animation, long startTick, float rate) {
         // 只登记一次起点，后续追踪者重用请求，不重启已经在播放的循环。
         requireServerThread(player);
         AnimationRequests.animationId(animation);
+        AnimationPlayer.validatePlaybackRate(rate);
         if (startTick < 0 || startTick > player.level().getGameTime()) {
             throw new IllegalArgumentException("起播 tick 必须位于当前世界时间以内");
         }
         String requestId = UUID.randomUUID().toString();
-        PlayRequest request = PlayRequest.newBuilder()
+        PlayRequest.Builder builder = PlayRequest.newBuilder()
                 .setRequestId(requestId)
                 .setPlayerUuid(player.getStringUUID())
                 .setAnimationId(animation)
-                .setStartTick(startTick)
-                .build();
+                .setStartTick(startTick);
+        if (rate != 1) {
+            builder.setPlaybackRate(rate);
+        }
+        PlayRequest request = builder.build();
         // 先通过载荷边界，避免发送失败却留下无法补发的登记状态。
         checkSize(request);
         STATE.play(player.getUUID(), request);
-        scheduleExpiry(player, animation, request.getStartTick());
+        scheduleExpiry(player, animation, request.getStartTick(), rate);
         broadcast(player, AnimationPackets.PLAY, request, requestId);
         return requestId;
     }
 
     public static String play(ServerPlayer player, PlayerAnimationAction action) {
         return play(player, action.id());
+    }
+
+    public static String play(ServerPlayer player, PlayerAnimationAction action, float rate) {
+        return playFrom(player, action.id(), player.level().getGameTime(), rate);
     }
 
     /**
@@ -322,7 +338,7 @@ public final class ServerPlayerAnimations implements ModInitializer {
         PENDING.values().removeIf(deadline -> server.getTickCount() >= deadline);
     }
 
-    private static void scheduleExpiry(ServerPlayer player, String animation, long startTick) {
+    private static void scheduleExpiry(ServerPlayer player, String animation, long startTick, float rate) {
         PlayerAnimationAction action = PlayerAnimationAction.find(animation);
         PlaybackKey key = new PlaybackKey(player.getUUID(), animation);
         if (action == null || !action.naturallyEnds()) {
@@ -330,7 +346,16 @@ public final class ServerPlayerAnimations implements ModInitializer {
             FINITE_EXPIRIES.remove(key);
             return;
         }
-        FINITE_EXPIRIES.put(key, startTick + action.naturalDurationTicks());
+        FINITE_EXPIRIES.put(key, expiryTick(action, startTick, rate));
+    }
+
+    static long expiryTick(PlayerAnimationAction action, long startTick, float rate) {
+        // 向上取整保证末帧可见；极小倍率饱和到最大 tick，避免溢出后立即到期。
+        long duration = (long) Math.ceil(action.naturalDurationTicks() / (double) rate);
+        if (duration > Long.MAX_VALUE - startTick) {
+            return Long.MAX_VALUE;
+        }
+        return startTick + duration;
     }
 
     private static void expireFinite(MinecraftServer server) {
@@ -391,12 +416,11 @@ public final class ServerPlayerAnimations implements ModInitializer {
                             .then(Commands.argument("player", EntityArgument.player())
                                     .then(Commands.argument("animation", StringArgumentType.word())
                                             .suggests(suggestAnimations)
-                                            .executes(context -> {
-                                                String id = play(EntityArgument.getPlayer(context, "player"),
-                                                        StringArgumentType.getString(context, "animation"));
-                                                context.getSource().sendSuccess(() -> Component.literal("已发送动画播放请求: " + id), false);
-                                                return 1;
-                                            }))))
+                                            .executes(context -> playCommand(context, 1))
+                                            .then(Commands.argument("rate",
+                                                            FloatArgumentType.floatArg(Float.MIN_VALUE, 1))
+                                                    .executes(context -> playCommand(context,
+                                                            FloatArgumentType.getFloat(context, "rate")))))))
                     .then(Commands.literal("stop")
                             .then(Commands.argument("player", EntityArgument.player())
                                     .executes(context -> {
@@ -411,5 +435,16 @@ public final class ServerPlayerAnimations implements ModInitializer {
                                                 return 1;
                                             })))));
         });
+    }
+
+    private static int playCommand(CommandContext<CommandSourceStack> context, float rate)
+            throws CommandSyntaxException {
+        // 指令与宿主 API 共用校验、同步和到期路径。
+        ServerPlayer player = EntityArgument.getPlayer(context, "player");
+        String animation = StringArgumentType.getString(context, "animation");
+        String id = playFrom(player, animation, player.level().getGameTime(), rate);
+        context.getSource().sendSuccess(() -> Component.literal("已发送动画播放请求: " + id),
+                false /* broadcastToAdmins */);
+        return 1;
     }
 }

@@ -18,7 +18,7 @@
 
 `meditate` 是一段打坐吐纳循环草稿，仍使用上述 classic 模板与内嵌 Steve 皮肤，导出到 `animations/meditate.animation.json`。时长 6 秒，约 2.4 秒吸气、3.6 秒呼气；双腿盘坐、双手搭膝，root 与腿部轨道恒定，腰胸、头部和手指有轻微呼吸变化。前臂仅屈肘 8°，不做轴向扭转。索引为 `full`、`hand: none`、`fpv: false`，淡入淡出各 0.6 秒。Human 正式吐纳会话启动时播放，真实位移先执行权威结束与资源结算，再切换运动动画；转头不结束。动作资源本身不含入座、起身、事件帧或缩放。
 
-旧 `animations/player_actions.animation.json` 已从打包资源和索引移除。动作设计文件位于 [`docs/animation-specs/`](animation-specs/)，classic `.bbmodel` 是关键帧源文件，运行时 JSON 均从该文件导出。索引中当前交付跳跃、攻击、挖掘、普通使用物品、放置方块、穿戴、望远镜、号角、弩装填/持弩、刷子，以及潜行操作支撑 `crouch_work`、通用潜行 `sneak` / `sneak_walk`、进食 `eat(_off)`、饮用 `drink(_off)`、持盾格挡 `block_shield(_off)`、拉弓 `bow_draw(_off)`、三叉戟蓄力 `trident_charge(_off)`、骑乘 `ride`、睡眠 `sleep`、鞘翅 `elytra`、攀爬 `climb`、游泳 `swim`；另含行走、奔跑、吐纳和校准资源。闪避、通用格挡、破门斩、千里腿、行矢、五脏诀与矛动作也已登记，索引共 147 段。主副手剪辑标记 `hand: main/off`。自动门禁通过不代表游戏内视觉验收完成，当前视觉验收状态见文末。
+旧 `animations/player_actions.animation.json` 已从打包资源和索引移除。动作设计文件位于 [`docs/animation-specs/`](animation-specs/)，classic `.bbmodel` 是关键帧源文件，运行时 JSON 均从该文件导出。索引中当前交付跳跃、攻击、挖掘、普通使用物品、放置方块、穿戴、望远镜、号角、弩装填/持弩、刷子，以及潜行操作支撑 `crouch_work`、通用潜行 `sneak` / `sneak_walk`、进食 `eat(_off)`、饮用 `drink(_off)`、持盾格挡 `block_shield(_off)`、拉弓 `bow_draw(_off)`、三叉戟蓄力 `trident_charge(_off)`、骑乘 `ride`、睡眠 `sleep`、鞘翅 `elytra`、攀爬 `climb`、游泳 `swim`；另含行走、奔跑、吐纳和校准资源。闪避、通用格挡、破门斩、千里腿、行矢、五脏诀、矛动作、行药诀与炼药也已登记，索引共 156 段。主副手剪辑标记 `hand: main/off`。自动门禁通过不代表游戏内视觉验收完成，当前视觉验收状态见文末。
 
 盘腿使用大腿三轴组合旋转，其中 X 约 130°–133°、Z 约 −77° / +91°，超出原方案的初稿逐轴范围。因此本动作仍是坐姿预览草稿，不能标记为已通过原方案角度门禁；正式验收前需校准盘腿姿态的关节范围。
 
@@ -96,7 +96,7 @@
 | `item_states` | 可选，弓、弩物品模型的剪辑时间轨道：`{"pull": [[秒, 值], ...], "pulling": [...], "charged": [...], "arrow": [...]}`。四种通道各至少一个键，时间在剪辑内且严格递增。`pull` 取 `[0, 1]` 并线性插值；其余通道取 0 / 1 并阶跃。首键前取首值，末键后保持。仅用于 `hand: main/off`；实际运行时取该手最高播放层中权重 ≥ 0.5 的持物轨道，缺省通道交回原版。承接偏移和停止淡出沿用播放器时钟。`pull` 到值后在 `pulling` 关闭帧补同值键，只在 `pulling` 关闭时下降。 |
 | `aim_windows` | 可选，`[{"start": 秒, "end": 秒, "mode": 模式}, ...]`，模式为 `pitch` 或 `yaw`，剪辑时间，`start < end`、按时间排列且不重叠。权重在段内由起点后 0.15 s 线性升到 1、终点前 0.15 s 线性降到 0，再乘该播放实例的淡入淡出权重 w。`pitch`：视线俯仰 × w 加到头部，双臂绕胸坐标系中两肩枢轴连线刚性转同一角度（同 `bow_draw`）；`yaw`：不补俯仰。两种模式下视线层俯仰权重都乘 (1 − w)，偏航照常由视线层给。多段同时生效时取 w 最大的一段 |
 | `reaction` | 可选，只接受 `hit`，只用于 `*_hit` 受击后坐：门禁对被动动作免查反向预备，跟随与回落照查；运行时不读取 |
-| `hand_contact_windows` | 可选，`[[开始秒, 结束秒], ...]`。只供门禁声明两手相触时段，运行时不读取：窗口内每帧至少一对「手 ↔ 目标」（手含拇指与两组手指；目标为另一只手、另一条前臂、头、胸、腰、胯、两条大腿）分离轴间隙 ≤ 0.5 px，且所有对穿入 ≤ 0.25 px；窗口外不查。只加要求、不放宽，不设白名单；当前为 `evoker_metal_edge` `[[1.10, 1.52]]`（左剑指贴右手背抹到指尖）、`evoker_fire_burn` `[[0.95, 1.80]]`（两掌相合搓掌、捧到嘴前）、`evoker_wood_thunder` `[[1.40, 1.45]]`（击掌）、`evoker_refine_heart` 每遍 `[T + 1.85, T + 2.30]`（捧掌）与 `[T + 3.50, T + 4.80]`（掌背相靠下插）、`evoker_refine_kidney` 每遍 `[T + 1.90, T + 2.90]`（摩腰到胯侧）与 `[T + 3.60, T + 4.90]`（抚腹摩回腰后）（T = 1、6、…、26，各 12 个窗口） |
+| `hand_contact_windows` | 可选，`[[开始秒, 结束秒], ...]`。只供门禁声明两手相触时段，运行时不读取：窗口内每帧至少一对「手 ↔ 目标」（手含拇指与两组手指；目标为另一只手、另一条前臂、头、胸、腰、胯、两条大腿）分离轴间隙 ≤ 0.5 px，且所有对穿入 ≤ 0.25 px；窗口外不查。只加要求、不放宽，不设白名单；当前为 `evoker_metal_edge` `[[1.10, 1.52]]`（左剑指贴右手背抹到指尖）、`evoker_fire_burn` `[[0.95, 1.80]]`（两掌相合搓掌、捧到嘴前）、`evoker_wood_thunder` `[[1.40, 1.45]]`（击掌）、`evoker_refine_heart` 每遍 `[T + 1.85, T + 2.30]`（捧掌）与 `[T + 3.50, T + 4.80]`（掌背相靠下插）、`evoker_refine_kidney` 每遍 `[T + 1.90, T + 2.90]`（摩腰到胯侧）与 `[T + 3.60, T + 4.90]`（抚腹摩回腰后）（T = 1、6、…、26，各 12 个窗口）；行药诀服药 `witch_imbibe` `[[0.60, 3.20]]`（左掌贴胸腹导药）、敷两臂 `witch_anoint_arms` `[[0.95, 1.65], [1.85, 2.55]]`（抹右前臂、蹭左臂）、敷两腿 `witch_anoint_legs` `[[1.10, 2.40], [2.53, 2.58]]`（搓大腿、拍腿） |
 
 战斗架势（2026-10-27）：`stance_*`、`dodge_*`、`technique_dash_*`、`block_*_hand(_hit)`、`technique_breath/charge` 只交付资源与 `PlayerAnimationAction` 显式接口，触发由战斗 UI / 宿主负责。
 
@@ -123,8 +123,10 @@ PA 提供 `assets/minecraft/items/bow.json` 的模型分支，资源包若覆盖
 
 五脏诀（2026-11-01 起，见 [PROGRESS](animation-specs/PROGRESS-evoker.md)）：强身、附伤、炼元各五式共十五段主剪辑，都是 `mask: full`、优先级 24、淡入 0.10 s、淡出 0.25 s、`hand: main`、`fpv: false`，不分主副手（左主手由运行时整段镜像），首帧、末帧等于 `stance_idle` 首帧；只交付资源与 `PlayerAnimationAction` 显式接口，宿主在起手时按真实时间播放，同破门斩一样在任何底层上整段生效。已交付哪几段以 PROGRESS 为准：2026-11-01 交付附伤寒水 `evoker_water_frost`、锐金 `evoker_metal_edge`、震土 `evoker_earth_quake`、灼火 `evoker_fire_burn`、惊雷 `evoker_wood_thunder`（各 3.5 s，70 tick）。强身心火 `evoker_fire_heart`（4.0 s，80 tick）、金臂 `evoker_metal_arms`（5.0 s，100 tick）、厚土 `evoker_earth_legs`（6.0 s，120 tick）、归水 `evoker_water_return`（5.0 s，100 tick）、舒筋 `evoker_wood_sinew`（5.0 s，100 tick）同日交付。炼元肺炼 `evoker_refine_lung`、脾炼 `evoker_refine_spleen`、肝炼 `evoker_refine_liver`、心炼 `evoker_refine_heart`、肾炼 `evoker_refine_kidney`（各 32.0 s，640 tick）同日交付。
 附伤五式共用 0.70 s 起手「唤」，时间线 `cast` 在 2.00 s，只作客户端通知；锐金左剑指贴着右手背抹锋、灼火两掌相合、惊雷两掌相击，索引声明上表的 `hand_contact_windows`；震土右脚 1.95 跺地、2.55 收步各发一次 `step_r`，惊雷 1.40 两掌相击发 `clap`。强身各式开立时右脚落开立位发 `step_r`（心火 0.35、金臂 0.40、厚土 0.40、舒筋 0.35；归水不开立），收步右脚提踵落回后脚位再发一次（心火 2.80、金臂 3.70、厚土 4.70、舒筋 3.75）；左脚落地发 `step_l`（金臂 3.20；厚土 1.40、4.02；归水 0.90、3.30；舒筋 2.50、3.35），厚土右脚 2.70 落步另发一次 `step_r`；`cast` 心火 1.80、金臂 2.60、厚土 3.20、归水 2.40、舒筋 2.80。厚土、归水的索引声明 `unbalanced_windows`（厚土 `[[1.20, 1.45], [2.50, 2.75]]`、归水 `[[0.73, 0.84], [3.05, 3.27]]`）。炼元各式进式右脚 0.50 落开立位、收式 31.40 提踵落回后脚位各发一次 `step_r`，不发 `cast`；心炼两掌相靠、肾炼两掌贴腰胯腹，索引声明上表的 `hand_contact_windows`。握持覆盖层 `evoker_grip` / `evoker_grip_off` 同日交付：`mask` 分别为 `r_fingers` / `l_fingers`，优先级 25、淡入 0.10 s、淡出 0.25 s、`hand: main`、`fpv: false`；0.2 s 两帧同值、`hold_on_last_frame`，只含覆盖手的拇指与两组手指，整段保持架势握拳，没有 `timeline`，不带 tick。宿主在起手时看哪只手有东西就同 tick 叠播对应的一段（两只手都有就两段都叠），中途不加不撤，主剪辑播完或被打断时同时停止。
+
+行药诀与炼药（2026-11-08 接入，见 [PROGRESS](animation-specs/PROGRESS-witch.md)）：七段主剪辑行药诀上卷服药 `witch_imbibe`（5.0 s，100 tick）、敷两臂 `witch_anoint_arms`、敷两腿 `witch_anoint_legs`（各 4.0 s，80 tick），中卷掷引 `witch_lob_seed`（2.2 s，44 tick）、泼引 `witch_fling_seed`（1.8 s，36 tick）、噀催 `witch_spray_trigger`（2.6 s，52 tick），炼药熬药 `witch_brew`（32.0 s，640 tick），都是 `mask: full`、优先级 24、淡入 0.10 s、淡出 0.25 s、`hand: main`、`fpv: false`，首帧、末帧等于 `stance_idle` 首帧，左主手由运行时整段镜像；只交付资源与 `PlayerAnimationAction` 显式接口，宿主起手时播放，有迟滞时用 `playback_rate` 放慢。时间线：服药 `cork` 0.30、`sip` 0.90 / 1.50 / 2.10、`rub` 2.40 / 2.85、`cast` 3.20；敷两臂 `cork` 0.25、`rub` 1.20 / 2.10、`cast` 2.60；敷两腿 `cork` 0.25、`rub` 1.25 / 1.55 / 1.90 / 2.20、`cast` 2.60；掷引 `release` 1.00、后脚落回 `step_r` 1.55；泼引 `cork` 0.15、`cast` 0.80；噀催 `cork` 0.15、`sip` 0.60、`cast` 1.60；熬药 `step_r` 0.50 / 31.40，每遍（T = 1、6、…、26）`T + 0.5 / 1.5 / 2.5` 各一次 `rub`，共 18 次。索引 `phases` 用对象写法给左臂阶段指定 `chest → l_upper_arm → l_forearm → l_hand` 主链（服药导药、敷两臂抹右臂、敷两腿拍腿、噀催）。熬药副手下料覆盖层 `witch_brew_feed_off`：`mask: l_arm`、优先级 25、淡入 0.10 s、淡出 0.25 s、`hand: main`、0.6 s（12 tick）、无事件，手指保持架势左拳，首末帧等于熬药左手在釜沿的姿势，宿主在熬药中副手生效时同 tick 叠播。僵直 `status_stagger`：`mask: full`、优先级 26、`hold_on_last_frame`、淡入 0.05 s、淡出 0.20 s，0.8 s 到位后保持，不带 tick，宿主醒时显式停止；在移动底层上只取上身（同格挡），静止在 `stand` 上两脚会滑到架势踝位（已知）；不叠握持覆盖层。七段主剪辑起手时副手有东西可叠 `evoker_grip_off`（敷药要求副手空着，不叠）。
 `AnimationPlayer` 的遮罩规则：原版上层（攻击、挖掘、使用等）在任何架势底层（含静止 `stance_idle`）、闪避、轻步、跃步和格挡上都只取 `upper`；
-格挡、受击、调息、蓄力在静止 `stance_idle` 上整段生效，在移动架势底层、进出过渡、闪避、轻步、跃步或原版移动底层上只取 `upper`。
+格挡、受击、调息、蓄力、僵直 `status_stagger` 在静止 `stance_idle` 上整段生效，在移动架势底层、进出过渡、闪避、轻步、跃步或原版移动底层上只取 `upper`。
 
 层序为原版姿态 → 循环姿态 → 一次性／保持动作。只有动画实际包含、且在 mask 内的骨参与接管，缺失的通道继承下层。`upper` 包含腰、胸、头、双臂；`lower` 包含胯、双腿；单臂包含上臂至手指；单手手指只含该手拇指与两组手指。只有 `full` 可以改变 root。
 
@@ -137,6 +139,8 @@ PA 提供 `assets/minecraft/items/bow.json` 的模型分支，资源包若覆盖
 工具挥动 `mine_main/off` 采用 0.8 倍视觉时钟：默认完整循环由 4 tick 延长到 5 tick，急迫/挖掘疲劳仍按原版挥手时长缩放。连续挥手只推进同一游标，不随原版重挥回零；松手后从当前位置以相同速度完成剪辑收势。刷子及普通 `use_item` 的视觉时钟也乘 0.8；攻击、放置、弩装填和真实挖掘/使用判定不变，
 
 `timeline` 的值是事件名或事件名数组，白名单为 `hit`、`release`、`step_l`、`step_r`、`cancel_ok`、`equip`、`cast`、`clap`。`cast`（法诀成形）与 `clap`（两掌相击）只作客户端通知，运行时不另做处理。`equip` 是穿戴动作唯一的层切换点：事件前隐藏对应盔甲层并渲染手中盔甲物品，事件后恢复盔甲层。胸甲、头盔、护腿和靴子均遵循同一约定；靴子层按左右腿分别隐藏。事件按播放时钟推进发送，跨帧、跨循环均不漏发；渲染取样不发送事件。这是客户端通知接口，不直接触发服务端伤害。
+
+时间线白名单另含 `cork`（拔塞）、`sip`（啜饮）、`rub`（搓抹、搅拌）；三者只作客户端通知，声音仍由服务端播放。
 
 穿戴同步从当前进度恢复已经越过的 `equip` 所对应的内部显隐状态，不向公开事件接口补发历史回调。相同起点与请求 ID 的重复同步保留现有显隐状态；新播放才重新初始化。靴子依次恢复两侧：主手模板先恢复惯用手同侧，副手模板先恢复另一侧，左主手随骨架一起镜像；两次事件之间仍持有第二只靴子。
 
@@ -178,7 +182,7 @@ PA 提供 `assets/minecraft/items/bow.json` 的模型分支，资源包若覆盖
 
 | 消息 | 字段与语义 |
 | --- | --- |
-| `PlayRequest` | `request_id`、`player_uuid`、`animation_id`，可选 `start_tick` 或 `normalized_progress`；后者对应客户端主线程的 `PlayerAnimations.scrub`，范围为 `[0,1]` |
+| `PlayRequest` | `request_id`、`player_uuid`、`animation_id`，可选 `start_tick` 或 `normalized_progress`；后者对应客户端主线程的 `PlayerAnimations.scrub`，范围为 `[0,1]`。可选 `playback_rate` 只用于自由播放，缺省 1，有限值 `(0,1]` |
 | `StopRequest` | `request_id`、`player_uuid`，以及 `target` 二选一：`animation_id` 停止指定动作，或 `all: true` 停止该玩家全部动作；对应 `stop` / `stopAll` |
 | `Result` | 原样回传 `request_id`，用 `code` 表示处理结果；`detail` 是可省略的诊断文字，调用方按 code 分支，不解析文字 |
 
@@ -187,6 +191,7 @@ PA 提供 `assets/minecraft/items/bow.json` 的模型分支，资源包若覆盖
 - `animation_id` 是 `player_anim_index.json` 中的 `id`，例如 `meditate`，匹配 `[a-z0-9_./-]+`；不是文件路径或完整 Bedrock 动画键。掩码、优先级、循环、淡入淡出、镜像及第一人称参数沿用索引和动画资源，不在消息里重复配置。
 - `start_tick` 是目标玩家所在世界的非负总 tick，单位为 1/20 秒。服务端发送时设置；客户端只在起播时将世界 tick 映射为本地播放起点，之后按本地动画时钟推进，避免后来进入追踪范围的玩家从头看到循环动作。旧调用方不设置时从收包时刻开始。补发时跳过已经过去的时间线事件；`normalized_progress` 是原版状态 scrub 的互斥路径，收到后不使用自由时钟，连续同 ID 请求只更新游标。`PlayerAnimationAction` 目录中的一次性动作由服务端按资源时长自动停止并移出补发快照，结束已久的一次性动作也不再显示。目录外的自定义动作仍须显式停止循环、保持或一次性动作；返回 `OK` 表示该同步请求已处理。
 - 停止必须显式选择目标；未设置 `target`、空 `animation_id` 或 `all: false` 均为无效请求，不能隐式停止全部。停止不存在或已经停止的动作仍成功，未建立播放器的玩家也视为无需停止；不会因此创建播放状态。
+- `playback_rate` 使用字段 6；不能与 `normalized_progress` 同时出现。剪辑时间为真实经过秒数乘倍率，时间线事件与自然结束一同放慢，淡入淡出仍按真实秒。`ServerPlayerAnimations.play(player, action, rate)`、`playFrom(player, animation, startTick, rate)` 提供倍率入口；旧重载等价于倍率 1，且不写入该字段，保留原字节格式。服务端到期为 `startTick + ceil(naturalDurationTicks / rate)`，超出 tick 表示范围时饱和到最大 tick；补发保留原始起点与倍率并跳过历史事件。`/kpa_server play <player> <animation> [rate]` 可用于验证。实体字节入口暂不支持倍率。
 - 一条可解码的请求处理后返回一个 `Result`。`OK` 表示播放已处理或停止已交给播放器；动画可能仍在淡入或淡出，不表示播放结束，也不表示服务端玩法成功。无效请求原样回传能取得且长度合法的 `request_id`，缺失或过长时为空。
 
 | `Result.Code` | 数值 | 语义 |
@@ -272,7 +277,7 @@ Vanilla 盔甲适配约定：从原版内、外层模型的绑定几何读取面
 服务端同步于 2026-10-14 使用一个独立 Fabric 1.20.1 服务端和两个真实 Fabric 客户端验证：目标本人和范围内观察者播放／停止成功并回传 Protobuf 结果；观察者移到 1024 格外后不接收新动作且清空卸载实体的播放器；重新进入范围恢复已登记动作；未知动作返回 `ANIMATION_NOT_FOUND`；换维度清理双方状态。48 项自动化测试通过，含原有动画／模型测试、协议字节格式、输入边界、补发进度、重播优先级及历史事件抑制。未覆盖真实公网延迟、跨版本客户端或大量玩家压力测试。
 
 截至 2026-11-07，打包包含粗臂、细臂骨架模板、64×64 调试皮肤 `models/player_debug_skin.png`
-和 147 段索引动画，包括千里腿、行矢、五脏诀与四段矛动作。旧聚合动作文件已移除，
+和 156 段索引动画，包括千里腿、行矢、五脏诀、四段矛动作与行药诀、炼药九段（2026-11-08 接入，尚未进游戏验收）。旧聚合动作文件已移除，
 动画均由 classic `.bbmodel` 分段导出并通过一致性检查。双体型数值门禁与 Java 回归通过。
 
 26.2 客户端验收覆盖矛主副手与左惯用手、持矛生物、弩装烟花、五脏诀双体型、

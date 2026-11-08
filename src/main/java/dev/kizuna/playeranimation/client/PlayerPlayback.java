@@ -130,6 +130,16 @@ public final class PlayerPlayback {
 
     public void play(UUID playerId, String animationId, Long startTick, String playId,
                      AnimationClip.Loop loopOverride) {
+        play(playerId, animationId, new PlayerPlay(startTick, playId, loopOverride, 1));
+    }
+
+    public void play(UUID playerId, String animationId, Long startTick, String playId, float rate) {
+        play(playerId, animationId, new PlayerPlay(startTick, playId, null, rate));
+    }
+
+    private record PlayerPlay(Long startTick, String playId, AnimationClip.Loop loopOverride, double rate) { }
+
+    private void play(UUID playerId, String animationId, PlayerPlay request) {
         Minecraft client = Minecraft.getInstance();
         prepareWorld(client);
         var entry = PlayerAnimationClient.ASSETS.animations().get(animationId);
@@ -148,18 +158,22 @@ public final class PlayerPlayback {
         double time = now(0);
         Handedness handedness = player.getMainArm() == HumanoidArm.LEFT ? Handedness.LEFT : Handedness.RIGHT;
         double elapsedSeconds;
+        Long startTick = request.startTick();
+        double rate = request.rate();
+        AnimationClip.Loop loopOverride = request.loopOverride();
         if (startTick == null) {
-            playback.play(entry, time, new PlaybackRequest(time, handedness, null, loopOverride));
+            playback.play(entry, time, new PlaybackRequest(time, handedness, null, loopOverride, rate));
             elapsedSeconds = 0;
         } else {
             double startSeconds = startTick / TICKS_PER_SECOND;
             elapsedSeconds = (client.level.getGameTime() - startTick) / TICKS_PER_SECOND;
-            PlaybackRequest request = new PlaybackRequest(startSeconds, handedness, playId, loopOverride);
-            if (!playback.synchronize(entry, time, request, elapsedSeconds)) {
+            PlaybackRequest playbackRequest = new PlaybackRequest(
+                    startSeconds, handedness, request.playId(), loopOverride, rate);
+            if (!playback.synchronize(entry, time, playbackRequest, elapsedSeconds)) {
                 return;
             }
         }
-        restartEquip(player, entry, elapsedSeconds);
+        restartEquip(player, entry, elapsedSeconds * rate);
     }
 
     public void scrubEntity(int entityId, String animationId, float normalizedProgress) {

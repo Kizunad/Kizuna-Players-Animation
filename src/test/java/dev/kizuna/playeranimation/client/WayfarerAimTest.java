@@ -57,9 +57,20 @@ class WayfarerAimTest {
             animation.play(entry, 0, request);
             assertWindowWeights(animation, id);
             assertModelContacts(animation, geometry, id);
+            assertSlowedAim(entry, animation);
             checked++;
         }
         assertEquals(2, checked);
+    }
+
+    private static void assertSlowedAim(AnimationEntry entry, AnimationPlayer original) {
+        // 倍率只改变剪辑进度，瞄准窗和身体必须一起进入渐入、保持及离开阶段。
+        AnimationPlayer slowed = new AnimationPlayer();
+        var request = new AnimationPlayer.PlaybackRequest(0, AnimationPlayer.Handedness.RIGHT, null, null, 0.5);
+        slowed.play(entry, 0, request);
+        for (double time : new double[]{BEFORE_AIM_SECONDS, HALF_BLEND_SECONDS, FULL_AIM_SECONDS}) {
+            assertEquals(AimCompensation.weights(original, time), AimCompensation.weights(slowed, time * 2));
+        }
     }
 
     private static void assertWindowWeights(AnimationPlayer animation, String id) {

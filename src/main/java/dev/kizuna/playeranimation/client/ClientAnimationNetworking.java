@@ -69,8 +69,16 @@ public final class ClientAnimationNetworking {
         if (request.hasNormalizedProgress()) {
             PlayerAnimationClient.PLAYBACK.scrub(player, request.getAnimationId(), request.getNormalizedProgress());
         } else {
+            Long startTick = null;
+            if (request.hasStartTick()) {
+                startTick = request.getStartTick();
+            }
+            float rate = 1;
+            if (request.hasPlaybackRate()) {
+                rate = request.getPlaybackRate();
+            }
             PlayerAnimationClient.PLAYBACK.play(player, request.getAnimationId(),
-                    request.hasStartTick() ? request.getStartTick() : null, request.getRequestId());
+                    startTick, request.getRequestId(), rate);
         }
         return result(request.getRequestId(), Result.Code.OK, "");
     }

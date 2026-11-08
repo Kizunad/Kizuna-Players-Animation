@@ -43,6 +43,18 @@ class AnimationSyncTest {
     }
 
     @Test
+    void lateObserverSnapshotPreservesPlaybackRate() throws Exception {
+        // 补发保留原始请求的起点、倍率和 ID，不从当前时刻重建请求。
+        AnimationSyncState state = new AnimationSyncState();
+        PlayRequest request = play("meditate", 40).toBuilder().setPlaybackRate(0.8f).build();
+        state.play(PLAYER, request);
+        PlayRequest replay = PlayRequest.parseFrom(state.snapshot(PLAYER).getFirst().toByteArray());
+        assertEquals(request, replay);
+        assertTrue(replay.hasPlaybackRate());
+        assertEquals(0.8f, replay.getPlaybackRate());
+    }
+
+    @Test
     void requestBoundaryRejectsMalformedValuesAndAmbiguousStops() throws Exception {
         PlayRequest valid = play("meditate", 0);
         assertEquals(PLAYER, AnimationRequests.validate(valid));

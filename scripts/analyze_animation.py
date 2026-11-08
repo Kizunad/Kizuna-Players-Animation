@@ -82,6 +82,8 @@ FULL_BODY_IDS = {
     "evoker_metal_arms", "evoker_earth_legs", "evoker_fire_heart", "evoker_water_return", "evoker_wood_sinew",
     "evoker_metal_edge", "evoker_earth_quake", "evoker_fire_burn", "evoker_water_frost", "evoker_wood_thunder",
     "evoker_refine_lung", "evoker_refine_spleen", "evoker_refine_heart", "evoker_refine_kidney", "evoker_refine_liver",
+    "witch_imbibe", "witch_anoint_arms", "witch_anoint_legs", "witch_lob_seed", "witch_fling_seed",
+    "witch_spray_trigger", "witch_brew", "status_stagger",
 }
 
 GRIP_IDS = {
@@ -105,6 +107,8 @@ GRIP_IDS = {
 
     "evoker_grip", "evoker_grip_off",
     "spear_charge", "spear_charge_off", "spear_stab", "spear_stab_off",
+    "witch_imbibe", "witch_anoint_arms", "witch_anoint_legs", "witch_lob_seed", "witch_fling_seed",
+    "witch_spray_trigger", "witch_brew",
 }
 
 # 跃步与 jump 同类：整段在空中，着地口径由原型自查的脚底高度代替（docs/animation-specs/technique_leap.md 第 9 节）。
@@ -154,7 +158,8 @@ AIM_WINDOW_MODES = {"pitch", "yaw"}
 # 值为覆盖臂一侧。躯干、腿、预备跟随、主链峰值、着地重心归下层的式；有效运动按覆盖臂三骨计，错峰链改为覆盖臂。
 ARM_OVERLAY_IDS = {"door_breaker_guard": "l", "door_breaker_guard_off": "r",
                    "spear_charge": "r", "spear_charge_off": "l",
-                   "spear_stab": "r", "spear_stab_off": "l"}
+                   "spear_stab": "r", "spear_stab_off": "l",
+                   "witch_brew_feed_off": "l"}
 MIN_ARM_OVERLAY_BONES = 3
 # 手指覆盖层（遮罩只含一只手的拇指与两组手指，见 docs/animation-specs/evoker_grip.md 第 6 节）：值为覆盖手一侧。
 # 整段保持握拳，不要求运动：三片手指旋转绝对值都不低于有效运动阈值即算参与；躯干、腿、预备跟随、错峰不适用。

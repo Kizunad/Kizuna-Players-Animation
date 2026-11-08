@@ -5507,6 +5507,228 @@
       "blend_out": 0.1,
       "hand": "off",
       "fpv": false
+    },
+    {
+      "id": "witch_imbibe",
+      "file": "animations/witch_imbibe.animation.json",
+      "mask": "full",
+      "priority": 24,
+      "blend_in": 0.1,
+      "blend_out": 0.25,
+      "hand": "main",
+      "fpv": false,
+      "hand_contact_windows": [
+        [
+          0.6,
+          3.2
+        ]
+      ],
+      "phases": [
+        [
+          0.5,
+          0.9
+        ],
+        {
+          "id": "left_hand",
+          "start": 2.3,
+          "end": 2.75,
+          "chain": [
+            "chest",
+            "l_upper_arm",
+            "l_forearm",
+            "l_hand"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "witch_anoint_arms",
+      "file": "animations/witch_anoint_arms.animation.json",
+      "mask": "full",
+      "priority": 24,
+      "blend_in": 0.1,
+      "blend_out": 0.25,
+      "hand": "main",
+      "fpv": false,
+      "hand_contact_windows": [
+        [
+          0.95,
+          1.65
+        ],
+        [
+          1.85,
+          2.55
+        ]
+      ],
+      "phases": [
+        [
+          0.4,
+          0.75
+        ],
+        {
+          "id": "left_hand",
+          "start": 0.9,
+          "end": 1.2,
+          "chain": [
+            "chest",
+            "l_upper_arm",
+            "l_forearm",
+            "l_hand"
+          ]
+        },
+        [
+          1.75,
+          2.1
+        ]
+      ]
+    },
+    {
+      "id": "witch_anoint_legs",
+      "file": "animations/witch_anoint_legs.animation.json",
+      "mask": "full",
+      "priority": 24,
+      "blend_in": 0.1,
+      "blend_out": 0.25,
+      "hand": "main",
+      "fpv": false,
+      "hand_contact_windows": [
+        [
+          1.1,
+          2.4
+        ],
+        [
+          2.53,
+          2.58
+        ]
+      ],
+      "phases": [
+        [
+          0.8,
+          1.1
+        ],
+        [
+          1.85,
+          2.05
+        ],
+        {
+          "id": "left_hand",
+          "start": 2.4,
+          "end": 2.6,
+          "chain": [
+            "chest",
+            "l_upper_arm",
+            "l_forearm",
+            "l_hand"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "witch_lob_seed",
+      "file": "animations/witch_lob_seed.animation.json",
+      "mask": "full",
+      "priority": 24,
+      "blend_in": 0.1,
+      "blend_out": 0.25,
+      "hand": "main",
+      "fpv": false,
+      "phases": [
+        [
+          0.3,
+          0.8
+        ],
+        [
+          0.8,
+          1.1
+        ]
+      ]
+    },
+    {
+      "id": "witch_fling_seed",
+      "file": "animations/witch_fling_seed.animation.json",
+      "mask": "full",
+      "priority": 24,
+      "blend_in": 0.1,
+      "blend_out": 0.25,
+      "hand": "main",
+      "fpv": false,
+      "phases": [
+        [
+          0.3,
+          0.55
+        ],
+        [
+          0.55,
+          0.85
+        ]
+      ]
+    },
+    {
+      "id": "witch_spray_trigger",
+      "file": "animations/witch_spray_trigger.animation.json",
+      "mask": "full",
+      "priority": 24,
+      "blend_in": 0.1,
+      "blend_out": 0.25,
+      "hand": "main",
+      "fpv": false,
+      "phases": [
+        [
+          0.3,
+          0.55
+        ],
+        {
+          "id": "left_hand",
+          "start": 1.3,
+          "end": 1.65,
+          "chain": [
+            "chest",
+            "l_upper_arm",
+            "l_forearm",
+            "l_hand"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "witch_brew",
+      "file": "animations/witch_brew.animation.json",
+      "mask": "full",
+      "priority": 24,
+      "blend_in": 0.1,
+      "blend_out": 0.25,
+      "hand": "main",
+      "fpv": false,
+      "phases": [
+        [
+          0.0,
+          1.0
+        ],
+        [
+          31.0,
+          32.0
+        ]
+      ]
+    },
+    {
+      "id": "witch_brew_feed_off",
+      "file": "animations/witch_brew_feed_off.animation.json",
+      "mask": "l_arm",
+      "priority": 25,
+      "blend_in": 0.1,
+      "blend_out": 0.25,
+      "hand": "main",
+      "fpv": false
+    },
+    {
+      "id": "status_stagger",
+      "file": "animations/status_stagger.animation.json",
+      "mask": "full",
+      "priority": 26,
+      "blend_in": 0.05,
+      "blend_out": 0.2,
+      "hand": "main",
+      "fpv": false
     }
   ]
 }

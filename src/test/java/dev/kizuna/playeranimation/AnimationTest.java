@@ -18,6 +18,76 @@ import static org.junit.jupiter.api.Assertions.*;
 class AnimationTest {
     private static final String KEY = "animation.kizuna_players_animation.player.test";
 
+    @Test
+    void slowedPlaybackKeepsEventsAndNaturalFadeOnOneClock() {
+        // 剪辑与事件按倍率推进，淡入淡出按真实秒；0.8 秒事件在真实 1 秒触发。
+        AnimationClip clip = rotationClip("{\"0\":[0,0,0],\"1\":[-100,0,0]}",
+                ",\"timeline\":{\"0.8\":\"cast\"}");
+        AnimationEntry entry = new AnimationEntry("rate", "animations/rate.animation.json",
+                AnimationEntry.Mask.UPPER, 1, 0.2f, 0.2f, AnimationEntry.Hand.NONE, false /* firstPerson */, clip);
+        AnimationPlayer player = new AnimationPlayer();
+        var request = new AnimationPlayer.PlaybackRequest(0, AnimationPlayer.Handedness.RIGHT, null, null, 0.8f);
+        player.play(entry, 0, request);
+        List<String> events = new ArrayList<>();
+        player.advance(0.99, (id, event) -> events.add(event));
+        assertTrue(events.isEmpty());
+        player.advance(1, (id, event) -> events.add(event));
+        assertEquals(List.of("cast"), events);
+        assertEquals(0.8, player.normalizedProgress("rate", 1), 0.00001);
+        assertEquals(0.5, player.active(0.1).getFirst().weight(), 0.00001);
+        double end = clip.duration() / (double) request.rate();
+        assertEquals(1, player.active(end).getFirst().weight(), 0.00001);
+        assertEquals(0.5, player.active(end + 0.1).getFirst().weight(), 0.00001);
+        player.advance(end + 0.21, (id, event) -> events.add(event));
+        assertTrue(player.empty());
+        assertEquals(List.of("cast"), events);
+    }
+
+    @Test
+    void slowedCatchUpSkipsOnlyPastClipEventsAndPreservesRepeatedSync() {
+        // 补发把服务器起点映射到本地时钟；跳过历史事件，保留未来事件。
+        AnimationClip clip = rotationClip("[-80,0,0]", ",\"timeline\":{\"0.2\":\"cork\",\"0.8\":\"cast\"}");
+        AnimationEntry entry = new AnimationEntry("rate", "animations/rate.animation.json",
+                AnimationEntry.Mask.UPPER, 1, 0, 0.2f, AnimationEntry.Hand.NONE, false /* firstPerson */, clip);
+        AnimationPlayer player = new AnimationPlayer();
+        var request = new AnimationPlayer.PlaybackRequest(10, AnimationPlayer.Handedness.RIGHT, "sync", null, 0.8f);
+        assertTrue(player.synchronize(entry, 100, request, 0.5));
+        List<String> events = new ArrayList<>();
+        player.advance(100, (id, event) -> events.add(event));
+        assertTrue(events.isEmpty());
+        assertEquals(0.4, player.normalizedProgress("rate", 100), 0.00001);
+        assertFalse(player.synchronize(entry, 100.4, request, 0));
+        player.advance(100.5, (id, event) -> events.add(event));
+        assertEquals(List.of("cast"), events);
+    }
+
+    @Test
+    void staggerKeepsMovingLegsAndOwnsTheStationaryPose() {
+        // 僵直盖住上身，但走路仍驱动腿；没有移动底层时保留僵直的屈膝。
+        AnimationClip movingClip = clip("\"animation_length\":1,\"bones\":{"
+                + "\"r_thigh\":{\"rotation\":[-20,0,0]},\"r_forearm\":{\"rotation\":[-10,0,0]}}",
+                new ArrayList<>());
+        AnimationClip staggerClip = clip("\"animation_length\":1,\"loop\":\"hold_on_last_frame\",\"bones\":{"
+                + "\"r_thigh\":{\"rotation\":[-40,0,0]},\"r_forearm\":{\"rotation\":[-60,0,0]}}",
+                new ArrayList<>());
+        AnimationEntry moving = new AnimationEntry("stance_walk_forward", "animations/walk.animation.json",
+                AnimationEntry.Mask.FULL, 1, 0, 0, AnimationEntry.Hand.NONE, false /* firstPerson */, movingClip);
+        AnimationEntry stagger = new AnimationEntry("status_stagger", "animations/stagger.animation.json",
+                AnimationEntry.Mask.FULL, 26, 0, 0, AnimationEntry.Hand.NONE, false /* firstPerson */, staggerClip);
+        AnimationPlayer walking = new AnimationPlayer();
+        walking.play(moving, 0, false /* leftHanded */);
+        Pose[] movingPose = walking.sample(Rig.zeroPose(), 0.5, false /* firstPerson */);
+        walking.play(stagger, 0, false /* leftHanded */);
+        Pose[] combined = walking.sample(Rig.zeroPose(), 0.5, false /* firstPerson */);
+        assertEquals(movingPose[BoneId.R_THIGH.ordinal()], combined[BoneId.R_THIGH.ordinal()]);
+        assertNotEquals(movingPose[BoneId.R_FOREARM.ordinal()], combined[BoneId.R_FOREARM.ordinal()]);
+        AnimationPlayer still = new AnimationPlayer();
+        still.play(stagger, 0, false /* leftHanded */);
+        Pose[] held = still.sample(Rig.zeroPose(), 1.6, false /* firstPerson */);
+        assertEquals(40, held[BoneId.R_THIGH.ordinal()].rotation().x());
+        assertEquals(60, held[BoneId.R_FOREARM.ordinal()].rotation().x());
+    }
+
     private static AnimationClip clip(String body, List<String> errors) {
         // 测试直接使用 Bedrock 载荷，验证导出契约而不是内部构造器的自洽性。
         JsonObject document = JsonParser.parseString("{\"format_version\":\"1.8.0\",\"animations\":{\""

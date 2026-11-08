@@ -5,6 +5,7 @@ import com.google.gson.JsonParser;
 import dev.kizuna.playeranimation.animation.AnimationClip;
 import dev.kizuna.playeranimation.animation.AnimationEntry;
 import dev.kizuna.playeranimation.animation.AnimationPlayer;
+import dev.kizuna.playeranimation.animation.ItemStates;
 import dev.kizuna.playeranimation.animation.PlayerAnimationAction;
 import dev.kizuna.playeranimation.model.BoneId;
 import dev.kizuna.playeranimation.model.Pose;
@@ -20,6 +21,7 @@ import java.util.Set;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -35,6 +37,48 @@ class AnimationSetContractTest {
             "door_breaker_knock", 1.25, "door_breaker_cleave", 1.6, "door_breaker_ram", 1.65,
             "door_breaker_hook", 1.05, "door_breaker_sweep", 2.05, "door_breaker_close", 2.3,
             "door_breaker_chain", 4.25, "door_breaker_finale", 2.9);
+
+    @Test
+    void explicitUnitRatePreservesPoseWeightsAndEvents() throws Exception {
+        // 用正式轨道核对旧重载与显式原速，浮点采样和事件序列必须完全一致。
+        AnimationEntry entry = resource("wayfarer_full_draw");
+        AnimationPlayer original = new AnimationPlayer();
+        AnimationPlayer explicit = new AnimationPlayer();
+        original.play(entry, 0, new AnimationPlayer.PlaybackRequest(
+                0, AnimationPlayer.Handedness.RIGHT, null, null));
+        explicit.play(entry, 0, new AnimationPlayer.PlaybackRequest(
+                0, AnimationPlayer.Handedness.RIGHT, null, null, 1));
+        var originalEvents = new ArrayList<String>();
+        var explicitEvents = new ArrayList<String>();
+        for (int frame = 0; frame <= 130; frame++) {
+            double time = frame / 20.0;
+            assertArrayEquals(original.sample(Rig.zeroPose(), time, false /* firstPerson */),
+                    explicit.sample(Rig.zeroPose(), time, false /* firstPerson */));
+            assertEquals(original.active(time), explicit.active(time));
+            original.advance(time, (id, event) -> originalEvents.add(event));
+            explicit.advance(time, (id, event) -> explicitEvents.add(event));
+        }
+        assertEquals(originalEvents, explicitEvents);
+    }
+
+    @Test
+    void slowedItemStatesUseTheSameClipClockAsTheBody() throws Exception {
+        // 半速的真实时刻对应原速的一半，弓弦与箭状态不能沿真实秒提前变化。
+        AnimationEntry entry = resource("wayfarer_full_draw");
+        AnimationPlayer original = new AnimationPlayer();
+        AnimationPlayer slowed = new AnimationPlayer();
+        original.play(entry, 0, new AnimationPlayer.PlaybackRequest(
+                0, AnimationPlayer.Handedness.RIGHT, null, null));
+        slowed.play(entry, 0, new AnimationPlayer.PlaybackRequest(
+                0, AnimationPlayer.Handedness.RIGHT, null, null, 0.5));
+        for (double time : new double[]{1.5, 3, 7, 10}) {
+            for (ItemStates.Channel channel : ItemStates.Channel.values()) {
+                assertEquals(original.itemValue(entry.hand(), channel, time / 2),
+                        slowed.itemValue(entry.hand(), channel, time), channel.key);
+            }
+            assertEquals(original.active(time / 2).getFirst().time(), slowed.active(time).getFirst().time());
+        }
+    }
 
     @Test
     void everyRequestedActionIsIndexedAndParsesFromThePackagedResource() throws Exception {
@@ -89,7 +133,9 @@ class AnimationSetContractTest {
                 "evoker_wood_thunder", "evoker_fire_heart", "evoker_metal_arms", "evoker_earth_legs",
                 "evoker_water_return", "evoker_wood_sinew", "evoker_refine_lung", "evoker_refine_spleen",
                 "evoker_refine_liver", "evoker_refine_heart", "evoker_refine_kidney",
-                "evoker_grip", "evoker_grip_off"), ids);
+                "evoker_grip", "evoker_grip_off",
+                "witch_imbibe", "witch_anoint_arms", "witch_anoint_legs", "witch_lob_seed", "witch_fling_seed",
+                "witch_spray_trigger", "witch_brew", "witch_brew_feed_off", "status_stagger"), ids);
         // 已交付标记必须与打包资源一致：调度只请求已交付动作，未打包的动作不得标为已交付。
         for (PlayerAnimationAction action : PlayerAnimationAction.values()) {
             assertEquals(ids.contains(action.id()), action.delivered(), action.id());

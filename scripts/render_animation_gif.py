@@ -178,6 +178,24 @@ KEY_TIMES["evoker_refine_kidney"] = (0.0, 0.50, 1.00, 2.00, 2.90, 3.90, 4.50, 5.
 KEY_TIMES["evoker_grip"] = (0.0,)
 KEY_TIMES["evoker_grip_off"] = (0.0,)
 
+# 行药诀与炼药：保留每次接触、出手、落脚和收势的独有时刻。
+KEY_TIMES["witch_imbibe"] = (0, 0.25, 0.30, 0.42, 0.60, 0.85, 0.90, 1.25, 1.50, 1.85,
+                              2.10, 2.30, 2.45, 2.60, 2.75, 3.05, 3.20, 3.50, 4.10, 5)
+KEY_TIMES["witch_anoint_arms"] = (0, 0.20, 0.25, 0.60, 0.70, 0.95, 1.20, 1.40, 1.65,
+                                   1.85, 2.10, 2.30, 2.55, 2.60, 3, 3.30, 3.60, 4)
+KEY_TIMES["witch_anoint_legs"] = (0, 0.25, 0.70, 0.90, 1, 1.10, 1.25, 1.40, 1.55, 1.85,
+                                   2.05, 2.30, 2.45, 2.55, 2.60, 2.90, 3.30, 3.50, 3.80, 4)
+KEY_TIMES["witch_lob_seed"] = (0, 0.10, 0.20, 0.30, 0.45, 0.60, 0.80, 0.90, 0.95, 1,
+                                1.05, 1.15, 1.30, 1.55, 1.75, 1.90, 2.05, 2.2)
+KEY_TIMES["witch_fling_seed"] = (0, 0.15, 0.30, 0.40, 0.48, 0.55, 0.65, 0.72, 0.80, 0.85,
+                                  1, 1.15, 1.30, 1.45, 1.60, 1.80)
+KEY_TIMES["witch_spray_trigger"] = (0, 0.15, 0.30, 0.45, 0.60, 0.80, 1, 1.15, 1.30,
+                                     1.45, 1.55, 1.60, 1.70, 1.90, 2.10, 2.25, 2.40, 2.60)
+KEY_TIMES["witch_brew"] = (0, 0.20, 0.50, 1, 1.25, 1.50, 1.75, 2, 3.50, 4.15, 4.25, 4.40, 4.65,
+                            4.80, 5.15, 5.30, 6, 31.10, 31.40, 31.70, 32)
+KEY_TIMES["witch_brew_feed_off"] = (0, 0.10, 0.20, 0.30, 0.45, 0.60)
+KEY_TIMES["status_stagger"] = (0, 0.06, 0.12, 0.20, 0.30, 0.40, 0.50, 0.65, 0.80, 1.60)
+
 # 手持与穿戴道具。剑刃方向由原版 handheld 第三人称 display 推算（见 conventions.md），
 # 胸甲在手中显示到“胸甲上身”时刻，之后改画穿在身上的盔甲层。
 PROPS = {
@@ -803,7 +821,8 @@ def gif_times(duration: float, sample_fps: float) -> list[float]:
 
 
 def render_model(source: dict[str, Any], model_path: Path, document: dict[str, Any], key: str,
-                 animation_id: str, output: Path, label: str, fps: int) -> None:
+                 animation_id: str, output: Path, label: str, fps: int,
+                 rate: float = 1.0, start: float = 0.0, end: float | None = None) -> None:
     model = SkeletonModel(load_json(model_path))
     sampler = AnimationSampler(model, document, key)
     texture = SkeletonModel(source).texture()  # 两套体型共用内嵌 Steve 贴图。
@@ -811,27 +830,37 @@ def render_model(source: dict[str, Any], model_path: Path, document: dict[str, A
     if not contact_times:
         # 接触表固定保留 10 个时刻（包括 0 和 duration 的阶段边界）。
         contact_times = [sampler.duration * index / 9 for index in range(10)]
-    slow = not sampler.loop and sampler.duration <= SLOW_MAX_DURATION
-    realtime = gif_times(sampler.duration, fps)
+    clip_end = sampler.duration if end is None else min(end, sampler.duration)
+    if start >= clip_end:
+        raise ValueError("预览起点必须早于剪辑终点")
+    slow = rate == 1 and start == 0 and end is None and not sampler.loop and sampler.duration <= SLOW_MAX_DURATION
+    realtime = [start + time * rate for time in gif_times((clip_end - start) / rate, fps)]
     slow_times = gif_times(sampler.duration, fps / SLOW_FACTOR) if slow else []
-    height = panel_height(model, sampler, animation_id, realtime + slow_times + contact_times + [sampler.duration])
+    if start != 0 or end is not None:
+        contact_times = [time for time in contact_times if start <= time <= clip_end]
+    if not contact_times:
+        contact_times = [start, clip_end]
+    height = panel_height(model, sampler, animation_id, realtime + slow_times + contact_times + [clip_end])
     frame_ms = round(1000 / fps)
 
     def sequence(times: list[float], tag: str) -> list[Image.Image]:
         frames = [render_frame(model, sampler, texture, animation_id, time, height, f"t={time:.3f}s{tag}") for time in times]
         if not sampler.loop:
             # 一次性动作补上末帧并在首尾停留，避免 GIF 循环时起止姿态一闪而过。
-            last = render_frame(model, sampler, texture, animation_id, sampler.duration, height,
-                                f"t={sampler.duration:.3f}s{tag}")
+            last = render_frame(model, sampler, texture, animation_id, clip_end, height,
+                                f"t={clip_end:.3f}s{tag}")
             hold = max(1, round(HOLD_SECONDS * fps))
             frames = [frames[0]] * hold + frames + [last] * hold
         return frames
 
-    save_gif(sequence(realtime, ""), output / f"{animation_id}-{label}.gif", frame_ms)
+    suffix = "" if rate == 1 else f"-rate-{rate:g}"
+    if start != 0 or end is not None:
+        suffix += f"-{start:g}-{clip_end:g}s"
+    save_gif(sequence(realtime, f" x{rate:g}"), output / f"{animation_id}-{label}{suffix}.gif", frame_ms)
     if slow:
         save_gif(sequence(slow_times, f" slow x{SLOW_FACTOR:g}"), output / f"{animation_id}-{label}-slow.gif", frame_ms)
     drive = DRIVE_PREVIEW.get(animation_id, DRIVE_PREVIEW.get(main_hand_id(animation_id) or "", ()))
-    if drive:
+    if drive and rate == 1 and start == 0 and end is None:
         step = SLOW_FACTOR / fps
         frames = []
         for start, end, repeat in drive:
@@ -842,7 +871,7 @@ def render_model(source: dict[str, Any], model_path: Path, document: dict[str, A
         save_gif(frames, output / f"{animation_id}-{label}-drive-slow.gif", frame_ms)
     contact_frames = [render_frame(model, sampler, texture, animation_id, time, height, f"t={time:.3f}s")
                       for time in contact_times]
-    contact_sheet(contact_frames, output / f"{animation_id}-{label}-contact.png")
+    contact_sheet(contact_frames, output / f"{animation_id}-{label}{suffix}-contact.png")
 
 
 def main() -> int:
@@ -852,9 +881,18 @@ def main() -> int:
     parser.add_argument("--slim", type=Path, default=Path("models/player_skeleton_slim.bbmodel"))
     parser.add_argument("--output", type=Path, default=Path("build/anim-review"))
     parser.add_argument("--fps", type=int, default=12)
+    parser.add_argument("--rate", type=float, default=1, help="播放倍率，有限值 (0, 1]；帧率仍按真实秒")
+    parser.add_argument("--start", type=float, default=0, help="预览片段的剪辑起点秒数")
+    parser.add_argument("--end", type=float, help="预览片段的剪辑终点秒数")
     parser.add_argument("--index", type=Path,
                         default=Path("src/main/resources/assets/kizuna_players_animation/player_anim_index.json"))
     args = parser.parse_args()
+    if not math.isfinite(args.rate) or not 0 < args.rate <= 1:
+        parser.error("--rate 必须为 (0, 1] 内的有限值")
+    if args.fps <= 0 or not math.isfinite(args.start) or args.start < 0:
+        parser.error("帧率必须为正，起点必须是非负有限秒数")
+    if args.end is not None and (not math.isfinite(args.end) or args.end <= args.start):
+        parser.error("终点必须是大于起点的有限秒数")
     # 弓、弩预览按索引 item_states 选弦档与箭；没有该字段的动作不受影响。
     for entry in load_json(args.index)["animations"]:
         if "item_states" in entry:
@@ -865,8 +903,10 @@ def main() -> int:
     for animation_id in args.animation:
         document, key = source_animation_document(source, animation_id)
         output = args.output / animation_id
-        render_model(source, args.source, document, key, animation_id, output, "classic", args.fps)
-        render_model(source, args.slim, document, key, animation_id, output, "slim", args.fps)
+        render_model(source, args.source, document, key, animation_id, output, "classic", args.fps,
+                     args.rate, args.start, args.end)
+        render_model(source, args.slim, document, key, animation_id, output, "slim", args.fps,
+                     args.rate, args.start, args.end)
         print(f"渲染 {animation_id}: {output}")
     return 0
 
