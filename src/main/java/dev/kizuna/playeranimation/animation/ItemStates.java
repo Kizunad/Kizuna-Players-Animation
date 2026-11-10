@@ -9,8 +9,9 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 索引 item_states：弓、弩物品模型谓词的剪辑时间轨道（docs/asset-contract.md「索引条目」）。
- * pull 取 [0, 1] 线性插值，pulling、charged、arrow 为 0 / 1 阶跃；第一个键之前取第一个键的值，
+ * 索引 item_states：持物模型的剪辑时间轨道（docs/asset-contract.md「索引条目」）。
+ * pull、pulling、charged、arrow 给弓弩谓词，open 给物品定义的 item_state 数值属性（例如药刀刀刃开合）。
+ * pull、open 取 [0, 1] 线性插值，其余为 0 / 1 阶跃；第一个键之前取第一个键的值，
  * 最后一个键之后保持。没写的通道不改原版；这些值只控制客户端模型，不修改物品使用或弹药。
  */
 public record ItemStates(Map<Channel, Track> tracks) {
@@ -26,7 +27,8 @@ public record ItemStates(Map<Channel, Track> tracks) {
         PULL("pull", Interpolation.LINEAR),
         PULLING("pulling", Interpolation.STEP),
         CHARGED("charged", Interpolation.STEP),
-        ARROW("arrow", Interpolation.STEP);
+        ARROW("arrow", Interpolation.STEP),
+        OPEN("open", Interpolation.LINEAR);
 
         public final String key;
         final Interpolation interpolation;
@@ -36,7 +38,7 @@ public record ItemStates(Map<Channel, Track> tracks) {
             this.interpolation = interpolation;
         }
 
-        static Channel find(String key) {
+        public static Channel find(String key) {
             for (Channel channel : values()) {
                 if (channel.key.equals(key)) {
                     return channel;

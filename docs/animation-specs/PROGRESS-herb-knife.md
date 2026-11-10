@@ -1,8 +1,9 @@
 # 药刀动作进度
 
-更新：2026-11-10 夜（**开刃、切药都已用户验收通过**；还没导入游戏）。
+更新：2026-11-11 凌晨（**开刃、切药都已用户验收通过**；已按派单第九节接进游戏，PA、BS3D、Brewing 都没提交）。
 规格在派单第六节确认，第 8 节十条照建议定；同日用户定物品栏画展开（第 2 节第 3 条）。用户看过开刃、切药第一版后定「开刃可以，切药选甲」（派单第八节，本页第 8 节第 11 条）：
-切药在手里把刀转平，PA 加了索引 `item_rotation`（第 6 节「已改」，已提交）。BS3D、Brewing 的接线是下一步。
+切药在手里把刀转平，PA 加了索引 `item_rotation`（第 6 节「已改」，已提交 `0474b77`）。
+11-11 凌晨照派单第九节接线（第 6 节「接线已改」）；真实客户端截图和实测在交接目录 `handoff/brewing-models-r2-20261110/README.md` 第十一节。
 派单 `~/Code/Kizuna-remote-session/handoff/i5-c4-c8-work/BREWING-MODELS-R2-TASK.md` 第四、六、八节（下称「派单」）。
 服务端设计稿 `handoff/pa-cloud-anim/22-Brewing-Addon.md`（下称「设计稿」）§4.3、声音表。
 
@@ -10,7 +11,7 @@
 | --- | --- | --- | --- | --- | --- |
 | `herb_knife_draw` | [规格](herb_knife_draw.md) | 主手切到药刀：甩腕开刃 | 一次性 0.60 s（12 tick） | 0.20 → 0.26 s 由合到开 | 用户验收通过（11-10），关键帧不再改 |
 | `herb_knife_cut` | [规格](herb_knife_cut.md) | 切药：主手药刀、副手药材，按住右键一秒一刀 | 一次性 1.00 s（20 tick），连切重播 | 全程开；刀在手里转 −54°（`item_rotation`） | 用户验收通过（11-10），关键帧不再改 |
-| 刀刃开合 `open` | [规格](herb_knife_blade.md) | 药刀模型自己的剪辑，BS3D 按进度画 | 进度驱动，不按时间播放 | 进度 0 合、1 开 | 规格已确认，没做（接线时做） |
+| 刀刃开合 `open` | [规格](herb_knife_blade.md) | 药刀模型自己的剪辑，BS3D 按进度画 | 进度驱动，不按时间播放 | 进度 0 合、1 开 | 已做（11-11 接线，未提交）；游戏内截图核过开合方向 |
 | 收刀合刃 | 本页第 5 节 | 切走药刀时 | 不做动作（方案 A） | — | 已定（第 8 节第 4 条） |
 
 两段玩家动作共同：`loop: false`、`mask: full`（加进 `upperOverlay`，移动中只取上身）、`hand: main`（左主手玩家整段镜像）、
@@ -28,6 +29,7 @@
 - 本仓：[验收](../animation-acceptance.md)、[共用约定](conventions.md)、[资产契约](../asset-contract.md)（`item_states`）、[过渡表](transitions.md)；格式照 [PROGRESS-witch](PROGRESS-witch.md)、[witch_brew_feed_off](witch_brew_feed_off.md)。
 - 派单第八节：用户选甲，切药在手里把刀转平约 −40°（仿 `SpearItemTransforms`），PA 加运行时、门禁、渲染都认的 `item_rotation`；刃口压在药材上沿往回、往下加腕掌屈拉切，药材横拿，时间轴不变。
 - 基线：PA `1aa1f7b`（工作区有第 6 节「已改」的 `item_rotation` 改动和本页四个规格，都没提交）、BS3D `09df44e`、Brewing `4bffd7f`（都干净，只读）。
+  接线基线：PA `0474b77`、BS3D `09df44e`、Brewing `4bffd7f`。
 
 ## 1. 26.2 物品模型能不能拿到持有者
 
@@ -41,7 +43,7 @@
 
 - `ItemOwner` 有 `level()`、`position()`、`getVisualRotationYInDegrees()`，默认方法 `asLivingEntity()`；`Entity implements ItemOwner`，所以拿在手里时就是那个玩家或生物，展示框里是展示框实体（`asLivingEntity()` 为空）。
 - 手里的物品确实带着持有者解析：原版提取 `state.rightHandItemState` 时传的是实体；PA 的 `PlayerMeshRenderer.heldItem` 直接用这份状态，穿戴动作换手持物时也调用 `updateForLiving(rendered, equip, displayContext(arm), player)`。
-- 注册入口：`RangeSelectItemModelProperties.ID_MAPPER` 和 `ItemModels.ID_MAPPER` 都是 `public static final LateBoundIdMapper`，直接 `put` 就行，不用访问器（条件属性那张表才要，PA 已有 `ConditionalItemPropertiesAccess`）。
+- 注册入口：**更正**（11-11 接线时核对反编译）`ItemModels.ID_MAPPER` 是公开的，`RangeSelectItemModelProperties.ID_MAPPER` 是 `private static final`，和条件属性那张表一样要访问器；PA 新加 `mixin/RangeSelectItemPropertiesAccess`，照已有的 `ConditionalItemPropertiesAccess` 写。
 - **「切到药刀多少 tick」从哪来**：用甩腕开刃这段剪辑自己的时钟，经 PA 的 `item_states` 交给物品模型，和手臂同一个时钟、同一个混合权重，不会对不上。
   不用原版计数：`Player.attackStrengthTicker` 换物品时清零，但每次左键攻击也清零（一砍刀刃就会合上再开）；
   `ItemInHandRenderer` 的换手进度只有本机玩家第一人称有，而且 PA 第一人称画全身、不用原版手。
@@ -109,7 +111,7 @@ C5 是功法目录里的 `presentation` 效果经 Human 的 `HumanTechniquePrese
 **K6 classic、slim 两套**都出。PA 每个 ID 只有一份动画资源，两种体型共用同一套轨道（[验收](../animation-acceptance.md)「slim 使用同一动画轨道」）；slim 手臂细 1 px、肩肘腕和持物挂点低 0.5 px、内移 0.5 px，所以切药求解时同一组姿势在两副骨架上一起查：刀切进药材的深度、刀柄不进药材、臂对躯干，门禁和 GIF 两套都跑。
 
 **K7 第一人称可读**：PA 第一人称画全身、镜头是原版眼位。切药原来估两只手在 y 17–21，实做为了刀不挡脸放低到 y 14.5–17.6（右拳挂点 z −7 到 −8.5，药片中心 `(−0.55, 12.97, −5.31)`）。
-按眼位 y 25.9、z 0 粗估，低头约 33° 药材才进画面下沿（[herb_knife_cut](herb_knife_cut.md) 第 6 节），游戏内没看过；甩腕开刃在持物位附近，平视就看得到刀。
+按眼位 y 25.9、z 0 粗估，低头约 33° 药材才进画面下沿（[herb_knife_cut](herb_knife_cut.md) 第 6 节）；**游戏内实测 45°**，50° 药材露得最多（上半截），classic 60°、slim 70° 起被前倾的躯干顶面挡住（同节「游戏内实测」）。甩腕开刃在持物位附近，平视就看得到刀。
 
 **K8 管线**：新动画从 `~/Code/MotionBricks-Intergrate-Test` 出，照行药诀的 `author_witch_pa.py` / `witch_pa_data.py` 写一套药刀的作者脚本和数据（事件、峰值时刻），`.bbmodel` 为准，导出后过 `scripts/analyze_animation.py`。
 Bong 的四段只看节奏和姿态，不拷关键帧。
@@ -140,7 +142,11 @@ A 的理由：B 的延迟和快速换物冲突，C 是新玩法。主会话定 A
 - `docs/asset-contract.md`：`item_rotation` 一行。
 - 验证：`flock /tmp/kizuna-gradle.lock ./gradlew --no-daemon test checkAnimationAntiForgery checkAnimationAssets` BUILD SUCCESSFUL，125 个测试 0 失败（`ItemRotationTest` 4/4），防伪回归通过，导出一致性 156 段。
 
-**还要改的（切药 GIF 验收后接线时动）**
+**接线已改（11-11 凌晨，派单第九节；三仓都没提交，等主会话审）**
+
+下面原是接线前列的计划，都已照做。和计划不同的：PA 登记数值属性要新加访问器 `mixin/RangeSelectItemPropertiesAccess`（第 1 节更正）；
+`.bbmodel` 只改 classic，slim 和 classic 共用同一份动画 JSON（门禁两副骨架结果相同）；
+Brewing GameTest 记录发给假玩家的 PA 包时只留 `player_uuid` 是该玩家自己的、按 `request_id` 去重（同一场测试里别的假玩家的动作和开始追踪时的补发都会到）。
 
 **PA**
 - `animation/ItemStates.java`：`Channel` 加 `OPEN("open", LINEAR)`；
@@ -170,7 +176,7 @@ A 的理由：B 的延迟和快速换物冲突，C 是新玩法。主会话定 A
 | --- | --- | ---: | :---: | --- |
 | stand / walk / run / sneak / sneak_walk | herb_knife_draw | 0.08 / 0.20 | 否 | 服务端看到主手由非药刀变成药刀；移动中只取上身 |
 | stand / walk / run / sneak / sneak_walk | herb_knife_cut | 0.20 / 0.25 | 否 | 主手药刀、副手药材开始使用；连切同 ID 重播，新旧实例在待切位交接 |
-| herb_knife_draw | herb_knife_cut | 0.20 / 0.20 | 否 | 开刃没播完就右键：切药接管，刀刃值在切药权重过 0.5 时跳到 1 |
+| herb_knife_draw | herb_knife_cut | 0.20 / 0.25 | 否 | 开刃没播完就右键：切药接管，刀刃值在切药权重过 0.5 时跳到 1 |
 | herb_knife_draw | attack_main | 0.04 / 0.14 | 否 | 开刃中左键：挥砍盖住，开刃在下面继续走，刀刃照开刃轨道 |
 
 ## 7. 探针
@@ -215,9 +221,12 @@ A 的理由：B 的延迟和快速换物冲突，C 是新玩法。主会话定 A
 
 ## 9. 没做的、未测的
 
-- 切药 GIF 用户 11-10 验收通过。PA 第 6 节「已改」那些已提交；BS3D、Brewing 接线是下一步。
-- 第 6 节「还要改的」都没动：`open` 通道和数值属性、动作枚举、索引条目、两段动画进 PA、BS3D `progress`、Brewing 触发。
-- 切药自查没做：连放三刀看交接、第一刀淡入和最后一刀淡出。
-- 游戏内都没看：第一人称（K7）、第 3 节的闪动、`item_rotation` 在游戏里的转向和淡出、左撇子镜像（只有单元测试）。
-- 刀和药材在 GIF 里是 PA 渲染器的预览道具，药材按原版 `item/generated` 第三人称变换估算；游戏里的毒马铃薯显示要进游戏核对。
-- 刀刃剪辑在 Blockbench 里的预览方向没核对（见 [herb_knife_blade](herb_knife_blade.md) 第 3 节）。
+- 开刃、切药用户 11-10 验收通过；PA `item_rotation` 已提交 `0474b77`。第 6 节「接线已改」三仓都没提交。
+- 游戏内实测过（2026-11-11 真实客户端截图，单人游戏，classic、slim 皮肤各一轮，截图和读数见交接目录 README 第十一节）：
+  - 开刃 0.10 / 0.23 / 0.60 s 合 → 半开 → 开，0.23 s 刃根没看到缝；切药刀在手里转平、压在副手毒马铃薯上沿，`item_rotation` 方向对；
+  - 刀刃 `open` 由剪辑驱动：物品栏、展示框、人偶手持展开，掉落合上；
+  - 第一人称（K7）：低头 45° 药材进画面（粗估 33°），classic 60°、slim 70° 起被躯干顶面挡住；
+  - 第 3 节的闪动：按快捷栏键后 1 个客户端 tick 画原版握姿、刀开着，下一 tick 剪辑到、刀合上再开（派单决定 3 待主会话和用户定）。
+- 未测：连切三刀的交接、第一刀淡入和最后一刀淡出；`item_rotation` 随切药淡出转回原版握法（截图只有定格和一刀的真实触发）；
+  左撇子镜像（只有单元测试）；联机时闪动多长；刀刃剪辑在 Blockbench 里的预览方向（见 [herb_knife_blade](herb_knife_blade.md) 第 3 节）。
+- PA 完整装配 GameTest 被 Brewing 已有的 `BrewEffectResume.resume` 崩溃挡住（C4e 日志同栈），接线用 PA 单独装配验证。

@@ -24,6 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class AnimationSetContractTest {
@@ -81,6 +82,28 @@ class AnimationSetContractTest {
     }
 
     @Test
+    void herbKnifeBladeFollowsTheDrawClipAndTheCutTakesOverAtHalfWeight() throws Exception {
+        // 刀刃值只来自剪辑的 open 轨道：开刃 0.20 → 0.26 s 由合到开，切药全程开，副手和播完都交回物品定义。
+        AnimationEntry draw = resource("herb_knife_draw");
+        AnimationEntry cut = resource("herb_knife_cut");
+        AnimationPlayer player = new AnimationPlayer();
+        player.play(draw, 0, false);
+        assertEquals(0f, player.itemValue(AnimationEntry.Hand.MAIN, ItemStates.Channel.OPEN, 0.1));
+        assertEquals(0.5f, player.itemValue(AnimationEntry.Hand.MAIN, ItemStates.Channel.OPEN, 0.23), 0.0001f);
+        assertEquals(1f, player.itemValue(AnimationEntry.Hand.MAIN, ItemStates.Channel.OPEN, 0.4));
+        assertNull(player.itemValue(AnimationEntry.Hand.OFF, ItemStates.Channel.OPEN, 0.4));
+        assertNull(player.itemValue(AnimationEntry.Hand.MAIN, ItemStates.Channel.OPEN, 2));
+        // 开刃没播完就切：切药淡入过半之前仍按开刃，过半后刀刃直接是开的。
+        player.play(draw, 10, false);
+        player.play(cut, 10.05, false);
+        assertEquals(0f, player.itemValue(AnimationEntry.Hand.MAIN, ItemStates.Channel.OPEN, 10.08));
+        assertEquals(1f, player.itemValue(AnimationEntry.Hand.MAIN, ItemStates.Channel.OPEN, 10.17));
+        assertEquals(1f, player.itemValue(AnimationEntry.Hand.MAIN, ItemStates.Channel.OPEN, 10.9));
+        assertEquals(20, PlayerAnimationAction.HERB_KNIFE_CUT.naturalDurationTicks());
+        assertEquals(12, PlayerAnimationAction.HERB_KNIFE_DRAW.naturalDurationTicks());
+    }
+
+    @Test
     void everyRequestedActionIsIndexedAndParsesFromThePackagedResource() throws Exception {
         JsonObject index = JsonParser.parseString(Files.readString(INDEX)).getAsJsonObject();
         Set<String> ids = new HashSet<>();
@@ -135,7 +158,8 @@ class AnimationSetContractTest {
                 "evoker_refine_liver", "evoker_refine_heart", "evoker_refine_kidney",
                 "evoker_grip", "evoker_grip_off",
                 "witch_imbibe", "witch_anoint_arms", "witch_anoint_legs", "witch_lob_seed", "witch_fling_seed",
-                "witch_spray_trigger", "witch_brew", "witch_brew_feed_off", "status_stagger"), ids);
+                "witch_spray_trigger", "witch_brew", "witch_brew_feed_off", "status_stagger",
+                "herb_knife_draw", "herb_knife_cut"), ids);
         // 已交付标记必须与打包资源一致：调度只请求已交付动作，未打包的动作不得标为已交付。
         for (PlayerAnimationAction action : PlayerAnimationAction.values()) {
             assertEquals(ids.contains(action.id()), action.delivered(), action.id());

@@ -35,7 +35,8 @@ public final class EquipVisibilityClientRunner implements ClientModInitializer {
                         DiscoverySelectors.selectClass(MobModelVariantsClientTest.class),
                         DiscoverySelectors.selectClass(PlaybackClockClientTest.class),
                         DiscoverySelectors.selectClass(WayfarerItemModelsClientTest.class),
-                        DiscoverySelectors.selectClass(SpearClientTest.class))
+                        DiscoverySelectors.selectClass(SpearClientTest.class),
+                        DiscoverySelectors.selectClass(ItemStatePropertyClientTest.class))
                 .build();
         var listener = new SummaryGeneratingListener();
         LauncherFactory.create().execute(request, listener);

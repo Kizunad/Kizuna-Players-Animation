@@ -16,9 +16,18 @@ public final class AnimatedItemModels {
 
     private AnimatedItemModels() { }
 
+    /** 弓弩谓词的混入用：只接管弓和弩，其他物品交回原版。 */
     public static Float value(ItemStack stack, LivingEntity owner, ItemStates.Channel channel) {
+        if (!(stack.getItem() instanceof BowItem || stack.getItem() instanceof CrossbowItem)) {
+            return null;
+        }
+        return clipValue(stack, owner, channel);
+    }
+
+    /** 不限物品种类：stack 是 owner 实际主手或副手里的那一份时，返回该手剪辑此刻的持物值，否则 null。 */
+    public static Float clipValue(ItemStack stack, LivingEntity owner, ItemStates.Channel channel) {
         // 身份比较排除背包副本、掉落物和展示框；主副手不依赖物理左右手。
-        if (owner == null || !(stack.getItem() instanceof BowItem || stack.getItem() instanceof CrossbowItem)) {
+        if (owner == null) {
             return null;
         }
         AnimationEntry.Hand hand;

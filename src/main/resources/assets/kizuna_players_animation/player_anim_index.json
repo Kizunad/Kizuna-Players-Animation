@@ -5729,6 +5729,72 @@
       "blend_out": 0.2,
       "hand": "main",
       "fpv": false
+    },
+    {
+      "id": "herb_knife_draw",
+      "file": "animations/herb_knife_draw.animation.json",
+      "mask": "full",
+      "priority": 19,
+      "blend_in": 0.08,
+      "blend_out": 0.2,
+      "hand": "main",
+      "fpv": false,
+      "phases": [
+        [
+          0.16,
+          0.26
+        ]
+      ],
+      "item_states": {
+        "open": [
+          [
+            0.0,
+            0
+          ],
+          [
+            0.2,
+            0
+          ],
+          [
+            0.26,
+            1
+          ]
+        ]
+      }
+    },
+    {
+      "id": "herb_knife_cut",
+      "file": "animations/herb_knife_cut.animation.json",
+      "mask": "full",
+      "priority": 21,
+      "blend_in": 0.2,
+      "blend_out": 0.25,
+      "hand": "main",
+      "fpv": false,
+      "phases": [
+        [
+          0.2,
+          0.55
+        ]
+      ],
+      "item_states": {
+        "open": [
+          [
+            0.0,
+            1
+          ]
+        ]
+      },
+      "item_rotation": [
+        [
+          0.0,
+          [
+            54,
+            0,
+            0
+          ]
+        ]
+      ]
     }
   ]
 }

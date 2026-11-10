@@ -233,7 +233,13 @@ public enum PlayerAnimationAction {
     /** 熬药副手下料覆盖层：只接管左臂，0.6 秒，播完淡回熬药当前时刻的左臂。 */
     WITCH_BREW_FEED_OFF("witch_brew_feed_off", 12),
     /** 僵直（docs/animation-specs/status_stagger.md）：0.8 秒到位后保持，宿主显式停止；移动底层上只取上身。 */
-    STATUS_STAGGER("status_stagger");
+    STATUS_STAGGER("status_stagger"),
+    /**
+     * 药刀（docs/animation-specs/PROGRESS-herb-knife.md）：甩腕开刃在主手换成药刀时播一次，刀刃 0.20 → 0.26 s 由合到开；
+     * 切药是主手药刀、副手药材按住右键一秒一刀，连切同 ID 重播。都是全身一次性动作，移动底层上只取上身。
+     */
+    HERB_KNIFE_DRAW("herb_knife_draw", 12),
+    HERB_KNIFE_CUT("herb_knife_cut", 20);
 
     private final String id;
     private final int naturalDurationTicks;

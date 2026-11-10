@@ -46,6 +46,11 @@ class WayfarerIndexFieldsTest {
         assertEquals(0.5f, states.value(ItemStates.Channel.PULL, 2.7f), 0.0001f);
         assertEquals(1f, states.value(ItemStates.Channel.PULL, 4.0f));
         assertEquals(0f, states.value(ItemStates.Channel.ARROW, 3.0f));
+        // open 和 pull 一样线性插值，取 [0, 1]。
+        ItemStates blade = AnimationEntry.parse(entry("herb_knife_draw", "main",
+                ",\"item_states\":{\"open\":[[0,0],[0.2,0],[0.26,1]]}"), clip()).itemStates();
+        assertEquals(0.5f, blade.value(ItemStates.Channel.OPEN, 0.23f), 0.0001f);
+        assertEquals(1f, blade.value(ItemStates.Channel.OPEN, 3f));
         // 没写的通道交给原版。
         assertNull(states.value(ItemStates.Channel.CHARGED, 3.0f));
         assertTrue(AnimationEntry.parse(entry("plain", "main", ""), clip()).aimWindows().isEmpty());
@@ -61,7 +66,9 @@ class WayfarerIndexFieldsTest {
                 ",\"item_states\":{\"pull\":[[0,1.2]]}",
                 ",\"item_states\":{\"pulling\":[[0,0.5]]}",
                 ",\"item_states\":{\"charged\":[[6.5,1]]}",
-                ",\"item_states\":{\"pulling\":[[0,1,2]]}"}) {
+                ",\"item_states\":{\"pulling\":[[0,1,2]]}",
+                ",\"item_states\":{\"open\":[[0,1.5]]}",
+                ",\"item_states\":{\"open\":[[0,-0.1]]}"}) {
             assertThrows(IllegalArgumentException.class,
                     () -> AnimationEntry.parse(entry("wayfarer_pearls", "main", bad), clip()), bad);
         }

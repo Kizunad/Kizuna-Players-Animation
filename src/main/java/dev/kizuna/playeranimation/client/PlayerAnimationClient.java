@@ -30,6 +30,7 @@ public final class PlayerAnimationClient implements ClientModInitializer {
         ClientTickEvents.END_LEVEL_TICK.register(LocalAnimationClock::tick);
         ClientAnimationNetworking.register();
         AnimationArrowProperty.register();
+        AnimationItemStateProperty.register();
         LevelRenderEvents.COLLECT_SUBMITS.register(FirstPersonBody::render);
         ResourceLoader.get(PackType.CLIENT_RESOURCES).registerReloadListener(PlayerAssets.id("player_assets"), ASSETS);
         ClientTickEvents.END_CLIENT_TICK.register(PLAYBACK::tick);

@@ -1,6 +1,6 @@
 # herb_knife_draw：切到药刀，甩腕开刃（全身，0.6 s）
 
-> 状态：**关键帧已做，classic、slim 门禁通过，用户 2026-11-10 验收通过，关键帧不再改**（派单第八节）。下面的角度是做规格时的设计值，门禁和实测见交接目录 `handoff/herb-knife-anim-20261110/REPORT.md` 第 2 节。轴向、坐标和面板值约定见 [共用约定](conventions.md)；共用约束 K1–K8、刀刃接法、触发和十条决定见 [PROGRESS-herb-knife](PROGRESS-herb-knife.md)；刀刃剪辑见 [herb_knife_blade](herb_knife_blade.md)。
+> 状态：**关键帧已做，classic、slim 门禁通过，用户 2026-11-10 验收通过，关键帧不再改**（派单第八节）；2026-11-11 接进游戏（未提交）：Brewing 服务端看到主手由非药刀变成药刀时播，真实客户端截图和逐 tick 连拍见交接目录 `handoff/brewing-models-r2-20261110/README.md` 第十一节。下面的角度是做规格时的设计值，门禁和实测见交接目录 `handoff/herb-knife-anim-20261110/REPORT.md` 第 2 节。轴向、坐标和面板值约定见 [共用约定](conventions.md)；共用约束 K1–K8、刀刃接法、触发和十条决定见 [PROGRESS-herb-knife](PROGRESS-herb-knife.md)；刀刃剪辑见 [herb_knife_blade](herb_knife_blade.md)。
 > 来源：派单第四节「切到药刀时播一次，刀刃在甩腕的那一下弹开，和刀的开合对上时刻」；参考 Bong `herb_knife_unfold`（只看节奏）。
 >
 > **资源 id**：`herb_knife_draw`；`mask: full`（移动中只取上身）、`hand: main`。

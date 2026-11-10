@@ -346,3 +346,18 @@
 | witch_imbibe / witch_brew / witch_lob_seed / witch_fling_seed / witch_spray_trigger → evoker_grip_off | 0.10 / 0.25 | 起手时副手有东西，宿主同 tick 叠播 | 只接管副手的拇指和两组手指，保持架势握拳；撤下沿用五脏诀已有的 `evoker_grip_off → stance_idle`；敷药要求副手空着，不叠 |
 | stand / stance_idle → status_stagger | 0.05 / 0.20 | 魅惑僵直开始，宿主播放 | 保持末帧到醒；移动底层上只取上身；`stand` 上两脚滑到架势踝位（已知） |
 | status_stagger → stand / stance_idle | 0.20 / 0.20 | 醒时宿主停止 | 淡回下层 |
+
+## 药刀（2026-11-10 资源接入）
+
+规格与进度见 [PROGRESS-herb-knife](PROGRESS-herb-knife.md)。两段都用下面的四列行（`AnimationTransitionContractTest` 解析，加 27 条边：开刃进出 12 条，切药进出 12 条，连切重播 1 条，开刃接切药、开刃接挥砍各 1 条）。
+两段都是 `mask: full`、`hand: main`（左主手整段镜像）、`fpv: false`，在上层规则里（`herb_knife` 前缀）：移动、潜行、架势底层上只取上身。开刃优先级 19，切药 21。
+
+| 来源 → 目标 | 淡入 / 淡出 | 触发 | 约束 |
+| --- | ---: | --- | --- |
+| stand / walk / run / sneak / sneak_walk / stance_idle → herb_knife_draw | 0.08 / 0.20 | 服务端看到主手由非药刀变成药刀 | 0.60 s 一次性，首末帧是 `use_item` 0 s 持物位；刀刃 `open` 0.20 → 0.26 s 由合到开 |
+| herb_knife_draw → stand / walk / run / sneak / sneak_walk / stance_idle | 0.20 / 0.20 | 播完 | 淡回当前底层 |
+| stand / walk / run / sneak / sneak_walk / stance_idle → herb_knife_cut | 0.20 / 0.25 | 主手药刀、副手药材开始使用 | 1.00 s 一次性，首末帧是待切位；`open` 全程 1，`item_rotation` 把刀在手里转 −54° |
+| herb_knife_cut → herb_knife_cut | 0.20 / 0.25 | 按住右键连切，同 ID 重播 | 新旧实例在待切位交接 |
+| herb_knife_cut → stand / walk / run / sneak / sneak_walk / stance_idle | 0.25 / 0.25 | 播完或松手 | 淡回当前底层；挂点随切药淡出转回原版握法 |
+| herb_knife_draw → herb_knife_cut | 0.20 / 0.25 | 开刃没播完就右键 | 不拦；切药接管，刀刃值在切药权重过 0.5 时跳到 1 |
+| herb_knife_draw → attack_main | 0.04 / 0.14 | 开刃中左键 | 挥砍（20）盖住开刃，开刃在下面继续走，刀刃照开刃轨道 |

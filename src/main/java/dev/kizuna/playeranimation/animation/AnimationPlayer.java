@@ -316,7 +316,7 @@ public final class AnimationPlayer {
                 || id.startsWith("bow_draw") || id.startsWith("trident_charge")
                 || id.startsWith("equip_")
                 || id.startsWith("spyglass") || id.startsWith("toot_horn")
-                || id.startsWith("crossbow_") || id.startsWith("brush");
+                || id.startsWith("crossbow_") || id.startsWith("brush") || id.startsWith("herb_knife");
     }
 
     private static boolean stanceOverlay(String id) {

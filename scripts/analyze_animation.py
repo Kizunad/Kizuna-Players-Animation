@@ -84,6 +84,7 @@ FULL_BODY_IDS = {
     "evoker_refine_lung", "evoker_refine_spleen", "evoker_refine_heart", "evoker_refine_kidney", "evoker_refine_liver",
     "witch_imbibe", "witch_anoint_arms", "witch_anoint_legs", "witch_lob_seed", "witch_fling_seed",
     "witch_spray_trigger", "witch_brew", "status_stagger",
+    "herb_knife_draw", "herb_knife_cut",
 }
 
 GRIP_IDS = {
@@ -109,6 +110,7 @@ GRIP_IDS = {
     "spear_charge", "spear_charge_off", "spear_stab", "spear_stab_off",
     "witch_imbibe", "witch_anoint_arms", "witch_anoint_legs", "witch_lob_seed", "witch_fling_seed",
     "witch_spray_trigger", "witch_brew",
+    "herb_knife_draw", "herb_knife_cut",
 }
 
 # 跃步与 jump 同类：整段在空中，着地口径由原型自查的脚底高度代替（docs/animation-specs/technique_leap.md 第 9 节）。
@@ -151,8 +153,10 @@ IMPACT_WINDOW_IDS = {"attack_main", "attack_off", "mine_main", "mine_off",
                      "peddler_snap_kick", "peddler_push_kick", "peddler_roundhouse", "peddler_triple_kick",
                      "peddler_mule_kick", "peddler_flying_kick", "peddler_axe_kick", "peddler_whirlwind",
                      "wayfarer_bow_strike", "wayfarer_bow_strike_off"}
-# 索引 item_states 的通道（弓、弩物品模型谓词）：pull 线性取 [0, 1]，其余为 0 / 1 阶跃开关。
-ITEM_STATE_CHANNELS = {"pull", "pulling", "charged", "arrow"}
+# 索引 item_states 的通道：pull、pulling、charged、arrow 给弓弩谓词，open 给 item_state 数值属性（药刀刀刃）。
+# pull、open 线性取 [0, 1]，其余为 0 / 1 阶跃开关。
+ITEM_STATE_CHANNELS = {"pull", "pulling", "charged", "arrow", "open"}
+LINEAR_ITEM_STATE_CHANNELS = {"pull", "open"}
 AIM_WINDOW_MODES = {"pitch", "yaw"}
 # 单臂覆盖层（遮罩只含一条手臂，叠在双手式上，见 docs/animation-specs/door_breaker_guard.md 第 10 节）：
 # 值为覆盖臂一侧。躯干、腿、预备跟随、主链峰值、着地重心归下层的式；有效运动按覆盖臂三骨计，错峰链改为覆盖臂。
@@ -1295,7 +1299,7 @@ def gate_label(item: dict[str, Any]) -> str:
 
 
 def validate_item_states(animation_id: str, raw: dict[str, Any], duration: float) -> None:
-    """索引 item_states 在资源边界校验一次：通道名、时间在剪辑内且严格递增、pull 在 [0, 1]、开关只取 0 / 1。"""
+    """索引 item_states 在资源边界校验一次：通道名、时间在剪辑内且严格递增、pull 和 open 在 [0, 1]、开关只取 0 / 1。"""
     states = raw["item_states"]
     if raw.get("hand") not in ("main", "off"):
         raise SystemExit(f"item_states 只能用于 hand 为 main / off 的动作: {animation_id}")
@@ -1314,9 +1318,9 @@ def validate_item_states(animation_id: str, raw: dict[str, Any], duration: float
             time, value = float(key[0]), float(key[1])
             if time < 0 or not previous < time <= duration:
                 raise SystemExit(f"item_states.{channel} 时间必须在剪辑内且严格递增（{time}）: {animation_id}")
-            if channel == "pull" and not 0 <= value <= 1:
-                raise SystemExit(f"item_states.pull 必须在 [0, 1]（{value}）: {animation_id}")
-            if channel != "pull" and value not in (0, 1):
+            if channel in LINEAR_ITEM_STATE_CHANNELS and not 0 <= value <= 1:
+                raise SystemExit(f"item_states.{channel} 必须在 [0, 1]（{value}）: {animation_id}")
+            if channel not in LINEAR_ITEM_STATE_CHANNELS and value not in (0, 1):
                 raise SystemExit(f"item_states.{channel} 只取 0 / 1（{value}）: {animation_id}")
             previous = time
 
