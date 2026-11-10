@@ -16,6 +16,7 @@ public final class AnimationPlayer {
     // 循环段边界判断的归一化容差，吸收 tick 取样与浮点误差。
     private static final float LOOP_REGION_EPSILON = 0.001f;
     private static final float ITEM_STATE_MIN_WEIGHT = 0.5f;
+    private static final BoneId[] SOCKETS = {BoneId.R_ITEM, BoneId.L_ITEM};
     private final List<Playback> playing = new ArrayList<>();
     private long sequence;
 
@@ -234,13 +235,54 @@ public final class AnimationPlayer {
                 }
                 if (track.rotation() != null) {
                     Vec3 raw = track.rotation().sample(time, playback.loop() == AnimationClip.Loop.REPEAT);
-                    rotation = new Vec3(-raw.x(), playback.mirror ? raw.y() : -raw.y(),
-                            playback.mirror ? -raw.z() : raw.z());
+                    rotation = blockbenchRotation(raw, playback.mirror);
                 }
                 result[target.ordinal()] = lower.blend(new Pose(position, rotation), weight);
             }
+            blendSockets(result, playback, mask, time, weight);
         }
         return result;
+    }
+
+    private static Vec3 blockbenchRotation(Vec3 raw, boolean mirror) {
+        if (mirror) {
+            return new Vec3(-raw.x(), raw.y(), -raw.z());
+        }
+        return new Vec3(-raw.x(), -raw.y(), raw.z());
+    }
+
+    private static void blendSockets(Pose[] result, Playback playback, AnimationEntry.Mask mask, float time,
+                                     float weight) {
+        // 挂点旋转跟着手：哪一层接管这只手的手臂，挂点就用那一层的 item_rotation，
+        // 没写就转回零，所以上层挥手不会带着下层转过的刀。
+        // 遮罩本身不含挂点，这里按挂点所在的手判断。
+        AnimationEntry entry = playback.entry;
+        for (BoneId socket : SOCKETS) {
+            BoneId hand = socket.parent;
+            boolean drivesArm = entry.clip().tracks().keySet().stream()
+                    .anyMatch(bone -> bone.skinPart().equals(hand.skinPart()));
+            if (!mask.includes(hand) || !drivesArm) {
+                continue;
+            }
+            Vec3 rotation = Vec3.ZERO;
+            if (entry.itemRotation() != null && socket == itemSocket(entry.hand())) {
+                rotation = blockbenchRotation(entry.itemRotation().sample(time), playback.mirror);
+            }
+            BoneId target = socket;
+            if (playback.mirror) {
+                target = socket.mirrored();
+            }
+            Pose lower = result[target.ordinal()];
+            result[target.ordinal()] = lower.blend(new Pose(lower.position(), rotation), weight);
+        }
+    }
+
+    private static BoneId itemSocket(AnimationEntry.Hand hand) {
+        // main 模板按右主手、off 模板按左副手写，镜像在调用方处理。
+        if (hand == AnimationEntry.Hand.OFF) {
+            return BoneId.L_ITEM;
+        }
+        return BoneId.R_ITEM;
     }
 
     private AnimationEntry.Mask effectiveMask(Playback playback, double now, boolean crouching) {

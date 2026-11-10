@@ -11,11 +11,11 @@ public record AnimationEntry(String id, String file, Mask mask, int priority, fl
                              float blendOut, Hand hand, boolean firstPerson, AnimationClip clip,
                              List<Window> impactWindows,
                              Float loopRegionStart, Float loopRegionEnd, boolean lookLayer,
-                             ItemStates itemStates, List<AimWindow> aimWindows) {
+                             ItemStates itemStates, ItemRotation itemRotation, List<AimWindow> aimWindows) {
     public AnimationEntry(String id, String file, Mask mask, int priority, float blendIn,
                           float blendOut, Hand hand, boolean firstPerson, AnimationClip clip) {
         this(id, file, mask, priority, blendIn, blendOut, hand, firstPerson, clip,
-                List.of(), null, null, false, null, List.of());
+                List.of(), null, null, false, null, null, List.of());
     }
 
     /** 剪辑时间里的一段 [start, end]（秒）。 */
@@ -81,6 +81,7 @@ public record AnimationEntry(String id, String file, Mask mask, int priority, fl
             loopEnd = loop.end();
         }
         ItemStates itemStates = readItemStates(raw, hand, clip.duration());
+        ItemRotation itemRotation = readItemRotation(raw, hand, clip.duration());
         List<AimWindow> aimWindows = List.of();
         if (raw.has("aim_windows")) {
             aimWindows = AimWindow.parse(raw.get("aim_windows"), clip.duration());
@@ -88,7 +89,7 @@ public record AnimationEntry(String id, String file, Mask mask, int priority, fl
         return new AnimationEntry(id, file, mask, priority,
                 JsonInput.nonnegative(raw, "blend_in"), JsonInput.nonnegative(raw, "blend_out"),
                 hand, JsonInput.bool(raw, "fpv"), clip, impact,
-                loopStart, loopEnd, readLookLayer(raw), itemStates, aimWindows);
+                loopStart, loopEnd, readLookLayer(raw), itemStates, itemRotation, aimWindows);
     }
 
     private static ItemStates readItemStates(JsonObject raw, Hand hand, float duration) {
@@ -100,6 +101,18 @@ public record AnimationEntry(String id, String file, Mask mask, int priority, fl
             throw new IllegalArgumentException("item_states 只能用于 hand 为 main / off 的动作");
         }
         return ItemStates.parse(raw.get("item_states"), duration);
+    }
+
+    private static ItemRotation readItemRotation(JsonObject raw, Hand hand, float duration) {
+        // 挂点旋转同样只绑定一只已明确的持物手：main 转右手挂点，off 转左手挂点，
+        // 左撇子随剪辑镜像。
+        if (!raw.has("item_rotation")) {
+            return null;
+        }
+        if (hand != Hand.MAIN && hand != Hand.OFF) {
+            throw new IllegalArgumentException("item_rotation 只能用于 hand 为 main / off 的动作");
+        }
+        return ItemRotation.parse(raw.get("item_rotation"), duration);
     }
 
     private static List<Window> readImpactWindows(JsonObject raw, float duration) {

@@ -1,0 +1,50 @@
+# herb_knife_blade：药刀刀刃开合（药刀模型里的 `open` 剪辑）
+
+> 状态：**规格已确认**（2026-11-10），没有改模型。这不是 PA 的资源，放在这里是因为派单要求每段动画的规格都放本目录；共用约束和接法见 [PROGRESS-herb-knife](PROGRESS-herb-knife.md)。
+> 来源：派单第四节第 1 种「刀刃绕转轴转开、合上，写成 `.bbmodel` 里的动画，由 BS3D 播放」。
+>
+> **资源**：Brewing `client/src/main/resources/bs3d/meridian_brewing/herb_knife.bbmodel` 里的动画 `open`。
+> 这个文件由 Brewing 的导入脚本从 Bong `c01576513e` 的源文件生成（第二轮生成收刃模型的同一个脚本；有了本剪辑后那一步删掉），改动写成导入时的转换步骤，参数记进 `sources.json`；Bong 仓不改。
+
+## 1. 用途与驱动
+
+- **不按时间播放**。BS3D 只按「进度」取样：物品定义里每档 `bs3d:placed` 带一个 `progress`，BS3D 取 `open` 剪辑第 `progress × 长度` 秒的姿态（`BagAnimation.Sample(false, progress)`）。
+- 进度来自玩家动作的 `item_states.open`（[PROGRESS](PROGRESS-herb-knife.md) 第 2 节）：开刃剪辑 0.20 → 0.26 s 由 0 到 1，切药全程 1，没有剪辑时 `idle` 1。
+- **进度 0 = 合**（和第二轮的 `herb_knife_folded` 一样），**进度 1 = 开**（和现在的 `herb_knife`、Bong 原样一样）。BS3D 背包的约定也是 0 为合（`BagAnimation.CLOSED = (false, 0)`）。
+- 哪里看得到：手里（玩家、拿着药刀的生物）、展示框、戴在头上都走 `range_dispatch`，后两处没有剪辑，取 `idle` 1，是开的；
+  物品栏（`gui`）固定画进度 1，展开（用户 11-10 定）；只有掉落物（`ground`）固定画进度 0，收刃。收刃模型 `herb_knife_folded` 删掉（[PROGRESS](PROGRESS-herb-knife.md) 第 8 节第 5 条）。
+
+## 2. 模型改动
+
+| 组 | 现在的枢轴 | 改成 | 说明 |
+| --- | --- | --- | --- |
+| `blade_spine` | `[8, 8, 8]` | `[8, 12, 8]` | 转轴在刀柄前端铆钉处，和第二轮的收刃模型一样 |
+| `blade_edge` | `[8, 8, 8]` | `[8, 12, 8]` | 同上 |
+| `pivot`、`handle`、`tail_cord` | `[8, 8, 8]` | 不改 | 不动 |
+
+- 立方体坐标是绝对坐标，组本身没有旋转，只改枢轴不会让静止的模型移动；改完先截一张进度 1 的图和现在的 `herb_knife` 对比。
+
+## 3. 剪辑
+
+| 字段 | 值 |
+| --- | --- |
+| 名字 | `open` |
+| 长度 | 1.0 s（只当进度刻度用） |
+| 循环 | `once` |
+| 骨 | `blade_spine`、`blade_edge`，两组同样的键 |
+| 旋转键 | 0.0 s `[−32, 0, 0]`，1.0 s `[0, 0, 0]`，线性 |
+| 位置、缩放 | 不写 |
+
+- **线性**：快慢全由 PA 的 `open` 轨道决定，时刻只在一处改。
+- **−32°**：和第二轮收刃模型的折叠角相同（第二轮 `sources.json` 记的参数）。BS3D 的 `ModelAsset.rotateAt` 按值绕组枢轴依次转 Z、Y、X，不反号，所以进度 0 的几何和第二轮的收刃模型一样，可以替掉它。
+  中间进度都是绕同一转轴的刚体转动，刃根不会和刀柄分开。
+- **Blockbench 预览的方向没核对**：PA 的玩家骨架导出时要给 X、Y 旋转反号，说明 Blockbench 动画面板的正方向和几何旋转不一定一致；
+  BS3D 读剪辑时不反号。所以在 Blockbench 里看这段剪辑，刃可能往反方向转，以游戏内截图为准（第 4 节）。
+- **BS3D 剪辑限制**（`docs/wiki/Model-Resources.md`「可选开合动画」）：只用位置、旋转、缩放，插值线性或阶跃，`once` / `hold`，长度在 (0, 60] 秒，没有 Molang、没有 Catmull-Rom。本剪辑都满足。
+- 不写合剪辑（BS3D 没有合剪辑时用开剪辑倒放）；不带声音（放置模型没有动作音效，切药的声音由服务端放）；绳穗不跟着摆。
+
+## 4. 验收
+
+- 进度 0 的掉落物和删掉前的收刃模型同机位截图一致；进度 1 的物品栏、展示框、人偶手持和现在的 `herb_knife` 一致。
+- 进度 0.5 截一张：刃转到一半，刃根贴着铆钉，没有缝也没有插进刀柄外侧。
+- 开刃 GIF 0.18–0.28 s 逐帧看刃转开的方向是不是「刃尖由贴柄转向前下」（[PROGRESS](PROGRESS-herb-knife.md) 第 7 节）。

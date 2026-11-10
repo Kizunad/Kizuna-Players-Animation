@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """回归：上一轮按同一条曲线缩放的动作设计必须被防伪造门禁拒绝；爆发窗口只放宽窗口内的角速度上限；
-相触窗口拒绝分开与穿入；手指覆盖层拒绝张开的手指。"""
+相触窗口拒绝分开与穿入；手指覆盖层拒绝张开的手指；索引 item_rotation 转动挂点并进角速度门禁。"""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from animation_analysis import AnimationSampler, SkeletonModel, load_json, sample_times
+from animation_analysis import AnimationSampler, SkeletonModel, attach_item_rotation, load_json, sample_times
 from analyze_animation import hand_contact_gates, report, velocity_gates
 
 
@@ -106,6 +106,14 @@ def finger_overlay_passes(model: SkeletonModel, thumb: list[float], fingers_a: f
     return report(AnimationSampler(model, {"format_version": "1.8.0", "animations": {key: animation}}, key))["pass"]
 
 
+def item_rotation_sampler(model: SkeletonModel, degrees: float, seconds: float) -> AnimationSampler:
+    """右前臂不动，索引 item_rotation 在 seconds 内把右手挂点绕 X 转 degrees（smoothstep，峰值角速度 1.5 × 平均）。"""
+    key = "animation.kizuna_players_animation.player.herb_knife_cut"
+    animation = {"animation_length": 0.4, "bones": {"r_forearm": {"rotation": {"0": [-10, 0, 0], "0.4": [-10, 0, 0]}}}}
+    attach_item_rotation(animation, {"hand": "main", "item_rotation": [[0, [0, 0, 0]], [seconds, [degrees, 0, 0]]]})
+    return AnimationSampler(model, {"format_version": "1.8.0", "animations": {key: animation}}, key)
+
+
 def main() -> int:
     root = Path(__file__).resolve().parents[1]
     document, key = fake_from_spec(root / "docs/animation-specs/attack_main.md")
@@ -139,12 +147,24 @@ def main() -> int:
     # 手指覆盖层：握拳放行，三片手指都张开（0°）拒绝。
     assert finger_overlay_passes(model, [-10.0, 0.0, 50.0], 80.0, 86.0), "握拳的手指覆盖层应放行"
     assert not finger_overlay_passes(model, [0.0, 0.0, 0.0], 0.0, 0.0), "张开手指的覆盖层应被拒绝"
+    # 挂点旋转：40° 用 0.2 s（峰值 300°/s）放行，用 0.05 s（峰值 1,200°/s）按 720°/s 拒绝；挂在挂点前方的点跟着转。
+    slow = item_rotation_sampler(model, 40.0, 0.2)
+    assert velocity_gates(slow, sample_times(slow))["pass"], "0.2 s 转 40° 的挂点应放行"
+    fast = item_rotation_sampler(model, 40.0, 0.05)
+    assert not velocity_gates(fast, sample_times(fast))["pass"], "0.05 s 转 40° 的挂点应被角速度门禁拒绝"
+    world, _ = slow.forward_kinematics(0.3)
+    origin = model.origins["r_item"]
+    ahead = (origin[0], origin[1], origin[2] - 4)
+    moved = [a - b for a, b in zip(world["r_item"].point(ahead), world["r_hand"].point(ahead))]
+    pivot_drift = max(abs(a - b) for a, b in zip(world["r_item"].point(origin), world["r_hand"].point(origin)))
+    assert abs(moved[1]) > 2 and pivot_drift < 1e-9, (moved, pivot_drift)
     print("旧伪造 attack_main 夹具被相关性、主链错峰、多轴门禁全部拒绝")
     print(f"correlation ratio={correlation['ratio']:.3f}, pairs={correlation['correlated_pair_count']}")
     print(f"peak order={peak_order['peak_times_s']}")
     print(f"multi-axis bones={multi_axis['count']}")
     print("爆发窗口只放宽窗口内的蹬伸峰值")
     print("相触窗口拒绝分开与穿入；手指覆盖层拒绝张开的手指")
+    print("item_rotation 绕挂点转手持物，转得过快被角速度门禁拒绝")
     return 0
 
 

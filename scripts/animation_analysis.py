@@ -16,6 +16,8 @@ from typing import Any
 
 
 Vec = tuple[float, float, float]
+# 索引 item_rotation 转的挂点：main 模板按右主手，off 模板按左副手（运行时左撇子整段镜像，工具不镜像）。
+ITEM_SOCKETS = {"main": "r_item", "off": "l_item"}
 
 
 def add(a: Vec, b: Vec) -> Vec:
@@ -137,6 +139,24 @@ class AnimationSampler:
         self.loop = self.animation.get("loop", False) is True
         self.hold = self.animation.get("loop") == "hold_on_last_frame"
         self.tracks = self.animation.get("bones", {})
+        # 索引 item_rotation 由 attach_item_rotation 注入：持物手挂点的 Blockbench 欧拉角轨道。
+        self.item_rotation = [(float(time), tuple(float(value) for value in angles))
+                              for time, angles in self.animation.get("item_rotation", [])]
+        self.item_socket = ITEM_SOCKETS.get(self.animation.get("hand")) if self.item_rotation else None
+
+    def _item_rotation(self, time: float) -> Vec:
+        """与运行时 ItemRotation 一致：相邻键 smoothstep，首键前取首值、末键后保持；再按骨骼旋转同样恢复 X/Y 反号。"""
+        previous = self.item_rotation[0]
+        value = previous[1]
+        if time > previous[0]:
+            value = self.item_rotation[-1][1]
+            for key in self.item_rotation[1:]:
+                if time < key[0]:
+                    amount = (time - previous[0]) / (key[0] - previous[0])
+                    value = lerp(previous[1], key[1], amount * amount * (3 - 2 * amount))
+                    break
+                previous = key
+        return (-value[0], -value[1], value[2])
 
     def _frames(self, bone: str, channel: str) -> list[tuple[float, Vec, str, Vec]]:
         """(时间, post, 插值, pre)；单值帧 pre 等于 post。"""
@@ -153,6 +173,8 @@ class AnimationSampler:
         return sorted(frames)
 
     def value(self, bone: str, channel: str, time: float, wrap: bool = True) -> Vec:
+        if channel == "rotation" and bone == self.item_socket:
+            return self._item_rotation(time % self.duration if wrap and self.loop else time)
         frames = self._frames(bone, channel)
         if self.duration <= 0 or len(frames) == 1:
             return frames[0][1]
@@ -283,6 +305,13 @@ def source_animation_document(source: dict[str, Any], animation_id: str) -> tupl
     assert spec and spec.loader
     spec.loader.exec_module(module)
     return module.export_animation(source, animations[key]), key
+
+
+def attach_item_rotation(animation: dict[str, Any], entry: dict[str, Any]) -> None:
+    """索引 item_rotation 属于索引契约：连同持物手临时注入采样用的动画字典，不改写资源文件。"""
+    if "item_rotation" in entry:
+        animation["item_rotation"] = entry["item_rotation"]
+        animation["hand"] = entry["hand"]
 
 
 def sample_times(sampler: AnimationSampler, hz: int = 60, include_end: bool = True) -> list[float]:

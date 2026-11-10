@@ -24,7 +24,8 @@ from PIL import Image, ImageDraw
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from animation_analysis import AnimationSampler, SkeletonModel, load_json, source_animation_document
+from animation_analysis import (AnimationSampler, SkeletonModel, attach_item_rotation, load_json,
+                                source_animation_document)
 
 
 PANEL_WIDTH = 320
@@ -894,7 +895,8 @@ def main() -> int:
     if args.end is not None and (not math.isfinite(args.end) or args.end <= args.start):
         parser.error("终点必须是大于起点的有限秒数")
     # 弓、弩预览按索引 item_states 选弦档与箭；没有该字段的动作不受影响。
-    for entry in load_json(args.index)["animations"]:
+    entries = {entry["id"]: entry for entry in load_json(args.index)["animations"]}
+    for entry in entries.values():
         if "item_states" in entry:
             ITEM_STATES[entry["id"]] = entry["item_states"]
     source = load_json(args.source)
@@ -902,6 +904,8 @@ def main() -> int:
     print("front 自检通过：yaw=180°，观察 head_inner north(-Z) Steve 脸部 UV 8..16；r_upper_arm 位于观察者左侧")
     for animation_id in args.animation:
         document, key = source_animation_document(source, animation_id)
+        # 索引 item_rotation 转持物手挂点，挂在挂点上的道具跟着转。
+        attach_item_rotation(document["animations"][key], entries.get(animation_id, {}))
         output = args.output / animation_id
         render_model(source, args.source, document, key, animation_id, output, "classic", args.fps,
                      args.rate, args.start, args.end)

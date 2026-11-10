@@ -12,7 +12,7 @@ from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from animation_analysis import (AnimationSampler, SkeletonModel, Vec, add, load_json, mat_point,
+from animation_analysis import (AnimationSampler, SkeletonModel, Vec, add, attach_item_rotation, load_json, mat_point,
                                 rotation_matrix, sample_times, sub)
 
 
@@ -1321,6 +1321,25 @@ def validate_item_states(animation_id: str, raw: dict[str, Any], duration: float
             previous = time
 
 
+def validate_item_rotation(animation_id: str, raw: dict[str, Any], duration: float) -> None:
+    """索引 item_rotation 在资源边界校验一次：只用于 main / off，非空 [[秒, [x, y, z]], ...]，时间在剪辑内且严格递增。"""
+    keys = raw["item_rotation"]
+    if raw.get("hand") not in ("main", "off"):
+        raise SystemExit(f"item_rotation 只能用于 hand 为 main / off 的动作: {animation_id}")
+    if not isinstance(keys, list) or not keys:
+        raise SystemExit(f"item_rotation 必须是非空 [[秒, [x, y, z]], ...]: {animation_id}")
+    finite = lambda value: type(value) in (int, float) and math.isfinite(value)
+    previous = -1.0
+    for key in keys:
+        if (not isinstance(key, list) or len(key) != 2 or not finite(key[0]) or not isinstance(key[1], list)
+                or len(key[1]) != 3 or not all(finite(value) for value in key[1])):
+            raise SystemExit(f"item_rotation 的键必须是 [秒, [x, y, z]]: {animation_id}")
+        time = float(key[0])
+        if time < 0 or not previous < time <= duration:
+            raise SystemExit(f"item_rotation 时间必须在剪辑内且严格递增（{time}）: {animation_id}")
+        previous = time
+
+
 def validate_aim_windows(animation_id: str, windows: Any, duration: float) -> None:
     """索引 aim_windows 校验：start < end、在剪辑内、按时间不重叠，模式只认 pitch / yaw。"""
     if not isinstance(windows, list) or not windows:
@@ -1408,6 +1427,8 @@ def main() -> int:
             duration = float(next(iter(document["animations"].values()))["animation_length"])
             if "item_states" in raw_entry:
                 validate_item_states(animation_id, raw_entry, duration)
+            if "item_rotation" in raw_entry:
+                validate_item_rotation(animation_id, raw_entry, duration)
             if "aim_windows" in raw_entry:
                 validate_aim_windows(animation_id, raw_entry["aim_windows"], duration)
             if animation_id in phase_declarations:
@@ -1416,6 +1437,8 @@ def main() -> int:
                     animation["phases"] = phase_declarations[animation_id]
             for animation in document.get("animations", {}).values():
                 animation.update(index_extras.get(animation_id, {}))
+                # 挂点旋转与骨骼旋转一起进角速度、角加加速度检查。
+                attach_item_rotation(animation, raw_entry)
             key = next(name for name in document["animations"] if name.rsplit(".", 1)[-1] == animation_id)
             item = report(AnimationSampler(model, document, key), impact_windows.get(animation_id))
             item["model"] = label
