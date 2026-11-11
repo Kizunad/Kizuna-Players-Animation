@@ -42,7 +42,7 @@ class DeliveredRigTest {
         }
     }
 
-    private static Skeleton skeleton(boolean slim) throws Exception {
+    static Skeleton skeleton(boolean slim) throws Exception {
         // 直接检查实际交付的资源，避免数学夹具与打包模型脱节。
         try (var reader = new InputStreamReader(DeliveredRigTest.class.getResourceAsStream(
                 "/assets/kizuna_players_animation/geo/player_skeleton.geo.json"), StandardCharsets.UTF_8)) {

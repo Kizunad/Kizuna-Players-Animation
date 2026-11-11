@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -113,8 +114,17 @@ class WayfarerIndexFieldsTest {
     }
 
     @Test
+    void firstPersonTorsoDefaultsToTrueAndMustBeBoolean() {
+        assertTrue(AnimationEntry.parse(entry("wayfarer_pearls", "main", ""), clip()).firstPersonTorso());
+        assertFalse(AnimationEntry.parse(entry("wayfarer_pearls", "main", ",\"fpv_torso\":false"), clip())
+                .firstPersonTorso());
+        assertThrows(IllegalArgumentException.class, () -> AnimationEntry.parse(entry("wayfarer_pearls", "main",
+                ",\"fpv_torso\":\"false\""), clip()));
+    }
+
+    @Test
     void itemStateUsesPlaybackOffsetSelectedHandAndFadeWeight() {
-        // 承接从实际剪辑位置采样；物品状态不能泄漏到另一手或淡出后的原版模型。
+        // 承接从实际剪辑位置采样；从原版淡入的头一段已用剪辑值，物品状态不能泄漏到另一手或淡出后的原版模型。
         AnimationEntry parsed = AnimationEntry.parse(entry("wayfarer_full_draw", "main", """
                 ,"item_states":{"pull":[[0,0],[2,1]],"pulling":[[0,1],[3.6,0]]}
                 """), clip());
@@ -122,7 +132,8 @@ class WayfarerIndexFieldsTest {
         double start = 10;
         player.play(parsed, start, new AnimationPlayer.PlaybackRequest(start,
                 AnimationPlayer.Handedness.LEFT, "draw", null));
-        assertNull(player.itemValue(AnimationEntry.Hand.MAIN, ItemStates.Channel.PULL, start + 0.02));
+        assertEquals(0.01f, player.itemValue(AnimationEntry.Hand.MAIN, ItemStates.Channel.PULL, start + 0.02),
+                0.0001f);
         assertEquals(1f, player.itemValue(AnimationEntry.Hand.MAIN, ItemStates.Channel.PULL, start + 2));
         assertNull(player.itemValue(AnimationEntry.Hand.OFF, ItemStates.Channel.PULL, start + 2));
         assertNull(player.itemValue(AnimationEntry.Hand.MAIN, ItemStates.Channel.CHARGED, start + 2));

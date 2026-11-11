@@ -43,6 +43,24 @@ class AnimationSyncTest {
     }
 
     @Test
+    void trackersOnlyAudienceFollowsTheLatestRegistrationAndClearsOnStop() {
+        // 本人客户端自己播的动作只记「发追踪者」；同一动作再按普通播放登记就恢复发给所有人，停掉后按所有人。
+        AnimationSyncState state = new AnimationSyncState();
+        state.play(PLAYER, play("herb_knife_draw", 20), AnimationSyncState.Audience.TRACKERS);
+        state.play(PLAYER, play("walk", 20));
+        assertEquals(AnimationSyncState.Audience.TRACKERS, state.audience(PLAYER, "herb_knife_draw"));
+        assertEquals(AnimationSyncState.Audience.EVERYONE, state.audience(PLAYER, "walk"));
+        assertEquals(AnimationSyncState.Audience.EVERYONE, state.audience(UUID.randomUUID(), "herb_knife_draw"));
+        assertEquals(List.of(play("herb_knife_draw", 20), play("walk", 20)), state.snapshot(PLAYER));
+        state.play(PLAYER, play("herb_knife_draw", 40));
+        assertEquals(AnimationSyncState.Audience.EVERYONE, state.audience(PLAYER, "herb_knife_draw"));
+        state.play(PLAYER, play("herb_knife_draw", 60), AnimationSyncState.Audience.TRACKERS);
+        state.stop(PLAYER, "herb_knife_draw");
+        assertEquals(AnimationSyncState.Audience.EVERYONE, state.audience(PLAYER, "herb_knife_draw"));
+        assertEquals(List.of(play("walk", 20)), state.snapshot(PLAYER));
+    }
+
+    @Test
     void lateObserverSnapshotPreservesPlaybackRate() throws Exception {
         // 补发保留原始请求的起点、倍率和 ID，不从当前时刻重建请求。
         AnimationSyncState state = new AnimationSyncState();

@@ -10,13 +10,35 @@ import java.util.UUID;
 
 /** 服务端保存控制状态，不加载皮肤、骨架或客户端动画资源。 */
 public final class AnimationSyncState {
-    private final Map<UUID, LinkedHashMap<String, PlayRequest>> players = new HashMap<>();
+    /** 登记的播放发给谁：所有人，或只发追踪者（本人客户端已经自己播了）。 */
+    public enum Audience { EVERYONE, TRACKERS }
+
+    private record Saved(PlayRequest request, Audience audience) { }
+
+    private final Map<UUID, LinkedHashMap<String, Saved>> players = new HashMap<>();
 
     public void play(UUID player, PlayRequest request) {
+        play(player, request, Audience.EVERYONE);
+    }
+
+    public void play(UUID player, PlayRequest request, Audience audience) {
         var animations = players.computeIfAbsent(player, ignored -> new LinkedHashMap<>());
         // 重播移到末尾，补发时保持相同优先级下的最新动作优先。
         animations.remove(request.getAnimationId());
-        animations.put(request.getAnimationId(), request);
+        animations.put(request.getAnimationId(), new Saved(request, audience));
+    }
+
+    public Audience audience(UUID player, String animation) {
+        // 没登记的动作（含已经停掉的）按所有人，停止包照旧发给本人。
+        var animations = players.get(player);
+        if (animations == null) {
+            return Audience.EVERYONE;
+        }
+        Saved saved = animations.get(animation);
+        if (saved == null) {
+            return Audience.EVERYONE;
+        }
+        return saved.audience();
     }
 
     public void stop(UUID player, String animation) {
@@ -38,7 +60,10 @@ public final class AnimationSyncState {
     public List<PlayRequest> snapshot(UUID player) {
         // 返回快照，补发过程不暴露可变登记表。
         var animations = players.get(player);
-        return animations == null ? List.of() : List.copyOf(animations.values());
+        if (animations == null) {
+            return List.of();
+        }
+        return animations.values().stream().map(Saved::request).toList();
     }
 
     public Set<UUID> players() { return Set.copyOf(players.keySet()); }

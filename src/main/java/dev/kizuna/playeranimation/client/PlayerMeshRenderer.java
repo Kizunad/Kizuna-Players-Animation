@@ -92,7 +92,12 @@ public final class PlayerMeshRenderer {
         Pose[] pose = base;
         AimCompensation.Weights aim = AimCompensation.Weights.NONE;
         if (animation != null) {
-            pose = animation.sample(base, now, firstPerson, state.isCrouching);
+            if (FirstPersonBody.rendering(player)) {
+                // 全身第一人称：索引写明不取躯干的剪辑在这里只留手臂、持物和腿。
+                pose = animation.sampleFirstPersonBody(base, now, state.isCrouching);
+            } else {
+                pose = animation.sample(base, now, firstPerson, state.isCrouching);
+            }
             if (!firstPerson) {
                 SpearPoses.applyPitch(pose, animation, state, now);
             }

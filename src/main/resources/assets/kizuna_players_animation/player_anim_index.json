@@ -5771,6 +5771,7 @@
       "blend_out": 0.25,
       "hand": "main",
       "fpv": false,
+      "fpv_torso": false,
       "phases": [
         [
           0.2,

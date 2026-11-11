@@ -8,13 +8,13 @@ import java.util.List;
 import java.util.Set;
 
 public record AnimationEntry(String id, String file, Mask mask, int priority, float blendIn,
-                             float blendOut, Hand hand, boolean firstPerson, AnimationClip clip,
-                             List<Window> impactWindows,
+                             float blendOut, Hand hand, boolean firstPerson, boolean firstPersonTorso,
+                             AnimationClip clip, List<Window> impactWindows,
                              Float loopRegionStart, Float loopRegionEnd, boolean lookLayer,
                              ItemStates itemStates, ItemRotation itemRotation, List<AimWindow> aimWindows) {
     public AnimationEntry(String id, String file, Mask mask, int priority, float blendIn,
                           float blendOut, Hand hand, boolean firstPerson, AnimationClip clip) {
-        this(id, file, mask, priority, blendIn, blendOut, hand, firstPerson, clip,
+        this(id, file, mask, priority, blendIn, blendOut, hand, firstPerson, true, clip,
                 List.of(), null, null, false, null, null, List.of());
     }
 
@@ -88,8 +88,16 @@ public record AnimationEntry(String id, String file, Mask mask, int priority, fl
         }
         return new AnimationEntry(id, file, mask, priority,
                 JsonInput.nonnegative(raw, "blend_in"), JsonInput.nonnegative(raw, "blend_out"),
-                hand, JsonInput.bool(raw, "fpv"), clip, impact,
+                hand, JsonInput.bool(raw, "fpv"), readFirstPersonTorso(raw), clip, impact,
                 loopStart, loopEnd, readLookLayer(raw), itemStates, itemRotation, aimWindows);
+    }
+
+    private static boolean readFirstPersonTorso(JsonObject raw) {
+        // 缺省时全身第一人称照第三人称取躯干；只有写明 false 的剪辑在第一人称里不取胯、腰、胸、头。
+        if (!raw.has("fpv_torso")) {
+            return true;
+        }
+        return JsonInput.bool(raw, "fpv_torso");
     }
 
     private static ItemStates readItemStates(JsonObject raw, Hand hand, float duration) {

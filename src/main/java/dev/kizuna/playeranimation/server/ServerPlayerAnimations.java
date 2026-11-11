@@ -16,6 +16,7 @@ import dev.kizuna.playeranimation.network.AnimationRequests;
 import dev.kizuna.playeranimation.network.RequiredAnimationChannels;
 import dev.kizuna.playeranimation.animation.JsonInput;
 import dev.kizuna.playeranimation.animation.PlayerAnimationAction;
+import dev.kizuna.playeranimation.server.AnimationSyncState.Audience;
 import dev.kizuna.playeranimation.protocol.pb.PlayerAnimationProtocol.PlayRequest;
 import dev.kizuna.playeranimation.protocol.pb.PlayerAnimationProtocol.Result;
 import dev.kizuna.playeranimation.protocol.pb.PlayerAnimationProtocol.StopRequest;
@@ -163,6 +164,19 @@ public final class ServerPlayerAnimations implements ModInitializer {
     }
 
     public static String playFrom(ServerPlayer player, String animation, long startTick, float rate) {
+        return playFrom(player, animation, startTick, rate, Audience.EVERYONE);
+    }
+
+    /**
+     * 本人客户端已经自己播放的目录动作：校验、登记、到期和补发同 {@link #play(ServerPlayer, PlayerAnimationAction)}，
+     * 但播放包、补发和这段动作的停止都只发给追踪者，不发本人。
+     */
+    public static String playForTrackers(ServerPlayer player, PlayerAnimationAction action) {
+        return playFrom(player, action.id(), player.level().getGameTime(), 1, Audience.TRACKERS);
+    }
+
+    private static String playFrom(ServerPlayer player, String animation, long startTick, float rate,
+                                   Audience audience) {
         // 只登记一次起点，后续追踪者重用请求，不重启已经在播放的循环。
         requireServerThread(player);
         AnimationRequests.animationId(animation);
@@ -182,9 +196,9 @@ public final class ServerPlayerAnimations implements ModInitializer {
         PlayRequest request = builder.build();
         // 先通过载荷边界，避免发送失败却留下无法补发的登记状态。
         checkSize(request);
-        STATE.play(player.getUUID(), request);
+        STATE.play(player.getUUID(), request, audience);
         scheduleExpiry(player, animation, request.getStartTick(), rate);
-        broadcast(player, AnimationPackets.PLAY, request, requestId);
+        broadcast(player, AnimationPackets.PLAY, request, requestId, audience);
         return requestId;
     }
 
@@ -213,7 +227,7 @@ public final class ServerPlayerAnimations implements ModInitializer {
         checkSize(request);
         STATE.play(player.getUUID(), request);
         FINITE_EXPIRIES.remove(new PlaybackKey(player.getUUID(), animation));
-        broadcast(player, AnimationPackets.PLAY, request, requestId);
+        broadcast(player, AnimationPackets.PLAY, request, requestId, Audience.EVERYONE);
         return requestId;
     }
 
@@ -266,21 +280,28 @@ public final class ServerPlayerAnimations implements ModInitializer {
         }
         StopRequest request = builder.build();
         checkSize(request);
+        // 只发追踪者的动作，停止也不发本人；停止全部照旧发给所有人。
+        Audience audience = Audience.EVERYONE;
+        if (animation != null) {
+            audience = STATE.audience(player.getUUID(), animation);
+        }
         STATE.stop(player.getUUID(), animation);
         if (animation == null) {
             FINITE_EXPIRIES.keySet().removeIf(key -> key.player.equals(player.getUUID()));
         } else {
             FINITE_EXPIRIES.remove(new PlaybackKey(player.getUUID(), animation));
         }
-        broadcast(player, AnimationPackets.STOP, request, requestId);
+        broadcast(player, AnimationPackets.STOP, request, requestId, audience);
         return requestId;
     }
 
     private static void broadcast(ServerPlayer target, CustomPacketPayload.Type<AnimationPackets.Payload> channel,
-                                  MessageLite message, String requestId) {
+                                  MessageLite message, String requestId, Audience audience) {
         Set<ServerPlayer> viewers = new HashSet<>(PlayerLookup.tracking(target));
-        viewers.add(target);
-        // tracking 本身限制维度和可见范围；集合避免本人被重复发送。
+        if (audience == Audience.EVERYONE) {
+            viewers.add(target);
+        }
+        // tracking 本身限制维度和可见范围；集合避免本人被重复发送。本人客户端自己播的动作不发本人。
         for (ServerPlayer viewer : viewers) {
             if (!viewer.connection.isAcceptingMessages()) {
                 continue;
@@ -330,6 +351,10 @@ public final class ServerPlayerAnimations implements ModInitializer {
                 continue;
             }
             for (PlayRequest saved : STATE.snapshot(pair.target)) {
+                // 本人客户端自己播的动作不补发给本人。
+                if (target == viewer && STATE.audience(pair.target, saved.getAnimationId()) == Audience.TRACKERS) {
+                    continue;
+                }
                 // 沿用原始请求 ID 和起点，客户端可区分重复补发与同 tick 重播。
                 send(viewer, AnimationPackets.PLAY, saved, saved.getRequestId());
             }

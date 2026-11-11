@@ -10,6 +10,7 @@ import dev.kizuna.playeranimation.animation.PlayerAnimationAction;
 import dev.kizuna.playeranimation.model.BoneId;
 import dev.kizuna.playeranimation.model.Pose;
 import dev.kizuna.playeranimation.model.Rig;
+import dev.kizuna.playeranimation.model.Skeleton;
 import dev.kizuna.playeranimation.model.Vec3;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -18,6 +19,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import org.joml.Matrix4f;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -32,6 +34,8 @@ class AnimationSetContractTest {
             "src/main/resources/assets/kizuna_players_animation/player_anim_index.json");
     private static final String KEY_PREFIX = "animation.kizuna_players_animation.player.";
     private static final float POSE_EPSILON = 0.0001f;
+    private static final double[] HERB_KNIFE_CUT_MOMENTS = {0.20, 0.55, 0.75};
+    private static final Set<BoneId> TORSO = Set.of(BoneId.PELVIS, BoneId.WAIST, BoneId.CHEST, BoneId.HEAD);
     private static final double SWING_LEAD_SECONDS = 0.1;
     private static final float SWING_PROGRESS = 0.3f;
     private static final Map<String, Double> DOOR_HITS = Map.of(
@@ -88,11 +92,18 @@ class AnimationSetContractTest {
         AnimationEntry cut = resource("herb_knife_cut");
         AnimationPlayer player = new AnimationPlayer();
         player.play(draw, 0, false);
+        // 从原版淡入还不到一半时已按剪辑首值，换刀第一帧刀是合的。
+        assertEquals(0f, player.itemValue(AnimationEntry.Hand.MAIN, ItemStates.Channel.OPEN, 0.01));
         assertEquals(0f, player.itemValue(AnimationEntry.Hand.MAIN, ItemStates.Channel.OPEN, 0.1));
         assertEquals(0.5f, player.itemValue(AnimationEntry.Hand.MAIN, ItemStates.Channel.OPEN, 0.23), 0.0001f);
         assertEquals(1f, player.itemValue(AnimationEntry.Hand.MAIN, ItemStates.Channel.OPEN, 0.4));
         assertNull(player.itemValue(AnimationEntry.Hand.OFF, ItemStates.Channel.OPEN, 0.4));
         assertNull(player.itemValue(AnimationEntry.Hand.MAIN, ItemStates.Channel.OPEN, 2));
+        // 停止淡出不过半就交回物品定义，不算淡入。
+        player.play(draw, 5, false);
+        player.stop(draw.id(), 5.4);
+        assertEquals(1f, player.itemValue(AnimationEntry.Hand.MAIN, ItemStates.Channel.OPEN, 5.45));
+        assertNull(player.itemValue(AnimationEntry.Hand.MAIN, ItemStates.Channel.OPEN, 5.55));
         // 开刃没播完就切：切药淡入过半之前仍按开刃，过半后刀刃直接是开的。
         player.play(draw, 10, false);
         player.play(cut, 10.05, false);
@@ -452,6 +463,45 @@ class AnimationSetContractTest {
             }
         }
         assertNotEquals(expected[BoneId.R_FOREARM.ordinal()], actual[BoneId.R_FOREARM.ordinal()]);
+    }
+
+    @Test
+    void herbKnifeCutDropsOnlyTheTorsoInTheFirstPersonBody() throws Exception {
+        // 全身第一人称不取切药的胯腰胸头：躯干等于底层，手臂和腿照第三人称，两个挂点的相对位置不变；开刃两种取样一样。
+        AnimationEntry cut = resource("herb_knife_cut");
+        AnimationEntry draw = resource("herb_knife_draw");
+        assertFalse(cut.firstPersonTorso());
+        assertTrue(draw.firstPersonTorso());
+        Pose[] base = Rig.zeroPose();
+        Skeleton skeleton = DeliveredRigTest.skeleton(false /* slim */);
+        AnimationPlayer cutting = new AnimationPlayer();
+        cutting.play(cut, 0, false /* leftHanded */);
+        for (double time : HERB_KNIFE_CUT_MOMENTS) {
+            Pose[] world = cutting.sample(base, time, false /* firstPerson */);
+            Pose[] body = cutting.sampleFirstPersonBody(base, time, false /* crouching */);
+            assertNotEquals(base[BoneId.CHEST.ordinal()], world[BoneId.CHEST.ordinal()]);
+            for (BoneId bone : BoneId.values()) {
+                Pose expected = world[bone.ordinal()];
+                if (TORSO.contains(bone)) {
+                    expected = base[bone.ordinal()];
+                }
+                assertEquals(expected, body[bone.ordinal()], bone + " @ " + time);
+            }
+            Matrix4f worldItems = itemsRelative(skeleton, world);
+            Matrix4f bodyItems = itemsRelative(skeleton, body);
+            assertTrue(worldItems.equals(bodyItems, POSE_EPSILON), "挂点相对位置 @ " + time);
+        }
+        AnimationPlayer drawing = new AnimationPlayer();
+        drawing.play(draw, 0, false /* leftHanded */);
+        assertArrayEquals(drawing.sample(base, 0.3, false /* firstPerson */),
+                drawing.sampleFirstPersonBody(base, 0.3, false /* crouching */));
+    }
+
+    private static Matrix4f itemsRelative(Skeleton skeleton, Pose[] pose) {
+        // 副手挂点在主手挂点坐标系里的变换：两只手都挂在胸下面，躯干怎么转都不该变。
+        Matrix4f[] matrices = Rig.matrices(skeleton, pose);
+        Matrix4f main = new Matrix4f(matrices[BoneId.R_ITEM.ordinal()]);
+        return main.invert().mul(matrices[BoneId.L_ITEM.ordinal()]);
     }
 
     private static AnimationEntry resource(String id) throws Exception {

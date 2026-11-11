@@ -5,7 +5,9 @@ import dev.kizuna.playeranimation.model.Pose;
 import dev.kizuna.playeranimation.model.Vec3;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.EnumSet;
 import java.util.List;
+import java.util.Set;
 import java.util.function.BiConsumer;
 
 public final class AnimationPlayer {
@@ -17,6 +19,7 @@ public final class AnimationPlayer {
     private static final float LOOP_REGION_EPSILON = 0.001f;
     private static final float ITEM_STATE_MIN_WEIGHT = 0.5f;
     private static final BoneId[] SOCKETS = {BoneId.R_ITEM, BoneId.L_ITEM};
+    private static final Set<BoneId> TORSO = EnumSet.of(BoneId.PELVIS, BoneId.WAIST, BoneId.CHEST, BoneId.HEAD);
     private final List<Playback> playing = new ArrayList<>();
     private long sequence;
 
@@ -151,17 +154,26 @@ public final class AnimationPlayer {
     }
 
     public Float itemValue(AnimationEntry.Hand hand, ItemStates.Channel channel, double now) {
-        // 从最高播放层选持物轨道；未声明的通道和淡出后的状态交还原版。
+        // 从最高播放层选过半的持物轨道；一层都不过半时用最高一层还在淡入的，所以从原版淡入的剪辑首帧就用剪辑值。
+        // 未声明的通道和淡出后的状态交还原版。
+        Playback fadingIn = null;
         for (int index = playing.size() - 1; index >= 0; index--) {
             Playback playback = playing.get(index);
             AnimationEntry entry = playback.entry;
-            ItemStates itemStates = entry.itemStates();
-            if (entry.hand() == hand && itemStates != null && !playback.finished(now)
-                    && playback.weight(now) >= ITEM_STATE_MIN_WEIGHT) {
-                return itemStates.value(channel, playback.time(now));
+            if (entry.hand() != hand || entry.itemStates() == null || playback.finished(now)) {
+                continue;
+            }
+            if (playback.weight(now) >= ITEM_STATE_MIN_WEIGHT) {
+                return entry.itemStates().value(channel, playback.time(now));
+            }
+            if (fadingIn == null && playback.fadingIn(now)) {
+                fadingIn = playback;
             }
         }
-        return null;
+        if (fadingIn == null) {
+            return null;
+        }
+        return fadingIn.entry.itemStates().value(channel, fadingIn.time(now));
     }
 
     public boolean hasTwoHandedAction(double now) {
@@ -208,11 +220,27 @@ public final class AnimationPlayer {
     }
 
     public Pose[] sample(Pose[] base, double now, boolean firstPerson, boolean crouching) {
+        View view = View.WORLD;
+        if (firstPerson) {
+            view = View.FIRST_PERSON_ARMS;
+        }
+        return sample(base, now, view, crouching);
+    }
+
+    /** 全身第一人称：同第三人称取样，但索引写了 fpv_torso: false 的剪辑不取胯、腰、胸、头。 */
+    public Pose[] sampleFirstPersonBody(Pose[] base, double now, boolean crouching) {
+        return sample(base, now, View.FIRST_PERSON_BODY, crouching);
+    }
+
+    /** 取样视角：第三人称、独立第一人称手臂入口、全身第一人称。 */
+    private enum View { WORLD, FIRST_PERSON_ARMS, FIRST_PERSON_BODY }
+
+    private Pose[] sample(Pose[] base, double now, View view, boolean crouching) {
         Pose[] result = base.clone();
         // 从低层到高层混合；缺失的骨与通道直接保留下层已有结果。
         for (Playback playback : playing) {
             AnimationEntry entry = playback.entry;
-            if (firstPerson && !entry.firstPerson()) {
+            if (view == View.FIRST_PERSON_ARMS && !entry.firstPerson()) {
                 continue;
             }
             float weight = playback.weight(now);
@@ -220,7 +248,7 @@ public final class AnimationPlayer {
             AnimationEntry.Mask mask = effectiveMask(playback, now, crouching);
             for (var trackEntry : entry.clip().tracks().entrySet()) {
                 BoneId source = trackEntry.getKey();
-                if (!mask.includes(source) || (firstPerson && !source.arm())) {
+                if (!mask.includes(source) || skipsTrack(view, entry, source)) {
                     continue;
                 }
                 BoneId target = playback.mirror ? source.mirrored() : source;
@@ -242,6 +270,15 @@ public final class AnimationPlayer {
             blendSockets(result, playback, mask, time, weight);
         }
         return result;
+    }
+
+    private static boolean skipsTrack(View view, AnimationEntry entry, BoneId bone) {
+        // 独立手臂入口只取手臂；全身第一人称按索引去掉躯干前倾，手臂、腿和挂点仍跟剪辑。
+        return switch (view) {
+            case WORLD -> false;
+            case FIRST_PERSON_ARMS -> !bone.arm();
+            case FIRST_PERSON_BODY -> !entry.firstPersonTorso() && TORSO.contains(bone);
+        };
     }
 
     private static Vec3 blockbenchRotation(Vec3 raw, boolean mirror) {
@@ -479,6 +516,11 @@ public final class AnimationPlayer {
 
         boolean finished(double now) {
             return now >= fadeStart() + entry.blendOut();
+        }
+
+        boolean fadingIn(double now) {
+            // 没停、没到淡出，还在从下层淡入的头一段。
+            return Double.isNaN(stopped) && now < fadeStart() && now - start < entry.blendIn();
         }
 
         float weight(double now) {
