@@ -14,11 +14,28 @@ public enum BoneId {
     public static final BoneId[] ALL = values();
     public final BoneId parent;
     public final String key;
+    private final String skinPart;
+    private final boolean arm;
+    private BoneId mirrored;
+
+    static {
+        // 镜像骨要等全部枚举值建好才能互相指向；渲染每帧都查，只在这里解析一次名字。
+        for (BoneId bone : ALL) {
+            bone.mirrored = bone;
+            if (bone.key.startsWith("r_")) {
+                bone.mirrored = named("l_" + bone.key.substring(2));
+            } else if (bone.key.startsWith("l_")) {
+                bone.mirrored = named("r_" + bone.key.substring(2));
+            }
+        }
+    }
 
     BoneId(BoneId parent) {
         // 声明顺序保证父骨先于子骨，矩阵求值无需递归或额外拓扑排序。
         this.parent = parent;
         this.key = name().toLowerCase(Locale.ROOT);
+        this.skinPart = skinPartOf(key);
+        this.arm = skinPart.endsWith("arm");
     }
 
     public static BoneId named(String name) {
@@ -36,15 +53,19 @@ public enum BoneId {
     }
 
     public boolean arm() {
-        return skinPart().endsWith("arm");
+        return arm;
     }
 
     public String skinPart() {
+        return skinPart;
+    }
+
+    private static String skinPartOf(String key) {
         // 原版六个皮肤区域同时决定外层开关与允许蒙皮连接的分段范围。
-        if (this == HEAD) {
+        if (key.equals("head")) {
             return "head";
         }
-        if (this == ROOT || this == PELVIS || this == WAIST || this == CHEST) {
+        if (key.equals("root") || key.equals("pelvis") || key.equals("waist") || key.equals("chest")) {
             return "body";
         }
         boolean leg = key.endsWith("thigh") || key.endsWith("shin")
@@ -54,9 +75,6 @@ public enum BoneId {
 
     public BoneId mirrored() {
         // 镜像只交换解剖左右，中央骨仍使用原来的对接键。
-        if (key.startsWith("r_")) {
-            return named("l_" + key.substring(2));
-        }
-        return key.startsWith("l_") ? named("r_" + key.substring(2)) : this;
+        return mirrored;
     }
 }

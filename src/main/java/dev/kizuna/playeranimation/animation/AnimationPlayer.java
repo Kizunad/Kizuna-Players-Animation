@@ -137,8 +137,13 @@ public final class AnimationPlayer {
     }
 
     public boolean hasActive(String id, double now) {
-        return playing.stream().anyMatch(playback -> playback.entry.id().equals(id)
-                && !playback.finished(now) && playback.weight(now) > 0);
+        // 渲染每帧要问十来次，不走 stream。
+        for (Playback playback : playing) {
+            if (playback.entry.id().equals(id) && !playback.finished(now) && playback.weight(now) > 0) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /** 当前仍有权重的播放实例，供渲染期读取索引里按剪辑时间生效的字段（如 aim_windows）。 */
@@ -177,8 +182,13 @@ public final class AnimationPlayer {
     }
 
     public boolean hasTwoHandedAction(double now) {
-        return playing.stream().anyMatch(playback -> !playback.finished(now) && playback.weight(now) > 0
-                && playback.entry.hand() == AnimationEntry.Hand.BOTH);
+        for (Playback playback : playing) {
+            if (!playback.finished(now) && playback.weight(now) > 0
+                    && playback.entry.hand() == AnimationEntry.Hand.BOTH) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public float normalizedProgress(String id, double now) {
@@ -296,9 +306,7 @@ public final class AnimationPlayer {
         AnimationEntry entry = playback.entry;
         for (BoneId socket : SOCKETS) {
             BoneId hand = socket.parent;
-            boolean drivesArm = entry.clip().tracks().keySet().stream()
-                    .anyMatch(bone -> bone.skinPart().equals(hand.skinPart()));
-            if (!mask.includes(hand) || !drivesArm) {
+            if (!mask.includes(hand) || !playback.drivesArm(socket)) {
                 continue;
             }
             Vec3 rotation = Vec3.ZERO;
@@ -390,6 +398,8 @@ public final class AnimationPlayer {
         final String playId;
         final boolean scrub;
         final AnimationClip.Loop loopOverride;
+        final boolean drivesRightArm;
+        final boolean drivesLeftArm;
         double stopped = Double.NaN;
         double lastEventTime = -1;
         float scrubFrom;
@@ -412,6 +422,22 @@ public final class AnimationPlayer {
             this.playId = request.playId();
             this.scrub = mode == PlaybackMode.SCRUB;
             this.loopOverride = request.loopOverride();
+            this.drivesRightArm = drivesArm(entry, BoneId.R_HAND);
+            this.drivesLeftArm = drivesArm(entry, BoneId.L_HAND);
+        }
+
+        private static boolean drivesArm(AnimationEntry entry, BoneId hand) {
+            // 剪辑有没有写这只手臂的任一根骨；起播时算一次，逐帧混合挂点时直接用。
+            for (BoneId bone : entry.clip().tracks().keySet()) {
+                if (bone.skinPart().equals(hand.skinPart())) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        boolean drivesArm(BoneId socket) {
+            return socket == BoneId.R_ITEM ? drivesRightArm : drivesLeftArm;
         }
 
         AnimationClip.Loop loop() {

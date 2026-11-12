@@ -7,6 +7,7 @@ import dev.kizuna.playeranimation.client.PlayerMeshRenderer;
 import dev.kizuna.playeranimation.model.*;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import net.minecraft.client.model.geom.builders.CubeDeformation;
@@ -16,6 +17,7 @@ import net.minecraft.world.entity.HumanoidArm;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
 import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 
@@ -140,5 +142,46 @@ class DeliveredRigTest {
         Matrix4f[] moved = Rig.matrices(skeleton, pose);
         Matrix4f expected = Rig.toVanilla(moved[BoneId.ROOT.ordinal()]).mul(item);
         assertTrue(expected.equals(Rig.itemTransform(skeleton, moved, BoneId.R_ITEM), 0.00001f));
+    }
+
+    @Test
+    void onlyRigidRegionsAreMergedAndBendBandsStayOnePixelPerQuad() throws Exception {
+        // 合并只能发生在四角权重相同的整块上：这样的四边形怎么弯都是平面，和逐像素细分画出来一样。
+        // 关节带里四角权重不同的四边形必须保持一像素见方，否则弯折处的三角面就变了。
+        for (boolean slim : new boolean[]{false, true}) {
+            SkinnedMesh mesh = new SkinnedMesh(skeleton(slim));
+            int merged = 0;
+            int bending = 0;
+            for (SkinnedMesh.Surface surface : mesh.surfaces()) {
+                // 外层的位置带膨胀，按内层的像素坐标量边长。
+                if (surface.outer()) {
+                    continue;
+                }
+                var vertices = surface.vertices();
+                for (int i = 0; i < vertices.size(); i += 4) {
+                    boolean rigid = true;
+                    float longest = 0;
+                    for (int j = 0; j < 4; j++) {
+                        var a = vertices.get(i + j);
+                        var b = vertices.get(i + (j + 1) % 4);
+                        rigid &= Arrays.equals(a.weights(), b.weights());
+                        Vec3 from = a.position();
+                        Vec3 to = b.position();
+                        longest = Math.max(longest, new Vector3f(from.x(), from.y(), from.z())
+                                .distance(to.x(), to.y(), to.z()));
+                    }
+                    if (rigid) {
+                        merged += longest > 1.0001f ? 1 : 0;
+                    } else {
+                        bending++;
+                        assertTrue(longest <= 1.0001f, "关节带里的四边形被合并了: " + surface.bone() + " slim=" + slim);
+                    }
+                }
+                if (surface.bone() == BoneId.HEAD) {
+                    assertEquals(6 * 4, vertices.size(), "头整块不弯，每面一个四边形");
+                }
+            }
+            assertTrue(merged > 0 && bending > 0);
+        }
     }
 }

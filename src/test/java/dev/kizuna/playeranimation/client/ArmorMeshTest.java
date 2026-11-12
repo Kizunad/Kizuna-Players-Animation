@@ -122,7 +122,13 @@ class ArmorMeshTest {
                             assertTrue(actual.corners.isEmpty(), () -> "空部件多出网格: " + slot + " " + surface.bone());
                             continue;
                         }
-                        assertTrue(actual.corners.size() > expected.corners.size());
+                        if (surface.bone() == BoneId.HEAD) {
+                            // 头和帽层整块不弯，合并后和原版一样每面一个四边形。
+                            assertEquals(expected.corners.size(), actual.corners.size());
+                        } else {
+                            // 带关节的部件在关节带保留逐像素细分。
+                            assertTrue(actual.corners.size() > expected.corners.size());
+                        }
                         for (var vertex : actual.corners) {
                             assertTrue(onVanillaFace(vertex, expected.corners),
                                     () -> "原版几何/UV 不一致: " + surface.bone() + " slim=" + slim

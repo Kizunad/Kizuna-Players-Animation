@@ -198,7 +198,7 @@ PA 提供 `assets/minecraft/items/bow.json` 的模型分支，资源包若覆盖
 - `start_tick` 是目标玩家所在世界的非负总 tick，单位为 1/20 秒。服务端发送时设置；客户端只在起播时将世界 tick 映射为本地播放起点，之后按本地动画时钟推进，避免后来进入追踪范围的玩家从头看到循环动作。旧调用方不设置时从收包时刻开始。补发时跳过已经过去的时间线事件；`normalized_progress` 是原版状态 scrub 的互斥路径，收到后不使用自由时钟，连续同 ID 请求只更新游标。`PlayerAnimationAction` 目录中的一次性动作由服务端按资源时长自动停止并移出补发快照，结束已久的一次性动作也不再显示。目录外的自定义动作仍须显式停止循环、保持或一次性动作；返回 `OK` 表示该同步请求已处理。
 - 停止必须显式选择目标；未设置 `target`、空 `animation_id` 或 `all: false` 均为无效请求，不能隐式停止全部。停止不存在或已经停止的动作仍成功，未建立播放器的玩家也视为无需停止；不会因此创建播放状态。
 - `playback_rate` 使用字段 6；不能与 `normalized_progress` 同时出现。剪辑时间为真实经过秒数乘倍率，时间线事件与自然结束一同放慢，淡入淡出仍按真实秒。`ServerPlayerAnimations.play(player, action, rate)`、`playFrom(player, animation, startTick, rate)` 提供倍率入口；旧重载等价于倍率 1，且不写入该字段，保留原字节格式。服务端到期为 `startTick + ceil(naturalDurationTicks / rate)`，超出 tick 表示范围时饱和到最大 tick；补发保留原始起点与倍率并跳过历史事件。`/kpa_server play <player> <animation> [rate]` 可用于验证。实体字节入口暂不支持倍率。
-- 一条可解码的请求处理后返回一个 `Result`。`OK` 表示播放已处理或停止已交给播放器；动画可能仍在淡入或淡出，不表示播放结束，也不表示服务端玩法成功。无效请求原样回传能取得且长度合法的 `request_id`，缺失或过长时为空。
+- 一条可解码的请求处理后返回一个 `Result`；带 `normalized_progress` 的请求（scrub）除外，它每 tick 都可能发，客户端不回 `Result`，处理失败只记在客户端日志，服务端也不为它登记待回执。`OK` 表示播放已处理或停止已交给播放器；动画可能仍在淡入或淡出，不表示播放结束，也不表示服务端玩法成功。无效请求原样回传能取得且长度合法的 `request_id`，缺失或过长时为空。
 
 | `Result.Code` | 数值 | 语义 |
 | --- | --- | --- |
@@ -216,7 +216,7 @@ PA 提供 `assets/minecraft/items/bow.json` 的模型分支，资源包若覆盖
 
 原版状态驱动的 `normalized_progress` 仍按真实拉弓、挥手等状态更新；每次更新从当前可见姿态向新目标插值，更新边界不跳到目标，停止时冻结当前插值姿态。它不对自由播放的动作反复校时。
 
-`ServerPlayerAnimations.play(player, id)`、`stop(player, id)`、`stopAll(player)` 必须在服务端主线程调用，返回本次请求 ID。`playForTrackers(player, action)` 给本人客户端已经自己播放的目录动作用：校验、登记、到期和补发同 `play`，但播放包、补发和这段动作的停止（到期停止和显式 `stop`）都只发给追踪者、不发本人；`stopAll` 仍发给所有人。同一动作之后再用 `play` 登记时恢复发给本人。`ServerPlayerAnimations.RESULT` 提供接收客户端与其上报结果；只接收发给该客户端且尚在 30 秒（600 tick）回执窗口内的请求结果。每个实际收到请求的客户端分别回应，不做全体成功聚合、自动重试或玩法判定；补发仍可产生原 ID 的新回执。无法解码的包记录错误并丢弃；可解码但业务字段无效的请求返回 `INVALID_REQUEST`。服务器不接收 C2S 播放／停止请求。管理员可用 `/kpa_server play <player> <id>`、`/kpa_server stop <player> [id]` 验证广播，权限等级为 2；已有 `/kpa` 命令仍仅用于本地预览。`ServerPlayerAnimations.animationIds()` 按索引顺序返回本模组自带 `player_anim_index.json` 中的全部 id，供服务端指令补全（`/kpa_server` 的 id 参数即取此列表）；资源包不影响它，播放请求也不据此校验，模组内缺少该索引时直接报错。
+`ServerPlayerAnimations.play(player, id)`、`stop(player, id)`、`stopAll(player)` 必须在服务端主线程调用，返回本次请求 ID。`playForTrackers(player, action)` 给本人客户端已经自己播放的目录动作用：校验、登记、到期和补发同 `play`，但播放包、补发和这段动作的停止（到期停止和显式 `stop`）都只发给追踪者、不发本人；`stopAll` 仍发给所有人。同一动作之后再用 `play` 登记时恢复发给本人。`ServerPlayerAnimations.scrub(player, id, progress)` 在进度与上一次相同、且距上一次发送不满 20 tick 时不重发，返回上一次的请求 ID；进度变了立即发，进度一直不变时每 20 tick 重发一次，让清过播放表的客户端（例如资源重载）重新摆好姿态。`ServerPlayerAnimations.RESULT` 提供接收客户端与其上报结果（不含 scrub）；只接收发给该客户端且尚在 30 秒（600 tick）回执窗口内的请求结果。每个实际收到请求的客户端分别回应，不做全体成功聚合、自动重试或玩法判定；补发仍可产生原 ID 的新回执。无法解码的包记录错误并丢弃；可解码但业务字段无效的请求返回 `INVALID_REQUEST`。服务器不接收 C2S 播放／停止请求。管理员可用 `/kpa_server play <player> <id>`、`/kpa_server stop <player> [id]` 验证广播，权限等级为 2；已有 `/kpa` 命令仍仅用于本地预览。`ServerPlayerAnimations.animationIds()` 按索引顺序返回本模组自带 `player_anim_index.json` 中的全部 id，供服务端指令补全（`/kpa_server` 的 id 参数即取此列表）；资源包不影响它，播放请求也不据此校验，模组内缺少该索引时直接报错。
 
 同一 v1 内只添加兼容字段；删除字段或枚举值必须同时 `reserved` 原编号和名称，禁止复用。新增必需语义或改变既有字段含义时升级包版本。未知字段可保留并忽略，未知结果码与零值不能按成功处理；未来新增的停止目标也不能在旧接收端退化成停止全部。
 

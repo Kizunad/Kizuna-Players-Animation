@@ -6,7 +6,8 @@
   "entrypoints": {
     "fabric-gametest": [
       "dev.kizuna.playeranimation.server.HandSwingGameTest",
-      "dev.kizuna.playeranimation.server.KpaServerCommandGameTest"
+      "dev.kizuna.playeranimation.server.KpaServerCommandGameTest",
+      "dev.kizuna.playeranimation.server.ScrubSyncGameTest"
     ]
   }
 }

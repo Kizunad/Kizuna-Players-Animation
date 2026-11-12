@@ -37,7 +37,13 @@ public final class ClientAnimationNetworking {
         ClientPlayNetworking.registerGlobalReceiver(AnimationPackets.PLAY, (payload, context) -> {
             try {
                 PlayRequest request = AnimationPackets.read(payload, PlayRequest.parser());
-                reply(play(context.client(), request));
+                Result result = play(context.client(), request);
+                if (request.hasNormalizedProgress()) {
+                    // scrub 每 tick 都可能来，只在本地记失败，不回执。
+                    logFailure(result);
+                } else {
+                    reply(result);
+                }
             } catch (InvalidProtocolBufferException | IllegalArgumentException exception) {
                 PlayerAnimationClient.LOG.error("动画播放包无法解码: {}", exception.getMessage());
             }
@@ -106,10 +112,14 @@ public final class ClientAnimationNetworking {
 
     private static void reply(Result result) {
         // 诊断与发送分开；正在协商的回执排队，不丢弃也不承担身体授权。
+        logFailure(result);
+        REPLIES.add(result);
+    }
+
+    private static void logFailure(Result result) {
         if (result.getCode() != Result.Code.OK) {
             PlayerAnimationClient.LOG.error("动画请求 {} 返回 {}: {}", result.getRequestId(), result.getCode(), result.getDetail());
         }
-        REPLIES.add(result);
     }
 
     private static void tick(Minecraft client) {

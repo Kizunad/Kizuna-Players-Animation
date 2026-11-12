@@ -159,7 +159,8 @@ class GeometryTest {
         var surface = new SkinnedMesh(skeleton).surfaces().stream()
                 .filter(item -> item.part().equals("head/mushrooms/red_mushroom_1"))
                 .findFirst().orElseThrow();
-        assertEquals(6 * 4 * 4 * 2, surface.vertices().size());
+        // 蘑菇跟着整块不弯的头，正反两面各合并成一个四边形。
+        assertEquals(4 * 2, surface.vertices().size());
         for (var vertex : surface.vertices()) {
             Vec3 position = vertex.position();
             assertTrue(Float.isFinite(position.x()) && Float.isFinite(position.y()));

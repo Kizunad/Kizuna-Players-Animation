@@ -63,12 +63,10 @@ public record Channel(List<Keyframe> frames) {
         if (seconds < frames.get(0).seconds) {
             return frames.get(0).pre;
         }
-        for (int i = 0; i < frames.size() - 1; i++) {
+        int i = segment(seconds);
+        if (i >= 0) {
             Keyframe left = frames.get(i);
             Keyframe right = frames.get(i + 1);
-            if (seconds >= right.seconds) {
-                continue;
-            }
             float amount = (seconds - left.seconds) / (right.seconds - left.seconds);
             if (left.interpolation == Interpolation.STEP) {
                 return left.post;
@@ -87,6 +85,24 @@ public record Channel(List<Keyframe> frames) {
             return left.post.lerp(right.pre, amount);
         }
         return frames.get(frames.size() - 1).post;
+    }
+
+    private int segment(float seconds) {
+        // 二分找右端时间第一个大于 seconds 的那一段，返回它的左帧序号；已过末帧返回 -1。
+        int low = 0;
+        int high = frames.size() - 1;
+        if (seconds >= frames.get(high).seconds) {
+            return -1;
+        }
+        while (high - low > 1) {
+            int middle = (low + high) >>> 1;
+            if (seconds >= frames.get(middle).seconds) {
+                low = middle;
+            } else {
+                high = middle;
+            }
+        }
+        return low;
     }
 
     private static float catmull(float a, float b, float c, float d, float t) {

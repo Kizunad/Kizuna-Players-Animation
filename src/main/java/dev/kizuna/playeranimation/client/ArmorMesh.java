@@ -8,9 +8,12 @@ import dev.kizuna.playeranimation.model.Skeleton;
 import dev.kizuna.playeranimation.model.SkinnedMesh;
 import dev.kizuna.playeranimation.model.Vec3;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import net.minecraft.client.model.HumanoidModel;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.model.geom.PartPose;
@@ -24,6 +27,10 @@ public final class ArmorMesh {
     private record Binding(BoneId bone, Skeleton.Cube cube) { }
     record Corner(Vec3 position, Vec3 normal, float u, float v) { }
     private static final String HAT_PATH = "/hat";
+    private static final float CUT_KEY_SCALE = 1024;
+    private static final int AXES = 3;
+    /** 一个原版面按像素格点烘焙好的顶点，[列][行]；columnAt、rowAt 是各条格线在绑定空间的「轴 + 坐标」键。 */
+    private record FaceGrid(SkinnedMesh.Vertex[][] vertices, long[] columnAt, long[] rowAt) { }
     private final List<SkinnedMesh.Surface> surfaces;
 
     public ArmorMesh(HumanoidModel<?> armor, PlayerAssets.Model player) {
@@ -144,34 +151,157 @@ public final class ArmorMesh {
                 .scale((cuboid.maxX - cuboid.minX) / (max.x - min.x),
                         (cuboid.maxY - cuboid.minY) / (max.y - min.y),
                         (cuboid.maxZ - cuboid.minZ) / (max.z - min.z)).translate(-min.x, -min.y, -min.z);
+        Placement placement = new Placement(bind, uninflate, bindings, skin);
+        List<FaceGrid> grids = new ArrayList<>();
         for (int face = 0; face < corners.size(); face += 4) {
-            Corner a = corners.get(face);
-            Corner b = corners.get(face + 1);
-            Corner c = corners.get(face + 2);
-            Corner d = corners.get(face + 3);
-            Vector3f qa = transform(uninflate, a.position());
-            // 每原始像素一格，膝肘、腰胸、踝与脚尖切面都来自现有分段几何。
-            int columns = Math.max(1, Math.round(qa.distance(transform(uninflate, b.position()))));
-            int rows = Math.max(1, Math.round(qa.distance(transform(uninflate, d.position()))));
-            for (int y = 0; y < rows; y++) {
-                for (int x = 0; x < columns; x++) {
-                    addVertex(a, b, c, d, (float) x / columns, (float) y / rows, bind, uninflate, bindings, skin, result);
-                    addVertex(a, b, c, d, (float) (x + 1) / columns, (float) y / rows, bind, uninflate, bindings, skin, result);
-                    addVertex(a, b, c, d, (float) (x + 1) / columns, (float) (y + 1) / rows, bind, uninflate, bindings, skin, result);
-                    addVertex(a, b, c, d, (float) x / columns, (float) (y + 1) / rows, bind, uninflate, bindings, skin, result);
+            grids.add(bakeGrid(corners.subList(face, face + 4), placement));
+        }
+        // 权重不变的一片像素合成一个四边形，和逐像素细分是同一张曲面；关节带里的格子保持一像素一格。
+        // 要留的格线按「轴 + 坐标」记，同一方块的各个面共用，面与面的公共边上不出现丁字接头。
+        Set<Long> cuts = new HashSet<>();
+        for (FaceGrid grid : grids) {
+            collectCuts(grid, cuts);
+        }
+        for (FaceGrid grid : grids) {
+            emitFace(grid, cuts, result);
+        }
+    }
+
+    private record Placement(Matrix4f bind, Matrix4f uninflate, List<Binding> bindings, SkinnedMesh skin) { }
+
+    private static FaceGrid bakeGrid(List<Corner> quad, Placement placement) {
+        Vector3f qa = transform(placement.uninflate(), quad.get(0).position());
+        // 格点每原始像素一个，膝肘、腰胸、踝与脚尖切面都来自现有分段几何。
+        int columns = Math.max(1, Math.round(qa.distance(transform(placement.uninflate(), quad.get(1).position()))));
+        int rows = Math.max(1, Math.round(qa.distance(transform(placement.uninflate(), quad.get(3).position()))));
+        SkinnedMesh.Vertex[][] vertices = new SkinnedMesh.Vertex[columns + 1][rows + 1];
+        Vec3[][] references = new Vec3[columns + 1][rows + 1];
+        for (int x = 0; x <= columns; x++) {
+            for (int y = 0; y <= rows; y++) {
+                float u = (float) x / columns;
+                float v = (float) y / rows;
+                references[x][y] = reference(quad, u, v, placement);
+                vertices[x][y] = vertex(quad, u, v, references[x][y], placement);
+            }
+        }
+        // 列方向沿哪根轴走，那根轴上的坐标就是各列格线的位置；行同理。
+        int columnAxis = dominantAxis(references[0][0], references[columns][0]);
+        int rowAxis = dominantAxis(references[0][0], references[0][rows]);
+        long[] columnAt = new long[columns + 1];
+        long[] rowAt = new long[rows + 1];
+        for (int x = 0; x <= columns; x++) {
+            columnAt[x] = cutKey(columnAxis, references[x][0].axis(columnAxis));
+        }
+        for (int y = 0; y <= rows; y++) {
+            rowAt[y] = cutKey(rowAxis, references[0][y].axis(rowAxis));
+        }
+        return new FaceGrid(vertices, columnAt, rowAt);
+    }
+
+    private static int dominantAxis(Vec3 from, Vec3 to) {
+        int dominant = 0;
+        for (int axis = 1; axis < AXES; axis++) {
+            if (Math.abs(to.axis(axis) - from.axis(axis)) > Math.abs(to.axis(dominant) - from.axis(dominant))) {
+                dominant = axis;
+            }
+        }
+        return dominant;
+    }
+
+    private static long cutKey(int axis, float coordinate) {
+        return ((long) axis << Integer.SIZE) | (Math.round(coordinate * CUT_KEY_SCALE) & 0xFFFFFFFFL);
+    }
+
+    private static void collectCuts(FaceGrid grid, Set<Long> cuts) {
+        SkinnedMesh.Vertex[][] vertices = grid.vertices();
+        int columns = vertices.length - 1;
+        int rows = vertices[0].length - 1;
+        boolean bendsAcrossColumns = false;
+        boolean bendsAcrossRows = false;
+        for (int x = 0; x < columns; x++) {
+            for (int y = 0; y <= rows; y++) {
+                if (!Arrays.equals(vertices[x][y].weights(), vertices[x + 1][y].weights())) {
+                    // 权重沿这一列变化：这一格是关节带，两侧格线都留。
+                    cuts.add(grid.columnAt()[x]);
+                    cuts.add(grid.columnAt()[x + 1]);
+                    bendsAcrossColumns = true;
+                    break;
                 }
+            }
+        }
+        for (int y = 0; y < rows; y++) {
+            for (int x = 0; x <= columns; x++) {
+                if (!Arrays.equals(vertices[x][y].weights(), vertices[x][y + 1].weights())) {
+                    cuts.add(grid.rowAt()[y]);
+                    cuts.add(grid.rowAt()[y + 1]);
+                    bendsAcrossRows = true;
+                    break;
+                }
+            }
+        }
+        // 关节带里的格子弯折后不是平面，另一个方向必须保持逐像素，才和原来的三角面一致。
+        if (bendsAcrossRows) {
+            for (long column : grid.columnAt()) {
+                cuts.add(column);
+            }
+        }
+        if (bendsAcrossColumns) {
+            for (long row : grid.rowAt()) {
+                cuts.add(row);
             }
         }
     }
 
-    private static void addVertex(Corner a, Corner b, Corner c, Corner d, float u, float v, Matrix4f bind,
-                                   Matrix4f uninflate, List<Binding> bindings, SkinnedMesh skin,
-                                   List<SkinnedMesh.Vertex> vertices) {
+    private static void emitFace(FaceGrid grid, Set<Long> cuts, List<SkinnedMesh.Vertex> output) {
+        SkinnedMesh.Vertex[][] vertices = grid.vertices();
+        int[] columns = keptLines(grid.columnAt(), cuts);
+        int[] rows = keptLines(grid.rowAt(), cuts);
+        for (int y = 0; y + 1 < rows.length; y++) {
+            for (int x = 0; x + 1 < columns.length; x++) {
+                output.add(vertices[columns[x]][rows[y]]);
+                output.add(vertices[columns[x + 1]][rows[y]]);
+                output.add(vertices[columns[x + 1]][rows[y + 1]]);
+                output.add(vertices[columns[x]][rows[y + 1]]);
+            }
+        }
+    }
+
+    private static int[] keptLines(long[] lines, Set<Long> cuts) {
+        // 首尾两条是面的边界，一定留；中间的只留登记过的。
+        int last = lines.length - 1;
+        int[] kept = new int[lines.length];
+        int count = 0;
+        for (int line = 0; line <= last; line++) {
+            if (line == 0 || line == last || cuts.contains(lines[line])) {
+                kept[count++] = line;
+            }
+        }
+        return Arrays.copyOf(kept, count);
+    }
+
+    private static Vec3 reference(List<Corner> quad, float u, float v, Placement placement) {
+        // 从膨胀后的实际顶点还原到未膨胀的绑定位置，权重和格线都按这个位置算。
+        Vec3 point = point(quad, u, v);
+        Vector3f reference = transform(placement.uninflate(), point);
+        placement.bind().transformPosition(reference);
+        return modelSpace(reference);
+    }
+
+    private static Vec3 point(List<Corner> quad, float u, float v) {
+        return quad.get(0).position().lerp(quad.get(1).position(), u)
+                .lerp(quad.get(3).position().lerp(quad.get(2).position(), u), v);
+    }
+
+    private static SkinnedMesh.Vertex vertex(List<Corner> quad, float u, float v, Vec3 q, Placement placement) {
         // 在原版四边形上插值位置与 UV，保留镜像、面绕序和纹理图集坐标。
-        Vec3 point = a.position().lerp(b.position(), u).lerp(d.position().lerp(c.position(), u), v);
-        Vector3f reference = transform(uninflate, point);
-        bind.transformPosition(reference);
-        Vec3 q = modelSpace(reference);
+        Corner a = quad.get(0);
+        Corner b = quad.get(1);
+        Corner c = quad.get(2);
+        Corner d = quad.get(3);
+        Matrix4f bind = placement.bind();
+        List<Binding> bindings = placement.bindings();
+        SkinnedMesh skin = placement.skin();
+        Vec3 point = point(quad, u, v);
         Binding selected = null;
         float nearest = Float.POSITIVE_INFINITY;
         for (Binding binding : bindings) {
@@ -189,8 +319,8 @@ public final class ArmorMesh {
         Vector3f normal = bind.transformDirection(a.normal().x(), a.normal().y(), a.normal().z(), new Vector3f());
         float texU = lerp(lerp(a.u(), b.u(), u), lerp(d.u(), c.u(), u), v);
         float texV = lerp(lerp(a.v(), b.v(), u), lerp(d.v(), c.v(), u), v);
-        vertices.add(new SkinnedMesh.Vertex(modelSpace(transform(bind, point)),
-                new Vec3(normal.x, -normal.y, normal.z), texU, texV, skin.weights(selected.bone(), q)));
+        return new SkinnedMesh.Vertex(modelSpace(transform(bind, point)),
+                new Vec3(normal.x, -normal.y, normal.z), texU, texV, skin.weights(selected.bone(), q));
     }
 
     private static Vector3f transform(Matrix4f matrix, Vec3 point) {

@@ -80,6 +80,8 @@ public final class ServerPlayerAnimations implements ModInitializer {
     private static final Map<PlaybackKey, Long> FINITE_EXPIRIES = new HashMap<>();
     private static final VanillaAnimationScheduler VANILLA = new VanillaAnimationScheduler();
     private static final int RECEIPT_TIMEOUT_TICKS = 20 * 30;
+    /** scrub 进度没变时隔这么多 tick 才重发一次；重发只为让清过播放表的客户端（如资源重载）重新摆好姿态。 */
+    static final int SCRUB_REFRESH_TICKS = 20;
     private static final String ANIMATION_INDEX = "assets/" + AnimationPackets.MOD_ID + "/player_anim_index.json";
     private record TrackingPair(UUID target, UUID viewer) { }
     private record Receipt(UUID viewer, String request) { }
@@ -220,10 +222,19 @@ public final class ServerPlayerAnimations implements ModInitializer {
         if (!Float.isFinite(normalizedProgress) || normalizedProgress < 0 || normalizedProgress > 1) {
             throw new IllegalArgumentException("normalized_progress 必须在 [0,1]");
         }
+        long now = player.level().getGameTime();
+        PlayRequest previous = STATE.saved(player.getUUID(), animation);
+        if (previous != null && previous.hasNormalizedProgress()
+                && previous.getNormalizedProgress() == normalizedProgress
+                && now >= previous.getStartTick() && now - previous.getStartTick() < SCRUB_REFRESH_TICKS) {
+            // 进度没变：客户端已经停在这个进度上，不重发。登记照旧挪到末尾，晚加入的观察者补发顺序不变。
+            STATE.play(player.getUUID(), previous);
+            return previous.getRequestId();
+        }
         String requestId = UUID.randomUUID().toString();
         PlayRequest request = PlayRequest.newBuilder().setRequestId(requestId)
                 .setPlayerUuid(player.getStringUUID()).setAnimationId(animation)
-                .setStartTick(player.level().getGameTime()).setNormalizedProgress(normalizedProgress).build();
+                .setStartTick(now).setNormalizedProgress(normalizedProgress).build();
         checkSize(request);
         STATE.play(player.getUUID(), request);
         FINITE_EXPIRIES.remove(new PlaybackKey(player.getUUID(), animation));
@@ -318,8 +329,11 @@ public final class ServerPlayerAnimations implements ModInitializer {
     private static void send(ServerPlayer viewer, CustomPacketPayload.Type<AnimationPackets.Payload> channel,
                              MessageLite message, String requestId) {
         // 调用点已完成整组通道校验，不在实际发送处吞掉缺接线错误。
-        int deadline = viewer.level().getServer().getTickCount() + RECEIPT_TIMEOUT_TICKS;
-        PENDING.put(new Receipt(viewer.getUUID(), requestId), deadline);
+        // scrub 每 tick 都可能发，客户端不回执，这里也不等。
+        if (!(message instanceof PlayRequest play && play.hasNormalizedProgress())) {
+            int deadline = viewer.level().getServer().getTickCount() + RECEIPT_TIMEOUT_TICKS;
+            PENDING.put(new Receipt(viewer.getUUID(), requestId), deadline);
+        }
         ServerPlayNetworking.send(viewer, AnimationPackets.write(channel, message));
     }
 

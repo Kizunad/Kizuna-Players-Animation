@@ -28,6 +28,19 @@ public final class AnimationSyncState {
         animations.put(request.getAnimationId(), new Saved(request, audience));
     }
 
+    /** 这名玩家这个动作当前登记的请求，没登记返回 null。 */
+    public PlayRequest saved(UUID player, String animation) {
+        var animations = players.get(player);
+        if (animations == null) {
+            return null;
+        }
+        Saved saved = animations.get(animation);
+        if (saved == null) {
+            return null;
+        }
+        return saved.request();
+    }
+
     public Audience audience(UUID player, String animation) {
         // 没登记的动作（含已经停掉的）按所有人，停止包照旧发给本人。
         var animations = players.get(player);

@@ -8,7 +8,6 @@ import dev.kizuna.playeranimation.model.Rig;
 import dev.kizuna.playeranimation.model.Skeleton;
 import dev.kizuna.playeranimation.model.SkinnedMesh;
 import dev.kizuna.playeranimation.model.Vec3;
-import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
@@ -149,8 +148,7 @@ public final class PlayerMeshRenderer {
         // 望远镜、号角和弩资源按平视制作；把原版视线俯仰叠到头与瞄准上臂，
         // 保持镜筒/吹口/弩托沿视线而不是固定在世界水平面。
         String active = null;
-        for (String candidate : new String[]{"spyglass", "spyglass_off", "toot_horn", "toot_horn_off",
-                "crossbow_hold", "crossbow_hold_off", "bow_draw", "bow_draw_off"}) {
+        for (String candidate : PITCH_COMPENSATED) {
             if (animation.hasActive(candidate, now)) {
                 active = candidate;
                 break;
@@ -191,17 +189,34 @@ public final class PlayerMeshRenderer {
 
     public static Pose[] basePose(Skeleton skeleton, PlayerModel model, boolean firstPerson, boolean slim,
                                   boolean stripLook) {
-        Map<BoneId, Matrix4f> absolute = new EnumMap<>(BoneId.class);
+        Matrix4f[] absolute = new Matrix4f[BoneId.ALL.length];
+        Matrix4f[] inverse = new Matrix4f[BoneId.ALL.length];
+        Matrix4f unmoved = new Matrix4f();
         Pose[] pose = Rig.zeroPose();
         // 原版六部件在绑定空间的变换转换为 25 骨局部姿态；保留蹲伏等枢轴位移。
+        // 同一部件里的骨共用一个原版变换，只算一次；相对父骨没有动的骨直接是零姿态，不再求逆相乘。
         for (BoneId bone : BoneId.ALL) {
-            ModelPart part = part(model, bone, false);
-            // 去视线时头部只保留枢轴位移（潜行下移）与滚转，偏航/俯仰交给视线层。
-            boolean lookless = stripLook && bone == BoneId.HEAD;
-            Matrix4f target = bone == BoneId.ROOT || (firstPerson && !bone.arm())
-                    ? new Matrix4f() : vanillaTransform(part, lookless);
-            absolute.put(bone, target);
-            Matrix4f local = bone.parent == null ? target : new Matrix4f(absolute.get(bone.parent)).invert().mul(target);
+            Matrix4f target;
+            if (bone == BoneId.ROOT || (firstPerson && !bone.arm())) {
+                target = unmoved;
+            } else if (absolute[bone.parent.ordinal()] != unmoved && bone.parent.skinPart().equals(bone.skinPart())) {
+                target = absolute[bone.parent.ordinal()];
+            } else {
+                // 去视线时头部只保留枢轴位移（潜行下移）与滚转，偏航/俯仰交给视线层。
+                boolean lookless = stripLook && bone == BoneId.HEAD;
+                target = vanillaTransform(part(model, bone, false), lookless);
+            }
+            absolute[bone.ordinal()] = target;
+            Matrix4f local;
+            if (bone.parent == null || absolute[bone.parent.ordinal()] == target) {
+                local = new Matrix4f();
+            } else {
+                int parent = bone.parent.ordinal();
+                if (inverse[parent] == null) {
+                    inverse[parent] = new Matrix4f(absolute[parent]).invert();
+                }
+                local = new Matrix4f(inverse[parent]).mul(target);
+            }
             if (slim && bone.socket()) {
                 // 原版细臂持物先沿模型 X 内移肩部，再旋转手臂；挂点已包含零姿态内移。
                 // 将差值写入底层局部姿态，让后续 root、胸、前臂和手腕动画共同带动它。
@@ -258,8 +273,8 @@ public final class PlayerMeshRenderer {
                 continue;
             }
             for (SkinnedMesh.Vertex vertex : surface.vertices()) {
-                SkinnedMesh.deform(vertex.position(), vertex.weights(), frame.matrices, false, position);
-                SkinnedMesh.deform(vertex.normal(), vertex.weights(), frame.matrices, true, normal);
+                SkinnedMesh.deform(vertex, frame.matrices, false, position);
+                SkinnedMesh.deform(vertex, frame.matrices, true, normal);
                 position.set(position.x / Rig.PIXELS_PER_BLOCK,
                         (Rig.MODEL_ORIGIN_HEIGHT - position.y) / Rig.PIXELS_PER_BLOCK, position.z / Rig.PIXELS_PER_BLOCK);
                 entry.pose().transformPosition(position);
