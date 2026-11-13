@@ -41,6 +41,19 @@ public final class AnimationSyncState {
         return saved.request();
     }
 
+    /** 按请求 ID 找当前登记的 scrub 请求；已被新进度顶掉、已停止，或这个 ID 不是 scrub 时返回 null。 */
+    public PlayRequest scrub(String requestId) {
+        for (var animations : players.values()) {
+            for (Saved saved : animations.values()) {
+                PlayRequest request = saved.request();
+                if (request.hasNormalizedProgress() && request.getRequestId().equals(requestId)) {
+                    return request;
+                }
+            }
+        }
+        return null;
+    }
+
     public Audience audience(UUID player, String animation) {
         // 没登记的动作（含已经停掉的）按所有人，停止包照旧发给本人。
         var animations = players.get(player);

@@ -198,7 +198,7 @@ PA 提供 `assets/minecraft/items/bow.json` 的模型分支，资源包若覆盖
 - `start_tick` 是目标玩家所在世界的非负总 tick，单位为 1/20 秒。服务端发送时设置；客户端只在起播时将世界 tick 映射为本地播放起点，之后按本地动画时钟推进，避免后来进入追踪范围的玩家从头看到循环动作。旧调用方不设置时从收包时刻开始。补发时跳过已经过去的时间线事件；`normalized_progress` 是原版状态 scrub 的互斥路径，收到后不使用自由时钟，连续同 ID 请求只更新游标。`PlayerAnimationAction` 目录中的一次性动作由服务端按资源时长自动停止并移出补发快照，结束已久的一次性动作也不再显示。目录外的自定义动作仍须显式停止循环、保持或一次性动作；返回 `OK` 表示该同步请求已处理。
 - 停止必须显式选择目标；未设置 `target`、空 `animation_id` 或 `all: false` 均为无效请求，不能隐式停止全部。停止不存在或已经停止的动作仍成功，未建立播放器的玩家也视为无需停止；不会因此创建播放状态。
 - `playback_rate` 使用字段 6；不能与 `normalized_progress` 同时出现。剪辑时间为真实经过秒数乘倍率，时间线事件与自然结束一同放慢，淡入淡出仍按真实秒。`ServerPlayerAnimations.play(player, action, rate)`、`playFrom(player, animation, startTick, rate)` 提供倍率入口；旧重载等价于倍率 1，且不写入该字段，保留原字节格式。服务端到期为 `startTick + ceil(naturalDurationTicks / rate)`，超出 tick 表示范围时饱和到最大 tick；补发保留原始起点与倍率并跳过历史事件。`/kpa_server play <player> <animation> [rate]` 可用于验证。实体字节入口暂不支持倍率。
-- 一条可解码的请求处理后返回一个 `Result`；带 `normalized_progress` 的请求（scrub）除外，它每 tick 都可能发，客户端不回 `Result`，处理失败只记在客户端日志，服务端也不为它登记待回执。`OK` 表示播放已处理或停止已交给播放器；动画可能仍在淡入或淡出，不表示播放结束，也不表示服务端玩法成功。无效请求原样回传能取得且长度合法的 `request_id`，缺失或过长时为空。
+- 一条可解码的请求处理后返回一个 `Result`；带 `normalized_progress` 的请求（scrub）除外，它每 tick 都可能发，客户端处理成功时不回 `Result`，服务端也不为它登记待回执；处理失败时照常回失败的 `Result`（并记客户端日志），服务端收到 `ANIMATION_NOT_FOUND` 或 `PLAYER_NOT_LOADED` 且该请求仍是登记的 scrub 时，在同一 tick 末把它原样重发给这个观察者，每 tick 至多一次，不等 20 tick 的刷新间隔。`OK` 表示播放已处理或停止已交给播放器；动画可能仍在淡入或淡出，不表示播放结束，也不表示服务端玩法成功。无效请求原样回传能取得且长度合法的 `request_id`，缺失或过长时为空。
 
 | `Result.Code` | 数值 | 语义 |
 | --- | --- | --- |

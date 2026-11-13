@@ -38,10 +38,7 @@ public final class ClientAnimationNetworking {
             try {
                 PlayRequest request = AnimationPackets.read(payload, PlayRequest.parser());
                 Result result = play(context.client(), request);
-                if (request.hasNormalizedProgress()) {
-                    // scrub 每 tick 都可能来，只在本地记失败，不回执。
-                    logFailure(result);
-                } else {
+                if (acknowledged(request, result)) {
                     reply(result);
                 }
             } catch (InvalidProtocolBufferException | IllegalArgumentException exception) {
@@ -56,6 +53,14 @@ public final class ClientAnimationNetworking {
                 PlayerAnimationClient.LOG.error("动画停止包无法解码: {}", exception.getMessage());
             }
         });
+    }
+
+    /**
+     * 这条播放请求要不要回执。scrub 每 tick 都可能来，摆上了不回；
+     * 没摆上才回失败，服务端收到后立即重发，不等它的刷新间隔。其余请求一律回执。
+     */
+    static boolean acknowledged(PlayRequest request, Result result) {
+        return !request.hasNormalizedProgress() || result.getCode() != Result.Code.OK;
     }
 
     private static Result play(Minecraft client, PlayRequest request) {

@@ -76,6 +76,7 @@ public final class ServerPlayerAnimations implements ModInitializer {
     private static final AnimationSyncState STATE = new AnimationSyncState();
     private static final Set<TrackingPair> SYNC = new HashSet<>();
     private static final Map<Receipt, Integer> PENDING = new HashMap<>();
+    private static final ScrubRetries SCRUB_RETRIES = new ScrubRetries();
     private static final Map<UUID, RequiredAnimationChannels> CONNECTIONS = new HashMap<>();
     private static final Map<PlaybackKey, Long> FINITE_EXPIRIES = new HashMap<>();
     private static final VanillaAnimationScheduler VANILLA = new VanillaAnimationScheduler();
@@ -97,6 +98,8 @@ public final class ServerPlayerAnimations implements ModInitializer {
             try {
                 Result result = AnimationPackets.read(payload, Result.parser());
                 if (PENDING.remove(new Receipt(viewer.getUUID(), result.getRequestId())) == null) {
+                    // scrub 不登记待回执，客户端只在没摆上时回失败：记下来，本 tick 末重发，不等刷新间隔。
+                    SCRUB_RETRIES.failed(viewer.getUUID(), result);
                     return;
                 }
                 if (result.getCode() != Result.Code.OK) {
@@ -150,6 +153,7 @@ public final class ServerPlayerAnimations implements ModInitializer {
             FINITE_EXPIRIES.clear();
             SYNC.clear();
             PENDING.clear();
+            SCRUB_RETRIES.clear();
             CONNECTIONS.clear();
             VANILLA.clear();
         });
@@ -329,7 +333,7 @@ public final class ServerPlayerAnimations implements ModInitializer {
     private static void send(ServerPlayer viewer, CustomPacketPayload.Type<AnimationPackets.Payload> channel,
                              MessageLite message, String requestId) {
         // 调用点已完成整组通道校验，不在实际发送处吞掉缺接线错误。
-        // scrub 每 tick 都可能发，客户端不回执，这里也不等。
+        // scrub 每 tick 都可能发，客户端摆上了不回执，这里也不等；没摆上的失败回执走 SCRUB_RETRIES。
         if (!(message instanceof PlayRequest play && play.hasNormalizedProgress())) {
             int deadline = viewer.level().getServer().getTickCount() + RECEIPT_TIMEOUT_TICKS;
             PENDING.put(new Receipt(viewer.getUUID(), requestId), deadline);
@@ -374,7 +378,27 @@ public final class ServerPlayerAnimations implements ModInitializer {
             }
             SYNC.remove(pair);
         }
+        for (ScrubRetries.Retry retry : SCRUB_RETRIES.drain(STATE)) {
+            resendScrub(server, retry);
+        }
         PENDING.values().removeIf(deadline -> server.getTickCount() >= deadline);
+    }
+
+    private static void resendScrub(MinecraftServer server, ScrubRetries.Retry retry) {
+        // 和补发一样重新检查：观察者还在线、通道接通、目标仍可见；本人客户端自己播的动作不发本人。
+        PlayRequest saved = retry.request();
+        UUID targetId = UUID.fromString(saved.getPlayerUuid());
+        ServerPlayer target = server.getPlayerList().getPlayer(targetId);
+        ServerPlayer viewer = server.getPlayerList().getPlayer(retry.viewer());
+        if (target == null || viewer == null || !viewer.connection.isAcceptingMessages()
+                || (target != viewer && !PlayerLookup.tracking(target).contains(viewer))
+                || !channelsReady(viewer)) {
+            return;
+        }
+        if (target == viewer && STATE.audience(targetId, saved.getAnimationId()) == Audience.TRACKERS) {
+            return;
+        }
+        send(viewer, AnimationPackets.PLAY, saved, saved.getRequestId());
     }
 
     private static void scheduleExpiry(ServerPlayer player, String animation, long startTick, float rate) {
