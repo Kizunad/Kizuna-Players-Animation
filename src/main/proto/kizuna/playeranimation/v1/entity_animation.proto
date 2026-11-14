@@ -32,6 +32,8 @@ message Play {
   optional int64 start_tick = 3;
   optional float normalized_progress = 4;
   optional bool loop = 5;
+  // 可选：自由播放倍率，有限值 (0,1]，缺省为 1；与 normalized_progress 互斥。含义同 PlayRequest.playback_rate。
+  optional float playback_rate = 6;
 }
 
 message Stop {

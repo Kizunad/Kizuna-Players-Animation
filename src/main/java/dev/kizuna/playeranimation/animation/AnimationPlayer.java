@@ -20,8 +20,12 @@ public final class AnimationPlayer {
     private static final float ITEM_STATE_MIN_WEIGHT = 0.5f;
     private static final BoneId[] SOCKETS = {BoneId.R_ITEM, BoneId.L_ITEM};
     private static final Set<BoneId> TORSO = EnumSet.of(BoneId.PELVIS, BoneId.WAIST, BoneId.CHEST, BoneId.HEAD);
+    /** 实体刚进视野时，服务端会把它正在播的动作连同原起点一并补发；这段时间里收到的算补发。 */
+    private static final double CATCH_UP_SECONDS = 0.25;
     private final List<Playback> playing = new ArrayList<>();
     private long sequence;
+    /** 这个播放器第一次收到播放的时刻；还没收到过是 NaN。 */
+    private double firstPlayAt = Double.NaN;
 
     public enum Handedness { RIGHT, LEFT }
     private enum PlaybackMode { FREE, SCRUB }
@@ -72,7 +76,7 @@ public final class AnimationPlayer {
         stop(entry.id(), now);
         Handedness handedness = leftHanded ? Handedness.LEFT : Handedness.RIGHT;
         PlaybackRequest request = new PlaybackRequest(now, handedness, null, null);
-        Playback playback = new Playback(entry, request, sequence++, PlaybackMode.SCRUB);
+        Playback playback = new Playback(entry, request, sequence++, PlaybackMode.SCRUB, now, shownAt(now, now));
         playback.scrubFrom = normalizedProgress;
         playback.scrubTarget = normalizedProgress;
         playback.scrubUpdatedAt = now;
@@ -111,7 +115,8 @@ public final class AnimationPlayer {
     private void start(AnimationEntry entry, double now, PlaybackRequest request, double localStart) {
         // 重播同名动画时旧实例从当前时刻淡出，新实例按指定起点取样。
         stop(entry.id(), now);
-        Playback playback = new Playback(entry, request, sequence++, PlaybackMode.FREE, localStart);
+        Playback playback = new Playback(entry, request, sequence++, PlaybackMode.FREE, localStart,
+                shownAt(localStart, now));
         if (request.playId() != null && now > localStart) {
             playback.lastEventTime = (now - localStart) * request.rate();
         }
@@ -121,6 +126,19 @@ public final class AnimationPlayer {
         playing.add(playback);
         playing.sort(Comparator.comparingInt((Playback p) -> p.loop() == AnimationClip.Loop.REPEAT ? 0 : 1)
                 .thenComparingInt(p -> p.entry.priority()).thenComparingLong(p -> p.sequence));
+    }
+
+    private double shownAt(double localStart, double now) {
+        // 淡入从这个实例真正开始显示的那一刻算：承接时后一式从剪辑中间起播、效果迟到，时钟起点都早于现在，
+        // 照时钟起点算淡入就是一出现就全权重，等于硬切。
+        // 例外是实体刚进视野时的补发：那是早就在播的动作，照原进度直接显示，不该再从原版姿态淡入一遍。
+        if (Double.isNaN(firstPlayAt)) {
+            firstPlayAt = now;
+        }
+        if (now - firstPlayAt <= CATCH_UP_SECONDS) {
+            return localStart;
+        }
+        return Math.max(localStart, now);
     }
 
     public void stop(String id, double now) {
@@ -391,6 +409,8 @@ public final class AnimationPlayer {
     private static final class Playback {
         final AnimationEntry entry;
         final double start;
+        /** 淡入的起点，见 {@link AnimationPlayer#shownAt}。 */
+        final double shownAt;
         final double requestedStart;
         final double rate;
         final boolean mirror;
@@ -407,14 +427,12 @@ public final class AnimationPlayer {
         double scrubUpdatedAt;
         double scrubRestartAt = Double.NaN;
 
-        Playback(AnimationEntry entry, PlaybackRequest request, long sequence, PlaybackMode mode) {
-            this(entry, request, sequence, mode, request.start());
-        }
-
-        Playback(AnimationEntry entry, PlaybackRequest request, long sequence, PlaybackMode mode, double localStart) {
+        Playback(AnimationEntry entry, PlaybackRequest request, long sequence, PlaybackMode mode, double localStart,
+                 double shownAt) {
             // 每次播放有独立时钟，多个实体和同一动画的重播互不共享状态。
             this.entry = entry;
             this.start = localStart;
+            this.shownAt = shownAt;
             this.requestedStart = request.start();
             this.rate = request.rate();
             this.mirror = request.handedness() == Handedness.LEFT && entry.hand() != AnimationEntry.Hand.NONE;
@@ -546,12 +564,12 @@ public final class AnimationPlayer {
 
         boolean fadingIn(double now) {
             // 没停、没到淡出，还在从下层淡入的头一段。
-            return Double.isNaN(stopped) && now < fadeStart() && now - start < entry.blendIn();
+            return Double.isNaN(stopped) && now < fadeStart() && now - shownAt < entry.blendIn();
         }
 
         float weight(double now) {
             // 提前停止时保留已淡入的权重，避免停止瞬间跳到全权重。
-            double elapsed = Math.max(0, Math.min(now, fadeStart()) - start);
+            double elapsed = Math.max(0, Math.min(now, fadeStart()) - shownAt);
             double fadeIn = entry.blendIn() == 0 ? 1 : Math.min(1, elapsed / entry.blendIn());
             if (scrub && !Double.isNaN(scrubRestartAt)) {
                 fadeIn = Math.min(fadeIn, Math.max(0,

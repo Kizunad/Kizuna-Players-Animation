@@ -130,7 +130,12 @@ public final class PlayerPlayback {
 
     public void play(UUID playerId, String animationId, Long startTick, String playId,
                      AnimationClip.Loop loopOverride) {
-        play(playerId, animationId, new PlayerPlay(startTick, playId, loopOverride, 1));
+        play(playerId, animationId, startTick, playId, loopOverride, 1);
+    }
+
+    public void play(UUID playerId, String animationId, Long startTick, String playId,
+                     AnimationClip.Loop loopOverride, float rate) {
+        play(playerId, animationId, new PlayerPlay(startTick, playId, loopOverride, rate));
     }
 
     public void play(UUID playerId, String animationId, Long startTick, String playId, float rate) {
@@ -205,17 +210,22 @@ public final class PlayerPlayback {
 
     public void playEntity(int entityId, String animationId, Long startTick, String playId,
                            AnimationClip.Loop loopOverride) {
+        playEntity(entityId, animationId, startTick, playId, loopOverride, 1);
+    }
+
+    public void playEntity(int entityId, String animationId, Long startTick, String playId,
+                           AnimationClip.Loop loopOverride, float rate) {
         EntityPlayback target = entityPlayback(entityId, animationId);
         AnimationPlayer playback = target.playback();
         double time = now(0);
         Handedness handedness = target.entity().getMainArm() == HumanoidArm.LEFT ? Handedness.LEFT : Handedness.RIGHT;
         if (startTick == null) {
-            playback.play(target.entry(), time, new PlaybackRequest(time, handedness, null, loopOverride));
+            playback.play(target.entry(), time, new PlaybackRequest(time, handedness, null, loopOverride, rate));
             return;
         }
         double startSeconds = startTick / TICKS_PER_SECOND;
         double elapsedSeconds = (target.entity().level().getGameTime() - startTick) / TICKS_PER_SECOND;
-        PlaybackRequest request = new PlaybackRequest(startSeconds, handedness, playId, loopOverride);
+        PlaybackRequest request = new PlaybackRequest(startSeconds, handedness, playId, loopOverride, rate);
         playback.synchronize(target.entry(), time, request, elapsedSeconds);
     }
 

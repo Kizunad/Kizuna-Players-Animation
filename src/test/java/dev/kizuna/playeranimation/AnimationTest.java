@@ -62,6 +62,44 @@ class AnimationTest {
     }
 
     @Test
+    void lateStartFadesInFromWhenItFirstShows() {
+        // 承接和迟到的开播都从剪辑中间起播：剪辑时间照起点往回填，淡入要从本机真正开始显示的那一刻算，不然一出现就是全权重。
+        AnimationClip clip = rotationClip("[-80,0,0]", "");
+        AnimationEntry earlier = new AnimationEntry("earlier", "animations/earlier.animation.json",
+                AnimationEntry.Mask.UPPER, 1, 0, 0.2f, AnimationEntry.Hand.NONE, false /* firstPerson */, clip);
+        AnimationEntry entry = new AnimationEntry("late", "animations/late.animation.json",
+                AnimationEntry.Mask.UPPER, 1, 0.2f, 0.2f, AnimationEntry.Hand.NONE, false /* firstPerson */, clip);
+        AnimationPlayer player = new AnimationPlayer();
+        player.play(earlier, 90, false /* leftHanded */);
+        var request = new AnimationPlayer.PlaybackRequest(10, AnimationPlayer.Handedness.RIGHT, "late", null);
+        assertTrue(player.synchronize(entry, 100, request, 0.5));
+        assertFalse(player.hasActive("late", 100));
+        var halfway = player.active(100.1).getLast();
+        assertEquals("late", halfway.entry().id());
+        assertEquals(0.5, halfway.weight(), 0.00001);
+        assertEquals(0.6, halfway.time(), 0.00001);
+        assertTrue(player.hasActive("late", 100.2));
+        assertEquals(1, player.active(100.2).getLast().weight(), 0.00001);
+    }
+
+    @Test
+    void catchUpRightAfterTheEntityAppearsShowsAtItsOriginalProgress() {
+        // 实体刚进视野，服务端把它正在播的动作连同原起点补发过来：照原进度、全权重直接显示，不从原版姿态再淡入一遍。
+        AnimationClip clip = rotationClip("[-80,0,0]", "");
+        AnimationEntry base = new AnimationEntry("base", "animations/base.animation.json",
+                AnimationEntry.Mask.UPPER, 1, 0.2f, 0.2f, AnimationEntry.Hand.NONE, false /* firstPerson */, clip);
+        AnimationEntry overlay = new AnimationEntry("overlay", "animations/overlay.animation.json",
+                AnimationEntry.Mask.UPPER, 2, 0.2f, 0.2f, AnimationEntry.Hand.NONE, false /* firstPerson */, clip);
+        AnimationPlayer player = new AnimationPlayer();
+        var first = new AnimationPlayer.PlaybackRequest(10, AnimationPlayer.Handedness.RIGHT, "base", null);
+        var second = new AnimationPlayer.PlaybackRequest(10, AnimationPlayer.Handedness.RIGHT, "overlay", null);
+        assertTrue(player.synchronize(base, 100, first, 0.5));
+        assertTrue(player.synchronize(overlay, 100.05, second, 0.55));
+        assertEquals(1, player.active(100.05).getFirst().weight(), 0.00001);
+        assertEquals(1, player.active(100.05).getLast().weight(), 0.00001);
+    }
+
+    @Test
     void staggerKeepsMovingLegsAndOwnsTheStationaryPose() {
         // 僵直盖住上身，但走路仍驱动腿；没有移动底层时保留僵直的屈膝。
         AnimationClip movingClip = clip("\"animation_length\":1,\"bones\":{"

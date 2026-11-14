@@ -97,6 +97,10 @@ public final class EntityAnimationApi {
             return response(request.getRequestId(), EntityAnimationResponse.Code.INVALID_REQUEST,
                     "动画进度必须在 [0,1]");
         }
+        if (play.hasPlaybackRate() && (play.hasNormalizedProgress() || !validRate(play.getPlaybackRate()))) {
+            return response(request.getRequestId(), EntityAnimationResponse.Code.INVALID_REQUEST,
+                    "播放倍率必须在 (0,1]，且不能与动画进度同时设置");
+        }
         if (!PlayerAnimationClient.ASSETS.animations().containsKey(play.getAnimationId())) {
             return response(request.getRequestId(), EntityAnimationResponse.Code.ANIMATION_NOT_FOUND,
                     "客户端未加载动画");
@@ -113,13 +117,14 @@ public final class EntityAnimationApi {
         if (play.hasStartTick()) {
             startTick = play.getStartTick();
         }
+        float rate = play.hasPlaybackRate() ? play.getPlaybackRate() : 1;
         if (entity instanceof AbstractClientPlayer player) {
             if (play.hasNormalizedProgress()) {
                 PlayerAnimationClient.PLAYBACK.scrub(player.getUUID(), play.getAnimationId(),
                         play.getNormalizedProgress());
             } else {
                 PlayerAnimationClient.PLAYBACK.play(player.getUUID(), play.getAnimationId(), startTick,
-                        request.getRequestId(), loop);
+                        request.getRequestId(), loop, rate);
             }
             return;
         }
@@ -128,7 +133,7 @@ public final class EntityAnimationApi {
                     play.getNormalizedProgress());
         } else {
             PlayerAnimationClient.PLAYBACK.playEntity(play.getEntityId(), play.getAnimationId(), startTick,
-                    request.getRequestId(), loop);
+                    request.getRequestId(), loop, rate);
         }
     }
 
@@ -159,6 +164,11 @@ public final class EntityAnimationApi {
         }
         PlayerAnimationClient.PLAYBACK.remove(request.getClear().getEntityId());
         return response(request.getRequestId(), EntityAnimationResponse.Code.OK, "");
+    }
+
+    private static boolean validRate(float rate) {
+        // 和玩家播放请求同一条约束：只允许放慢。
+        return Float.isFinite(rate) && rate > 0 && rate <= 1;
     }
 
     private static AnimationClip.Loop loopOverride(Play play) {
