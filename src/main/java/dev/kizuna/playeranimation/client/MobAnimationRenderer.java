@@ -61,6 +61,11 @@ public final class MobAnimationRenderer {
         if (armor != null) {
             armor.setData(EntityFrame.KEY, frame);
         }
+        boolean mainRight = entity.getMainArm() == HumanoidArm.RIGHT;
+        boolean mainItem = !entity.getMainHandItem().isEmpty();
+        boolean offItem = !entity.getOffhandItem().isEmpty();
+        frame.trails(SwingTrails.observe(entity, PlayerAnimationClient.PLAYBACK.entity(entity.getId()),
+                PlayerPlayback.now(tickDelta), pose, mainRight ? mainItem : offItem, mainRight ? offItem : mainItem));
         return frame;
     }
 

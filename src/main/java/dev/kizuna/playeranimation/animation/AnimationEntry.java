@@ -11,11 +11,12 @@ public record AnimationEntry(String id, String file, Mask mask, int priority, fl
                              float blendOut, Hand hand, boolean firstPerson, boolean firstPersonTorso,
                              AnimationClip clip, List<Window> impactWindows,
                              Float loopRegionStart, Float loopRegionEnd, boolean lookLayer,
-                             ItemStates itemStates, ItemRotation itemRotation, List<AimWindow> aimWindows) {
+                             ItemStates itemStates, ItemRotation itemRotation, List<AimWindow> aimWindows,
+                             List<SwingWindow> swings) {
     public AnimationEntry(String id, String file, Mask mask, int priority, float blendIn,
                           float blendOut, Hand hand, boolean firstPerson, AnimationClip clip) {
         this(id, file, mask, priority, blendIn, blendOut, hand, firstPerson, true, clip,
-                List.of(), null, null, false, null, null, List.of());
+                List.of(), null, null, false, null, null, List.of(), List.of());
     }
 
     /** 剪辑时间里的一段 [start, end]（秒）。 */
@@ -86,10 +87,14 @@ public record AnimationEntry(String id, String file, Mask mask, int priority, fl
         if (raw.has("aim_windows")) {
             aimWindows = AimWindow.parse(raw.get("aim_windows"), clip.duration());
         }
+        List<SwingWindow> swings = List.of();
+        if (raw.has("swings")) {
+            swings = SwingWindow.parse(raw.get("swings"), clip.duration());
+        }
         return new AnimationEntry(id, file, mask, priority,
                 JsonInput.nonnegative(raw, "blend_in"), JsonInput.nonnegative(raw, "blend_out"),
                 hand, JsonInput.bool(raw, "fpv"), readFirstPersonTorso(raw), clip, impact,
-                loopStart, loopEnd, readLookLayer(raw), itemStates, itemRotation, aimWindows);
+                loopStart, loopEnd, readLookLayer(raw), itemStates, itemRotation, aimWindows, swings);
     }
 
     private static boolean readFirstPersonTorso(JsonObject raw) {

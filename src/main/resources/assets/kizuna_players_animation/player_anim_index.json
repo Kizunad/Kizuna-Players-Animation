@@ -102,6 +102,20 @@
       "impact_window": [
         0.0,
         0.2
+      ],
+      "swings": [
+        {
+          "start": 0.0,
+          "end": 0.5,
+          "part": "main",
+          "weight": "light"
+        },
+        {
+          "start": 0.0,
+          "end": 0.18,
+          "part": "r_hand",
+          "weight": "light"
+        }
       ]
     },
     {
@@ -136,6 +150,20 @@
       "impact_window": [
         0.0,
         0.2
+      ],
+      "swings": [
+        {
+          "start": 0.0,
+          "end": 0.5,
+          "part": "off",
+          "weight": "light"
+        },
+        {
+          "start": 0.0,
+          "end": 0.18,
+          "part": "l_hand",
+          "weight": "light"
+        }
       ]
     },
     {
@@ -1244,6 +1272,26 @@
           1.05,
           1.3
         ]
+      ],
+      "swings": [
+        {
+          "start": 0.35,
+          "end": 0.43,
+          "part": "main",
+          "weight": "light"
+        },
+        {
+          "start": 0.7,
+          "end": 0.92,
+          "part": "main",
+          "weight": "light"
+        },
+        {
+          "start": 1.18,
+          "end": 1.25,
+          "part": "main",
+          "weight": "light"
+        }
       ]
     },
     {
@@ -1272,6 +1320,26 @@
           1.05,
           1.3
         ]
+      ],
+      "swings": [
+        {
+          "start": 0.35,
+          "end": 0.42,
+          "part": "off",
+          "weight": "light"
+        },
+        {
+          "start": 0.68,
+          "end": 0.92,
+          "part": "off",
+          "weight": "light"
+        },
+        {
+          "start": 1.13,
+          "end": 1.25,
+          "part": "off",
+          "weight": "light"
+        }
       ]
     },
     {
@@ -1302,6 +1370,14 @@
           1.35,
           1.7
         ]
+      ],
+      "swings": [
+        {
+          "start": 1.38,
+          "end": 1.6,
+          "part": "main",
+          "weight": "heavy"
+        }
       ]
     },
     {
@@ -1332,6 +1408,14 @@
           1.35,
           1.7
         ]
+      ],
+      "swings": [
+        {
+          "start": 1.42,
+          "end": 1.6,
+          "part": "off",
+          "weight": "heavy"
+        }
       ]
     },
     {
@@ -1376,6 +1460,20 @@
           1.45,
           1.75
         ]
+      ],
+      "swings": [
+        {
+          "start": 0.18,
+          "end": 0.5,
+          "part": "main",
+          "weight": "light"
+        },
+        {
+          "start": 1.45,
+          "end": 1.63,
+          "part": "main",
+          "weight": "heavy"
+        }
       ]
     },
     {
@@ -1420,6 +1518,14 @@
           1.45,
           1.75
         ]
+      ],
+      "swings": [
+        {
+          "start": 1.45,
+          "end": 1.65,
+          "part": "off",
+          "weight": "heavy"
+        }
       ]
     },
     {
@@ -1458,6 +1564,26 @@
           1.05,
           1.6
         ]
+      ],
+      "swings": [
+        {
+          "start": 0.5,
+          "end": 0.6,
+          "part": "main",
+          "weight": "light"
+        },
+        {
+          "start": 0.92,
+          "end": 1.0,
+          "part": "main",
+          "weight": "light"
+        },
+        {
+          "start": 1.18,
+          "end": 1.32,
+          "part": "main",
+          "weight": "light"
+        }
       ]
     },
     {
@@ -1496,6 +1622,14 @@
           1.05,
           1.6
         ]
+      ],
+      "swings": [
+        {
+          "start": 0.9,
+          "end": 1.0,
+          "part": "off",
+          "weight": "heavy"
+        }
       ]
     },
     {
@@ -1538,6 +1672,32 @@
           1.25,
           1.75
         ]
+      ],
+      "swings": [
+        {
+          "start": 0.28,
+          "end": 0.42,
+          "part": "main",
+          "weight": "light"
+        },
+        {
+          "start": 0.5,
+          "end": 0.68,
+          "part": "main",
+          "weight": "light"
+        },
+        {
+          "start": 0.8,
+          "end": 1.07,
+          "part": "main",
+          "weight": "light"
+        },
+        {
+          "start": 1.35,
+          "end": 2.43,
+          "part": "main",
+          "weight": "heavy"
+        }
       ]
     },
     {
@@ -1576,6 +1736,32 @@
           1.25,
           1.75
         ]
+      ],
+      "swings": [
+        {
+          "start": 0.27,
+          "end": 0.43,
+          "part": "off",
+          "weight": "light"
+        },
+        {
+          "start": 0.52,
+          "end": 0.72,
+          "part": "off",
+          "weight": "light"
+        },
+        {
+          "start": 0.83,
+          "end": 1.05,
+          "part": "off",
+          "weight": "light"
+        },
+        {
+          "start": 1.37,
+          "end": 2.47,
+          "part": "off",
+          "weight": "heavy"
+        }
       ]
     },
     {
@@ -1610,6 +1796,20 @@
           2.15,
           2.35
         ]
+      ],
+      "swings": [
+        {
+          "start": 2.07,
+          "end": 2.2,
+          "part": "main",
+          "weight": "heavy"
+        },
+        {
+          "start": 3.77,
+          "end": 3.95,
+          "part": "main",
+          "weight": "light"
+        }
       ]
     },
     {
@@ -1648,6 +1848,20 @@
           2.15,
           2.35
         ]
+      ],
+      "swings": [
+        {
+          "start": 2.08,
+          "end": 2.22,
+          "part": "off",
+          "weight": "heavy"
+        },
+        {
+          "start": 3.77,
+          "end": 3.97,
+          "part": "off",
+          "weight": "light"
+        }
       ]
     },
     {
@@ -1698,6 +1912,32 @@
           4.05,
           4.3
         ]
+      ],
+      "swings": [
+        {
+          "start": 0.82,
+          "end": 1.13,
+          "part": "main",
+          "weight": "heavy"
+        },
+        {
+          "start": 2.27,
+          "end": 2.45,
+          "part": "main",
+          "weight": "light"
+        },
+        {
+          "start": 4.08,
+          "end": 4.33,
+          "part": "main",
+          "weight": "heavy"
+        },
+        {
+          "start": 6.53,
+          "end": 6.67,
+          "part": "main",
+          "weight": "light"
+        }
       ]
     },
     {
@@ -1748,6 +1988,26 @@
           4.05,
           4.3
         ]
+      ],
+      "swings": [
+        {
+          "start": 0.82,
+          "end": 0.97,
+          "part": "off",
+          "weight": "light"
+        },
+        {
+          "start": 2.27,
+          "end": 2.48,
+          "part": "off",
+          "weight": "light"
+        },
+        {
+          "start": 4.08,
+          "end": 4.3,
+          "part": "off",
+          "weight": "heavy"
+        }
       ]
     },
     {
@@ -1790,6 +2050,38 @@
           2.7,
           3.05
         ]
+      ],
+      "swings": [
+        {
+          "start": 0.6,
+          "end": 0.72,
+          "part": "main",
+          "weight": "light"
+        },
+        {
+          "start": 0.97,
+          "end": 1.17,
+          "part": "main",
+          "weight": "light"
+        },
+        {
+          "start": 1.25,
+          "end": 1.4,
+          "part": "main",
+          "weight": "light"
+        },
+        {
+          "start": 2.8,
+          "end": 3.0,
+          "part": "main",
+          "weight": "heavy"
+        },
+        {
+          "start": 5.58,
+          "end": 5.75,
+          "part": "main",
+          "weight": "light"
+        }
       ]
     },
     {
@@ -1832,6 +2124,32 @@
           2.7,
           3.05
         ]
+      ],
+      "swings": [
+        {
+          "start": 1.15,
+          "end": 1.45,
+          "part": "off",
+          "weight": "light"
+        },
+        {
+          "start": 2.8,
+          "end": 2.98,
+          "part": "off",
+          "weight": "heavy"
+        },
+        {
+          "start": 5.57,
+          "end": 5.78,
+          "part": "off",
+          "weight": "light"
+        },
+        {
+          "start": 6.2,
+          "end": 6.38,
+          "part": "off",
+          "weight": "light"
+        }
       ]
     },
     {
@@ -1904,6 +2222,14 @@
             "l_foot"
           ]
         }
+      ],
+      "swings": [
+        {
+          "start": 0.97,
+          "end": 1.15,
+          "part": "l_foot",
+          "weight": "light"
+        }
       ]
     },
     {
@@ -1930,6 +2256,14 @@
             "l_shin",
             "l_foot"
           ]
+        }
+      ],
+      "swings": [
+        {
+          "start": 1.87,
+          "end": 1.97,
+          "part": "l_foot",
+          "weight": "light"
         }
       ]
     },
@@ -1972,6 +2306,20 @@
             "r_shin",
             "r_foot"
           ]
+        }
+      ],
+      "swings": [
+        {
+          "start": 1.75,
+          "end": 2.1,
+          "part": "r_foot",
+          "weight": "heavy"
+        },
+        {
+          "start": 2.57,
+          "end": 2.73,
+          "part": "r_foot",
+          "weight": "light"
         }
       ]
     },
@@ -2069,6 +2417,26 @@
             "l_foot"
           ]
         }
+      ],
+      "swings": [
+        {
+          "start": 1.47,
+          "end": 1.65,
+          "part": "l_foot",
+          "weight": "light"
+        },
+        {
+          "start": 2.07,
+          "end": 2.25,
+          "part": "l_foot",
+          "weight": "light"
+        },
+        {
+          "start": 2.77,
+          "end": 2.95,
+          "part": "l_foot",
+          "weight": "light"
+        }
       ]
     },
     {
@@ -2112,6 +2480,20 @@
             "r_foot"
           ]
         }
+      ],
+      "swings": [
+        {
+          "start": 1.33,
+          "end": 1.42,
+          "part": "r_foot",
+          "weight": "light"
+        },
+        {
+          "start": 1.33,
+          "end": 1.42,
+          "part": "l_foot",
+          "weight": "light"
+        }
       ]
     },
     {
@@ -2153,6 +2535,14 @@
             "r_foot"
           ]
         }
+      ],
+      "swings": [
+        {
+          "start": 1.65,
+          "end": 1.92,
+          "part": "r_foot",
+          "weight": "heavy"
+        }
       ]
     },
     {
@@ -2183,6 +2573,20 @@
           "id": "chop",
           "start": 2.3,
           "end": 2.5
+        }
+      ],
+      "swings": [
+        {
+          "start": 1.73,
+          "end": 2.08,
+          "part": "r_foot",
+          "weight": "light"
+        },
+        {
+          "start": 2.35,
+          "end": 2.47,
+          "part": "r_foot",
+          "weight": "heavy"
         }
       ]
     },
@@ -2223,6 +2627,20 @@
           "id": "launch",
           "start": 2.55,
           "end": 2.95
+        }
+      ],
+      "swings": [
+        {
+          "start": 2.85,
+          "end": 3.28,
+          "part": "r_foot",
+          "weight": "heavy"
+        },
+        {
+          "start": 2.97,
+          "end": 3.22,
+          "part": "l_foot",
+          "weight": "light"
         }
       ]
     },
@@ -3001,6 +3419,32 @@
           2.25,
           2.75
         ]
+      ],
+      "swings": [
+        {
+          "start": 0.52,
+          "end": 0.7,
+          "part": "main",
+          "weight": "light"
+        },
+        {
+          "start": 1.25,
+          "end": 1.38,
+          "part": "main",
+          "weight": "heavy"
+        },
+        {
+          "start": 1.65,
+          "end": 1.88,
+          "part": "main",
+          "weight": "heavy"
+        },
+        {
+          "start": 2.23,
+          "end": 2.37,
+          "part": "main",
+          "weight": "light"
+        }
       ]
     },
     {
@@ -3082,6 +3526,32 @@
           2.25,
           2.75
         ]
+      ],
+      "swings": [
+        {
+          "start": 0.52,
+          "end": 0.72,
+          "part": "off",
+          "weight": "light"
+        },
+        {
+          "start": 1.25,
+          "end": 1.38,
+          "part": "off",
+          "weight": "heavy"
+        },
+        {
+          "start": 1.65,
+          "end": 1.88,
+          "part": "off",
+          "weight": "heavy"
+        },
+        {
+          "start": 2.23,
+          "end": 2.37,
+          "part": "off",
+          "weight": "light"
+        }
       ]
     },
     {

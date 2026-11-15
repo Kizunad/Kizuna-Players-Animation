@@ -1,0 +1,40 @@
+{
+  "swing.weapon.light": {
+    "subtitle": "subtitles.kizuna_players_animation.swing",
+    "sounds": [
+      "kizuna_players_animation:swing/weapon_light1",
+      "kizuna_players_animation:swing/weapon_light2",
+      "kizuna_players_animation:swing/weapon_light3"
+    ]
+  },
+  "swing.weapon.heavy": {
+    "subtitle": "subtitles.kizuna_players_animation.swing",
+    "sounds": [
+      "kizuna_players_animation:swing/weapon_heavy1",
+      "kizuna_players_animation:swing/weapon_heavy2",
+      "kizuna_players_animation:swing/weapon_heavy3"
+    ]
+  },
+  "swing.limb.light": {
+    "subtitle": "subtitles.kizuna_players_animation.swing",
+    "sounds": [
+      "kizuna_players_animation:swing/limb_light1",
+      "kizuna_players_animation:swing/limb_light2",
+      "kizuna_players_animation:swing/limb_light3"
+    ]
+  },
+  "swing.limb.heavy": {
+    "subtitle": "subtitles.kizuna_players_animation.swing",
+    "sounds": [
+      "kizuna_players_animation:swing/limb_heavy1",
+      "kizuna_players_animation:swing/limb_heavy2",
+      "kizuna_players_animation:swing/limb_heavy3"
+    ]
+  },
+  "swing.low": {
+    "sounds": [
+      "kizuna_players_animation:swing/low1",
+      "kizuna_players_animation:swing/low2"
+    ]
+  }
+}

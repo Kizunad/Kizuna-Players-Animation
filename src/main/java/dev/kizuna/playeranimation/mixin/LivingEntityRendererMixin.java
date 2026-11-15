@@ -5,6 +5,7 @@ import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.mojang.blaze3d.vertex.PoseStack;
 import dev.kizuna.playeranimation.client.EntityFrame;
 import dev.kizuna.playeranimation.client.MobEquipmentRenderer;
+import dev.kizuna.playeranimation.client.SwingTrails;
 import net.minecraft.client.model.EntityModel;
 import net.minecraft.client.model.Model;
 import net.minecraft.client.renderer.SubmitNodeCollector;
@@ -43,6 +44,9 @@ public abstract class LivingEntityRendererMixin {
         EntityFrame frame = EntityFrame.of(state);
         if (frame != null && frame.mob() != null) {
             kpa$equipment.submit(frame, state, matrices, collector);
+        }
+        if (frame != null) {
+            SwingTrails.submit(frame.trails(), matrices, collector);
         }
     }
 

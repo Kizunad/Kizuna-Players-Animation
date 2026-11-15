@@ -261,6 +261,7 @@ public final class PlayerPlayback {
                 continue;
             }
             AnimationPlayer playback = entry.getValue();
+            SwingTrails.listen(client.level.getPlayerByUUID(id), playback, time);
             playback.advance(time, (animation, event) -> {
                 if (event.equals("equip")) {
                     markEquip(id, animation);
@@ -290,6 +291,7 @@ public final class PlayerPlayback {
             }
             // 玩家事件监听方持有玩家装备状态，生物事件只推进播放器内部时间。
             AnimationPlayer playback = entry.getValue();
+            SwingTrails.listen(entity, playback, time);
             playback.advance(time, (animation, event) -> { });
             if (playback.empty()) {
                 entities.remove(id);
@@ -308,6 +310,7 @@ public final class PlayerPlayback {
         entities.clear();
         automaticEntities.clear();
         equipVisuals.clear();
+        SwingTrails.clear();
     }
 
     public void remove(UUID player) {

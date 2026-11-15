@@ -69,7 +69,14 @@ public final class PlayerMeshRenderer {
                 PlayerAnimationClient.PLAYBACK.shouldHideBoot(id, false), emptyHands,
                 heldItem(frame, player, HumanoidArm.RIGHT, state.rightHandItemState, state),
                 heldItem(frame, player, HumanoidArm.LEFT, state.leftHandItemState, state));
-        return EntityFrame.player(frame, parts);
+        EntityFrame extracted = EntityFrame.player(frame, parts);
+        if (!firstPersonPass) {
+            // 第一人称身体这一趟镜头就在身体里，风痕是糊在眼前的一大片（实拍试过），不画；破风声照响，由逻辑 tick 触发。
+            extracted.trails(SwingTrails.observe(player, PlayerAnimationClient.PLAYBACK.player(id),
+                    PlayerPlayback.now(tickDelta), frame, !state.rightHandItemStack.isEmpty(),
+                    !state.leftHandItemStack.isEmpty()));
+        }
+        return extracted;
     }
 
     public static Frame frame(AbstractClientPlayer player, AvatarRenderState state, PlayerModel vanilla,

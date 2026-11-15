@@ -66,6 +66,8 @@ public final class EntityFrame {
     private final MobParts mob;
     private final Map<Model<?>, Layer> models = new IdentityHashMap<>();
     private final Map<Submitted, Layer> submits = new HashMap<>();
+    /** 本帧要画的挥击风痕，取帧时由 {@link SwingTrails} 给出。 */
+    private List<SwingTrails.Ribbon> trails = List.of();
 
     private EntityFrame(PlayerMeshRenderer.Frame pose, PlayerParts player, MobParts mob) {
         this.pose = pose;
@@ -90,6 +92,8 @@ public final class EntityFrame {
     }
 
     public PlayerMeshRenderer.Frame pose() { return pose; }
+    public List<SwingTrails.Ribbon> trails() { return trails; }
+    public void trails(List<SwingTrails.Ribbon> ribbons) { trails = ribbons; }
 
     public PlayerParts player() { return player; }
 
