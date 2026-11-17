@@ -37,6 +37,8 @@ test {
     useJUnitPlatform()
     // ModelFileSizeTest 直接读 models/ 下的文件大小：声明成输入，模型变了才会重跑，不然 Gradle 当它没变直接跳过。
     inputs.dir('models').withPathSensitivity(PathSensitivity.RELATIVE)
+    // AnimationTransitionContractTest 直接读过渡表：同样声明成输入，只改这份文档时也要重跑。
+    inputs.file('docs/animation-specs/transitions.md').withPathSensitivity(PathSensitivity.RELATIVE)
 }
 
 protobuf {
