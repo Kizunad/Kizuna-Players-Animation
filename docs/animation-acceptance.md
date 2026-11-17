@@ -4,7 +4,7 @@
 
 ## 1. 制作来源：只能是 `.bbmodel`
 
-- 每段动画必须先存在于 `models/player_skeleton_classic.bbmodel` 的 Animate 数据中，是可在 Blockbench 打开、播放、继续编辑的源。`animations/*.animation.json` 只是它的导出产物，不允许手写或用脚本直接生成 JSON 而不进 `.bbmodel`。
+- 每段动画必须先存在于 `models/player_skeleton_classic/` 下它那一组 `.bbmodel` 的 Animate 数据中（按动画名分组，见 [资产契约](asset-contract.md#classic-模型按组分成几个文件)），是可在 Blockbench 打开、播放、继续编辑的源。`animations/*.animation.json` 只是它的导出产物，不允许手写或用脚本直接生成 JSON 而不进 `.bbmodel`。
 - 如果没有 Blockbench 图形界面，可以用脚本编辑 `.bbmodel` 的动画数据，再用仓库内的导出脚本按 Blockbench Bedrock 导出规则（见 [资产契约](asset-contract.md) 中的坐标反号规则）生成 JSON。导出脚本必须先证明：对现有 `walk`、`run`、`meditate` 重新导出，结果与仓库里的 JSON 数值一致（允许浮点舍入误差 ≤ 0.001）。
 - 增加一条回归：`.bbmodel` 中每段动画重新导出后，与打包的 JSON 一致；JSON 中存在而 `.bbmodel` 中没有的动画直接失败。
 - 粗臂、细臂两套骨架共用同一份动画，两种体型都要做视觉验收。
@@ -42,7 +42,7 @@
 ### 门禁实现与基线校准（2026-10-22）
 
 门禁入口为 `python3 scripts/analyze_animation.py <id>`，先读取打包 Bedrock JSON，再按
-`models/player_skeleton_classic.bbmodel` 的父子枢轴做正向运动学；采样频率固定为 60 Hz。
+`models/player_skeleton_classic/` 分组文件共用的父子枢轴做正向运动学；采样频率固定为 60 Hz。
 粗臂和细臂共享动画数据，渲染工具分别载入两套几何。当前命名常量为：有效旋转
 `3°`、有效位移 `0.3 px`、肘/膝 `150°`、手腕 `120°`、脚踝 `75°`、颈部 `75°`、腰
 `45°`、胸 `60°`、一次性动作角速度 `720°/s`、角加加速度 `1,500,000°/s³`、地面

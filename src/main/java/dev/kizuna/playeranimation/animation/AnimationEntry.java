@@ -178,8 +178,9 @@ public record AnimationEntry(String id, String file, Mask mask, int priority, fl
                 "door_breaker_finale", "door_breaker_finale_off",
                 "wayfarer_bow_strike", "wayfarer_bow_strike_off",
                 "peddler_snap_kick", "peddler_push_kick", "peddler_roundhouse", "peddler_triple_kick",
-                "peddler_mule_kick", "peddler_flying_kick", "peddler_axe_kick", "peddler_whirlwind").contains(id)) {
-            throw new IllegalArgumentException("impact_window 只能用于攻击、挖掘、破门斩、弓梢或千里腿动作");
+                "peddler_mule_kick", "peddler_flying_kick", "peddler_axe_kick", "peddler_whirlwind",
+                "villager_crushing_fist").contains(id)) {
+            throw new IllegalArgumentException("impact_window 只能用于攻击、挖掘、破门斩、弓梢、千里腿或袖手拳崩拳动作");
         }
     }
 

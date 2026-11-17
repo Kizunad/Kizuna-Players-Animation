@@ -170,7 +170,9 @@ class AnimationSetContractTest {
                 "evoker_grip", "evoker_grip_off",
                 "witch_imbibe", "witch_anoint_arms", "witch_anoint_legs", "witch_lob_seed", "witch_fling_seed",
                 "witch_spray_trigger", "witch_brew", "witch_brew_feed_off", "status_stagger",
-                "herb_knife_draw", "herb_knife_cut"), ids);
+                "herb_knife_draw", "herb_knife_cut",
+                "villager_crushing_fist", "villager_golem_lift", "villager_shoulder_throw", "villager_dummy_drill",
+                "villager_inch_power", "villager_wrist_lock"), ids);
         // 已交付标记必须与打包资源一致：调度只请求已交付动作，未打包的动作不得标为已交付。
         for (PlayerAnimationAction action : PlayerAnimationAction.values()) {
             assertEquals(ids.contains(action.id()), action.delivered(), action.id());

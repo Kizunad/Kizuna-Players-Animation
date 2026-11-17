@@ -33,7 +33,11 @@ tasks.withType(JavaExec).configureEach {
     javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(libs.versions.java.get()) }
 }
 
-test { useJUnitPlatform() }
+test {
+    useJUnitPlatform()
+    // ModelFileSizeTest 直接读 models/ 下的文件大小：声明成输入，模型变了才会重跑，不然 Gradle 当它没变直接跳过。
+    inputs.dir('models').withPathSensitivity(PathSensitivity.RELATIVE)
+}
 
 protobuf {
     // 编译器与运行库固定同版，调用方复用本仓唯一的协议源。
@@ -66,7 +70,8 @@ tasks.register('protocolZip', Zip) {
 
 tasks.named('build') { dependsOn tasks.named('protocolZip') }
 
-// 资源的唯一来源是 classic .bbmodel；测试前拒绝手写或漂移的导出 JSON。
+// 资源的唯一来源是 classic 的分组 .bbmodel（models/player_skeleton_classic/）；测试前拒绝手写或漂移的导出 JSON，
+// 也拒绝不是本仓写法或单个超过 90 MB 的分组文件。
 tasks.register('checkAnimationAssets', Exec) {
     commandLine 'python3', 'scripts/export_bbmodel_animation.py', '--check'
 }
@@ -105,7 +110,9 @@ tasks.register('checkAnimationGates', Exec) {
             'evoker_grip', 'evoker_grip_off',
             'witch_imbibe', 'witch_anoint_arms', 'witch_anoint_legs', 'witch_lob_seed', 'witch_fling_seed',
             'witch_spray_trigger', 'witch_brew', 'witch_brew_feed_off', 'status_stagger',
-            'herb_knife_draw', 'herb_knife_cut'
+            'herb_knife_draw', 'herb_knife_cut',
+            'villager_crushing_fist', 'villager_golem_lift', 'villager_shoulder_throw', 'villager_dummy_drill',
+            'villager_inch_power', 'villager_wrist_lock'
 }
 
 tasks.register('checkAnimationAntiForgery', Exec) {

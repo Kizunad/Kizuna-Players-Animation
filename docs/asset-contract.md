@@ -14,11 +14,34 @@
 
 `.bbmodel` 源文件放在 `models/`，运行时只读导出的 JSON。模型与动画未交付时不打包占位模型；资源缺失会提示日志并保留原版玩家渲染。资源热重载后清空旧播放状态，避免旧骨架与新资源混用。
 
-`models/player_skeleton_classic.bbmodel` 包含可编辑的 `walk`（1.2 秒）和 `run`（0.7 秒）循环草稿，并内嵌原版 Steve 皮肤供预览。两段分别导出到 `animations/walk.animation.json`、`animations/run.animation.json`，共用既有骨架与 UV；模组中通过 `/kpa play walk`、`/kpa play run` 手动预览。Human 宿主按实际运动与权威吐纳状态统一调度，仅在动作改变时调用播放或停止。循环保持原地，只有重心左右与上下起伏，不用 root 前进位移驱动实体。Steve 贴图来自 Minecraft 1.20.1 客户端，版权归 Mojang / Microsoft，不属于本项目 MIT 授权。
+### classic 模型按组分成几个文件
+
+classic 的动画不放在一个 `.bbmodel` 里，按模组分在 `models/player_skeleton_classic/` 下（2026-11-17 起）。原因：全部放一个文件到 164 段时有 122 MB，GitHub 拒收超过 100 MB 的文件。
+
+| 文件 | 放哪些动画（按动画 id 的前缀定） |
+|---|---|
+| `base.bbmodel` | 下面都对不上的：行走、跑、吐纳、原版动作、校准 |
+| `combat.bbmodel` | `stance_`、`dodge_`、`block_one_hand`、`block_two_hand`、`technique_`、`status_` |
+| `door_breaker.bbmodel` | `door_breaker_` |
+| `peddler.bbmodel` | `peddler_` |
+| `wayfarer.bbmodel` | `wayfarer_` |
+| `evoker.bbmodel` | `evoker_` |
+| `witch.bbmodel` | `witch_` |
+| `herb_knife.bbmodel` | `herb_knife_` |
+| `villager.bbmodel` | `villager_` |
+
+- 每个文件都带完整的骨架、几何和内嵌贴图，单独用 Blockbench 打开就能播放、编辑那一组。各文件里动画以外的部分必须一模一样；改骨架或几何要九个文件一起改。
+- 动画进哪个文件只看名字，规则在 `scripts/bbmodel_store.py` 的 `GROUPS`。加新模组的动画，在那里加一行前缀，文件会在第一次写入时生成。
+- 脚本读写都走 `bbmodel_store`：`load_model(目录)` 读回成一整份，`upsert(目录, 动画列表)` 同名替换、没有的追加到它那一组。导出器、门禁、渲染工具的 `--source` 默认就是这个目录，也可以给单个 `.bbmodel`。
+- 文件写法：两格缩进的 JSON，关键帧一帧一行。Blockbench 存出来的写法不同，存完跑 `python3 scripts/bbmodel_store.py normalize` 改回来。把别处做好的单个 `.bbmodel`（骨架几何相同）收进来用 `python3 scripts/bbmodel_store.py adopt <文件>`。
+- `python3 scripts/bbmodel_store.py list` 看各组大小。单个文件超过 90 MB，`export_bbmodel_animation.py --check` 和单测 `ModelFileSizeTest` 都会失败；到那时把那一组再拆（在 `GROUPS` 里把更长的前缀排在前面）。
+- 细臂 `models/player_skeleton_slim.bbmodel` 不带动画，还是一个文件。
+
+`models/player_skeleton_classic/base.bbmodel` 包含可编辑的 `walk`（1.2 秒）和 `run`（0.7 秒）循环草稿，并内嵌原版 Steve 皮肤供预览。两段分别导出到 `animations/walk.animation.json`、`animations/run.animation.json`，共用既有骨架与 UV；模组中通过 `/kpa play walk`、`/kpa play run` 手动预览。Human 宿主按实际运动与权威吐纳状态统一调度，仅在动作改变时调用播放或停止。循环保持原地，只有重心左右与上下起伏，不用 root 前进位移驱动实体。Steve 贴图来自 Minecraft 1.20.1 客户端，版权归 Mojang / Microsoft，不属于本项目 MIT 授权。
 
 `meditate` 是一段打坐吐纳循环草稿，仍使用上述 classic 模板与内嵌 Steve 皮肤，导出到 `animations/meditate.animation.json`。时长 6 秒，约 2.4 秒吸气、3.6 秒呼气；双腿盘坐、双手搭膝，root 与腿部轨道恒定，腰胸、头部和手指有轻微呼吸变化。前臂仅屈肘 8°，不做轴向扭转。索引为 `full`、`hand: none`、`fpv: false`，淡入淡出各 0.6 秒。Human 正式吐纳会话启动时播放，真实位移先执行权威结束与资源结算，再切换运动动画；转头不结束。动作资源本身不含入座、起身、事件帧或缩放。
 
-旧 `animations/player_actions.animation.json` 已从打包资源和索引移除。动作设计文件位于 [`docs/animation-specs/`](animation-specs/)，classic `.bbmodel` 是关键帧源文件，运行时 JSON 均从该文件导出。索引中当前交付跳跃、攻击、挖掘、普通使用物品、放置方块、穿戴、望远镜、号角、弩装填/持弩、刷子，以及潜行操作支撑 `crouch_work`、通用潜行 `sneak` / `sneak_walk`、进食 `eat(_off)`、饮用 `drink(_off)`、持盾格挡 `block_shield(_off)`、拉弓 `bow_draw(_off)`、三叉戟蓄力 `trident_charge(_off)`、骑乘 `ride`、睡眠 `sleep`、鞘翅 `elytra`、攀爬 `climb`、游泳 `swim`；另含行走、奔跑、吐纳和校准资源。闪避、通用格挡、破门斩、千里腿、行矢、五脏诀、矛动作、行药诀与炼药、药刀也已登记，索引共 158 段。主副手剪辑标记 `hand: main/off`。自动门禁通过不代表游戏内视觉验收完成，当前视觉验收状态见文末。
+旧 `animations/player_actions.animation.json` 已从打包资源和索引移除。动作设计文件位于 [`docs/animation-specs/`](animation-specs/)，classic 的分组 `.bbmodel` 是关键帧源文件，运行时 JSON 均从它们导出。索引中当前交付跳跃、攻击、挖掘、普通使用物品、放置方块、穿戴、望远镜、号角、弩装填/持弩、刷子，以及潜行操作支撑 `crouch_work`、通用潜行 `sneak` / `sneak_walk`、进食 `eat(_off)`、饮用 `drink(_off)`、持盾格挡 `block_shield(_off)`、拉弓 `bow_draw(_off)`、三叉戟蓄力 `trident_charge(_off)`、骑乘 `ride`、睡眠 `sleep`、鞘翅 `elytra`、攀爬 `climb`、游泳 `swim`；另含行走、奔跑、吐纳和校准资源。闪避、通用格挡、破门斩、千里腿、行矢、五脏诀、矛动作、行药诀与炼药、药刀也已登记，索引共 158 段。主副手剪辑标记 `hand: main/off`。自动门禁通过不代表游戏内视觉验收完成，当前视觉验收状态见文末。
 
 盘腿使用大腿三轴组合旋转，其中 X 约 130°–133°、Z 约 −77° / +91°，超出原方案的初稿逐轴范围。因此本动作仍是坐姿预览草稿，不能标记为已通过原方案角度门禁；正式验收前需校准盘腿姿态的关节范围。
 
@@ -73,7 +96,7 @@
 收纳袋第三人称继续使用 `use_item`；第一人称持有使用动画为 `BUNDLE` 的物品时，双手交还原版，
 保留实际倒出物品时的挥动反馈。该分流与矛共用第一人称专用持物入口，不改变服务端使用规则。
 
-导出与门禁命令：`python3 scripts/export_bbmodel_animation.py --check` 检查 `.bbmodel` 与全部打包 JSON；`python3 scripts/analyze_animation.py walk run meditate` 按 60 Hz 采样基线的正向运动学门禁；`python3 scripts/render_animation_gif.py walk run meditate --fps 12` 从 `.bbmodel` 直接输出粗臂/细臂三视角 GIF 和接触表。当前环境没有 Blockbench 可执行文件，因此使用仓库内 Pillow 工具完成离线 GIF；有图形界面时仍可用 Blockbench 自带导出复核。
+导出与门禁命令：`python3 scripts/export_bbmodel_animation.py --check` 检查全部分组 `.bbmodel` 与全部打包 JSON（连同分组文件的写法和大小）；`python3 scripts/analyze_animation.py walk run meditate` 按 60 Hz 采样基线的正向运动学门禁；`python3 scripts/render_animation_gif.py walk run meditate --fps 12` 从 `.bbmodel` 直接输出粗臂/细臂三视角 GIF 和接触表。当前环境没有 Blockbench 可执行文件，因此使用仓库内 Pillow 工具完成离线 GIF；有图形界面时仍可用 Blockbench 自带导出复核。
 
 索引条目：
 
@@ -87,11 +110,11 @@
 | `hand` | `main`、`off`、`both`、`none`；main 模板按右主手，off 模板按左副手；none 固定解剖左右 |
 | `fpv` | 布尔，仅此标记为真的动画参与独立第一人称手臂播放；全身第一人称直接复用第三人称姿态，不受此标记限制 |
 | `fpv_torso` | 可选布尔，缺省 `true`。写 `false` 时，只在全身第一人称里不取本段的胯、腰、胸、头轨道（旋转和位移都不取），这四根骨用下层姿势；两臂、手指、持物挂点（含 `item_rotation`）和腿照剪辑。第三人称、其他玩家和独立 `fpv` 手臂入口不读它；门禁和 GIF 预览也不读。当前只有 `herb_knife_cut` |
-| `impact_window` | 可选，`[开始秒, 结束秒]`，或多段 `[[开始秒, 结束秒], ...]`（多击的式每击一段，各段按时间先后、互不重叠），剪辑时间。只供门禁声明打击时段（角速度差分的末帧落在任一段内即按打击上限），运行时不读取；当前白名单为 `attack_main/off`、`mine_main/off`、`door_breaker_knock(_off)`、`door_breaker_cleave(_off)`、`door_breaker_ram(_off)`、`door_breaker_hook(_off)`、`door_breaker_close(_off)`、`door_breaker_chain(_off)`、`door_breaker_finale(_off)` 与千里腿八式 `peddler_snap_kick`、`peddler_push_kick`、`peddler_roundhouse`、`peddler_triple_kick`、`peddler_mule_kick`、`peddler_flying_kick`、`peddler_axe_kick`、`peddler_whirlwind`（蹲马步不打击）、`wayfarer_bow_strike(_off)` |
+| `impact_window` | 可选，`[开始秒, 结束秒]`，或多段 `[[开始秒, 结束秒], ...]`（多击的式每击一段，各段按时间先后、互不重叠），剪辑时间。只供门禁声明打击时段（角速度差分的末帧落在任一段内即按打击上限），运行时不读取；当前白名单为 `attack_main/off`、`mine_main/off`、`door_breaker_knock(_off)`、`door_breaker_cleave(_off)`、`door_breaker_ram(_off)`、`door_breaker_hook(_off)`、`door_breaker_close(_off)`、`door_breaker_chain(_off)`、`door_breaker_finale(_off)` 与千里腿八式 `peddler_snap_kick`、`peddler_push_kick`、`peddler_roundhouse`、`peddler_triple_kick`、`peddler_mule_kick`、`peddler_flying_kick`、`peddler_axe_kick`、`peddler_whirlwind`（蹲马步不打击）、`wayfarer_bow_strike(_off)`、袖手拳崩拳 `villager_crushing_fist` |
 | `loop_region` | 可选，`[开始秒, 结束秒]`，剪辑时间。scrub 进度到达结束点后在该区间回绕；仅用于保持类的可重复动作（例如 `spyglass`、`brush`） |
 | `layer` | 可选，只接受 `look`：加性视线层。渲染器每帧按原版视线角度取样并把旋转加到已混合姿态上，不经过播放、优先级与同步；当前为 `head_follow`、`head_follow_pitch` |
 | `phases` | 可选，阶段数组或名称到 `[开始秒, 结束秒]` 的映射；数组元素可写成对象 `{"id", "start", "end", "chain"}`，`chain` 可选，是近端到远端至少 3 根已有骨骼（例如踢腿 `["pelvis", "l_thigh", "l_shin", "l_foot"]`），覆盖该阶段按动作 id 推断的主链。仅供门禁在每个声明阶段内按主动作方向检查峰值顺序，时间必须落在剪辑范围内；运行时不读取 |
-| `unbalanced_windows` | 可选，`[[开始秒, 结束秒], ...]`。只供门禁声明失衡时段（窗口内不查重心投影），运行时不读取；只允许 `dodge_*`、`technique_dash_*`、`door_breaker_cleave(_off)`、`door_breaker_ram(_off)`、`door_breaker_hook(_off)`、`door_breaker_sweep(_off)`、`door_breaker_close(_off)`、`door_breaker_chain(_off)`、`door_breaker_finale(_off)`、`peddler_*`、`wayfarer_*`、`evoker_earth_legs`、`evoker_water_return` |
+| `unbalanced_windows` | 可选，`[[开始秒, 结束秒], ...]`。只供门禁声明失衡时段（窗口内不查重心投影），运行时不读取；只允许 `dodge_*`、`technique_dash_*`、`door_breaker_cleave(_off)`、`door_breaker_ram(_off)`、`door_breaker_hook(_off)`、`door_breaker_sweep(_off)`、`door_breaker_close(_off)`、`door_breaker_chain(_off)`、`door_breaker_finale(_off)`、`peddler_*`、`wayfarer_*`、`evoker_earth_legs`、`evoker_water_return`、袖手拳背摔 `villager_shoulder_throw` |
 | `burst_windows` | 可选，`[[开始秒, 结束秒]]`，至多一段且 ≤ 0.08 s。只供门禁声明蹬伸爆发时段（窗口内角速度 / 角加加速度上限放宽到 1,500°/s、6×10⁶°/s³），运行时不读取；只允许 `dodge_*`、`technique_dash_*`、`door_breaker_ram(_off)`、`wayfarer_bow_strike(_off)`；与 `impact_window` 同时声明时两种窗口各按各的上限查，其余帧按一次性上限 |
 | `slide_window` | 可选，`[开始秒, 结束秒]`。只供游戏内验收：声明该段脚底随实体在世界空间同步滑行不算穿帮，运行时不读取；当前为 `technique_dash_*` `[0.28, 1.01]`（冲刺短跑：着地脚在模型空间锁定，实体被功法推动时随之滑行）、`door_breaker_ram(_off)` `[0.80, 1.50]`（第一次冲量到冲量衰减；施放中 0.4 倍主动移动不属于冲量段，不要求锁脚）、`door_breaker_close(_off)` `[0.45, 1.10]`（冲量一到冲量二衰减，两步原地后撤）、`door_breaker_chain(_off)` `[0.80, 4.35]`（冲量一到冲量三衰减，两次垫步与弓步）、`door_breaker_finale(_off)` `[2.10, 2.90]`（起跳两次冲量到落地后实体滑停）、`wayfarer_bow_strike(_off)` `[1.70, 2.20]`（后撤冲量）、`wayfarer_parthian(_off)` `[0.80, 2.10]`（背跑、起跳冲量） |
 | `item_states` | 可选，持物模型的剪辑时间轨道：`{"pull": [[秒, 值], ...], "pulling": [...], "charged": [...], "arrow": [...], "open": [...]}`。前四种给弓、弩，`open` 给任何物品（物品定义经 `kizuna_players_animation:item_state` 数值属性读取，见下文）。每种通道至少一个键，时间在剪辑内且严格递增。`pull`、`open` 取 `[0, 1]` 并线性插值；其余通道取 0 / 1 并阶跃。首键前取首值，末键后保持。仅用于 `hand: main/off`；实际运行时自上而下取该手第一个权重 ≥ 0.5 的持物层；一层都不过半时，取还在淡入（未停止、未过 `blend_in`）的最高一层，所以从原版淡入的剪辑首帧就用剪辑值；交叉淡入仍在新层过半时交接，停止淡出不过半交回原版；都没有或缺省通道交回原版。承接偏移和停止淡出沿用播放器时钟。`pull` 到值后在 `pulling` 关闭帧补同值键，只在 `pulling` 关闭时下降。 |
@@ -132,6 +155,8 @@ PA 提供 `assets/minecraft/items/bow.json` 的模型分支，资源包若覆盖
 
 行药诀与炼药（2026-11-08 接入，见 [PROGRESS](animation-specs/PROGRESS-witch.md)）：七段主剪辑行药诀上卷服药 `witch_imbibe`（5.0 s，100 tick）、敷两臂 `witch_anoint_arms`、敷两腿 `witch_anoint_legs`（各 4.0 s，80 tick），中卷掷引 `witch_lob_seed`（2.2 s，44 tick）、泼引 `witch_fling_seed`（1.8 s，36 tick）、噀催 `witch_spray_trigger`（2.6 s，52 tick），炼药熬药 `witch_brew`（32.0 s，640 tick），都是 `mask: full`、优先级 24、淡入 0.10 s、淡出 0.25 s、`hand: main`、`fpv: false`，首帧、末帧等于 `stance_idle` 首帧，左主手由运行时整段镜像；只交付资源与 `PlayerAnimationAction` 显式接口，宿主起手时播放，有迟滞时用 `playback_rate` 放慢。时间线：服药 `cork` 0.30、`sip` 0.90 / 1.50 / 2.10、`rub` 2.40 / 2.85、`cast` 3.20；敷两臂 `cork` 0.25、`rub` 1.20 / 2.10、`cast` 2.60；敷两腿 `cork` 0.25、`rub` 1.25 / 1.55 / 1.90 / 2.20、`cast` 2.60；掷引 `release` 1.00、后脚落回 `step_r` 1.55；泼引 `cork` 0.15、`cast` 0.80；噀催 `cork` 0.15、`sip` 0.60、`cast` 1.60；熬药 `step_r` 0.50 / 31.40，每遍（T = 1、6、…、26）`T + 0.5 / 1.5 / 2.5` 各一次 `rub`，共 18 次。索引 `phases` 用对象写法给左臂阶段指定 `chest → l_upper_arm → l_forearm → l_hand` 主链（服药导药、敷两臂抹右臂、敷两腿拍腿、噀催）。熬药副手下料覆盖层 `witch_brew_feed_off`：`mask: l_arm`、优先级 25、淡入 0.10 s、淡出 0.25 s、`hand: main`、0.6 s（12 tick）、无事件，手指保持架势左拳，首末帧等于熬药左手在釜沿的姿势，宿主在熬药中副手生效时同 tick 叠播。僵直 `status_stagger`：`mask: full`、优先级 26、`hold_on_last_frame`、淡入 0.05 s、淡出 0.20 s，0.8 s 到位后保持，不带 tick，宿主醒时显式停止；在移动底层上只取上身（同格挡），静止在 `stand` 上两脚会滑到架势踝位（已知）；不叠握持覆盖层。七段主剪辑起手时副手有东西可叠 `evoker_grip_off`（敷药要求副手空着，不叠）。
 药刀（2026-11-10 接入，见 [PROGRESS](animation-specs/PROGRESS-herb-knife.md)）：甩腕开刃 `herb_knife_draw`（0.60 s，12 tick，优先级 19、淡入 0.08 s、淡出 0.20 s）和切药 `herb_knife_cut`（1.00 s，20 tick，优先级 21、淡入 0.20 s、淡出 0.25 s），都是 `mask: full`、`hand: main`、`fpv: false`，左主手整段镜像；两段在上层规则里（`herb_knife` 前缀），移动、潜行底层上只取上身。开刃首帧、末帧是 `use_item` 0 s 的持物位，`item_states.open` 0.20 → 0.26 s 由 0 到 1；切药首帧、末帧是待切位，连切同 ID 重播时在同一姿势交接，`open` 全程 1，`item_rotation` `[[0.0, [54, 0, 0]]]` 把刀在手里转平；切药写 `fpv_torso: false`（2026-11-11 用户选定），全身第一人称里不前倾，只留手臂和刀、药材，第三人称不变。只交付资源与 `PlayerAnimationAction` 显式接口：宿主在主手换成药刀时播开刃（Brewing 由本人客户端在换刀那一 tick 用 `PlayerAnimations.play` 自己播，服务端用 `playForTrackers` 只发给追踪者），开始切药时播切药；两段都没有 `timeline`，结算和声音由宿主服务端负责。开刃优先级低于攻击（20），开刃中左键由挥砍盖住；切药高于攻击。
+袖手拳（2026-11-16 接入四段，见 [PROGRESS](animation-specs/PROGRESS-villager.md)）：崩拳 `villager_crushing_fist`（3.0 s，60 tick）、撩天 `villager_golem_lift`（5.0 s，100 tick）、背摔 `villager_shoulder_throw`（6.0 s，120 tick）、打木桩 `villager_dummy_drill`（32.0 s，640 tick），都是 `mask: full`、优先级 24、淡入 0.10 s、淡出 0.25 s、`hand: main`、`fpv: false`，首帧、末帧等于 `stance_idle` 首帧，左主手由运行时整段镜像；只交付资源与 `PlayerAnimationAction` 显式接口，宿主起手时播放。时间线：崩拳 `step_l` 0.60 / 2.55、`step_r` 0.98 / 1.80、`hit` 1.00；撩天 `step_l` 0.60 / 2.80、`step_r` 0.95、`hit` 1.90；背摔 `grab` 1.20、`release` 2.55、`hit` 2.60（落地）和七次落脚；打木桩 `step_l` 0.40 / 31.40，二十组每组三下 `hit`（第 k 组在 1.00 + 1.5k 起的 0.30、0.80、1.30 s），共 60 次。时间线事件新增 `grab`，只作客户端通知。崩拳出拳约 1400°/s，声明 `impact_window` `[0.88, 1.15]`；背摔转身、回身各有一段只有左脚着地，声明 `unbalanced_windows` `[[1.68, 2.00], [3.40, 3.72]]`；撩天抡起段的 `phases` 用对象写法把主链取到上臂为止（两臂伸直着抡，肘和腕不领先）。2026-11-17 接入中卷两段：寸劲 `villager_inch_power`（4.0 s，80 tick；`step_l` 0.60 / 2.00、`hit` 1.45）、缠腕 `villager_wrist_lock`（5.0 s，100 tick；`step_l` 0.55 / 2.80、`grab` 0.90、`hit` 1.40 / 2.10、`release` 2.50），共同字段同上四段；两段的角速度都在一次性动作上限以内，不声明打击时段；寸劲的 `phases` 用对象写法把主链写成左臂（出拳的是前手）。
+
 `AnimationPlayer` 的遮罩规则：原版上层（攻击、挖掘、使用等）在任何架势底层（含静止 `stance_idle`）、闪避、轻步、跃步和格挡上都只取 `upper`；
 格挡、受击、调息、蓄力、僵直 `status_stagger` 在静止 `stance_idle` 上整段生效，在移动架势底层、进出过渡、闪避、轻步、跃步或原版移动底层上只取 `upper`。
 

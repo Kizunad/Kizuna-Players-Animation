@@ -239,7 +239,19 @@ public enum PlayerAnimationAction {
      * 切药是主手药刀、副手药材按住右键一秒一刀，连切同 ID 重播。都是全身一次性动作，移动底层上只取上身。
      */
     HERB_KNIFE_DRAW("herb_knife_draw", 12),
-    HERB_KNIFE_CUT("herb_knife_cut", 20);
+    HERB_KNIFE_CUT("herb_knife_cut", 20),
+    /**
+     * 袖手拳（docs/animation-specs/PROGRESS-villager.md）：崩拳、撩天、背摔三式和打木桩。都是整段全身、不分主副手，
+     * 左主手由运行时镜像；宿主起手时播放。时间线事件只作客户端通知：打击 hit，背摔抓实 grab、松手 release。
+     */
+    VILLAGER_CRUSHING_FIST("villager_crushing_fist", 60),
+    VILLAGER_GOLEM_LIFT("villager_golem_lift", 100),
+    VILLAGER_SHOULDER_THROW("villager_shoulder_throw", 120),
+    /** 打木桩：两脚钉住，拍、拦、打一组 1.5 秒，练二十组，32.0 秒一次性。 */
+    VILLAGER_DUMMY_DRILL("villager_dummy_drill", 640),
+    /** 袖手拳中卷：寸劲（拳贴着对方，全身一抖，hit 1.45）、缠腕（刁腕 grab 0.90，两拧 hit 1.40、2.10，松手 release 2.50）。 */
+    VILLAGER_INCH_POWER("villager_inch_power", 80),
+    VILLAGER_WRIST_LOCK("villager_wrist_lock", 100);
 
     private final String id;
     private final int naturalDurationTicks;

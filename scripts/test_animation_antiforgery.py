@@ -11,6 +11,7 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+import bbmodel_store
 from animation_analysis import AnimationSampler, SkeletonModel, attach_item_rotation, load_json, sample_times
 from analyze_animation import hand_contact_gates, report, velocity_gates
 
@@ -117,7 +118,7 @@ def item_rotation_sampler(model: SkeletonModel, degrees: float, seconds: float) 
 def main() -> int:
     root = Path(__file__).resolve().parents[1]
     document, key = fake_from_spec(root / "docs/animation-specs/attack_main.md")
-    model = SkeletonModel(load_json(root / "models/player_skeleton_classic.bbmodel"))
+    model = SkeletonModel(load_json(root / bbmodel_store.CLASSIC))
     result = report(AnimationSampler(model, document, key))
     correlation = result["anti_forgery_correlation"]
     peak_order = result["anti_forgery_peak_order"]

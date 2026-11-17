@@ -13,7 +13,7 @@
 - 左主手镜像、时间线事件、第三人称持物、全身第一人称和独立 `fpv` 手臂入口。
 - Protobuf 播放／停止／回执、本人及实体追踪范围同步、进入范围时按原始起点补发。
 
-已打包粗臂 / 细臂骨架（`models/player_skeleton_*.bbmodel` 与 `geo/player_skeleton.geo.json`）及 147 段动画（含两段视线层）：五个校准、三段移动/吐纳基线，以及攻击、跳跃、穿戴、挖掘、放置、望远镜、号角、弩、刷子、普通使用和潜行操作支撑资源。关键帧以 classic `.bbmodel` 为唯一来源，原版六大部件姿态仍作为底层；打包完成不代表已通过游戏内视觉验收。
+已打包粗臂 / 细臂骨架（`models/player_skeleton_classic/*.bbmodel`、`models/player_skeleton_slim.bbmodel` 与 `geo/player_skeleton.geo.json`）及 147 段动画（含两段视线层）：五个校准、三段移动/吐纳基线，以及攻击、跳跃、穿戴、挖掘、放置、望远镜、号角、弩、刷子、普通使用和潜行操作支撑资源。关键帧以 classic `.bbmodel` 为唯一来源，原版六大部件姿态仍作为底层；打包完成不代表已通过游戏内视觉验收。
 
 2026-10-23 修订：跳跃双腿错峰收伸；挖掘加重下砸；望远镜改为另一只手托住前臂并随俯仰联动；弩装填扩大拉弦肘的轮廓。按住潜行键静止操作工具时，`crouch_work` 提供前后错脚、重心后坐的支撑，工具动作只覆盖上半身，开始移动或结束操作时退出支撑。闪避和通用格挡资源已交付；最新索引还包含破门斩、千里腿、行矢、五脏诀与矛动作。
 
@@ -48,7 +48,7 @@ Vanilla 盔甲已接入身体同一帧的多关节蒙皮，袖子、胸腰、护
 
 打坐吐纳通过 `/kpa play meditate` 预览：盘腿静坐、双手搭膝，6 秒一周期，约 2.4 秒吸气、3.6 秒呼气。双腿与 root 固定，腰胸舒展、头部与手指轻微跟随；不含入座、起身或特效。停止使用 `/kpa stop`，索引中的 0.6 秒淡入淡出仅用于姿态过渡。
 
-在 Blockbench 打开 [`models/player_skeleton_classic.bbmodel`](models/player_skeleton_classic.bbmodel)，进入 Animate 面板即可播放和编辑 `animation.kizuna_players_animation.player.walk` / `run` / `meditate`。该文件内嵌原版 Steve 皮肤；运行时继续使用玩家自己的皮肤。Steve 贴图来自 Minecraft 1.20.1 客户端，版权归 Mojang / Microsoft，不属于本项目 MIT 授权。
+在 Blockbench 打开 [`models/player_skeleton_classic/base.bbmodel`](models/player_skeleton_classic/base.bbmodel)，进入 Animate 面板即可播放和编辑 `animation.kizuna_players_animation.player.walk` / `run` / `meditate`。classic 的动画按模组分在 `models/player_skeleton_classic/` 下的几个 `.bbmodel` 里（破门斩、千里腿、袖手拳等各一个），每个都带完整骨架，分法和脚本入口见 [资产契约](docs/asset-contract.md#classic-模型按组分成几个文件)。这些文件内嵌原版 Steve 皮肤；运行时继续使用玩家自己的皮肤。Steve 贴图来自 Minecraft 1.20.1 客户端，版权归 Mojang / Microsoft，不属于本项目 MIT 授权。
 
 客户端主线程可以调用 `dev.kizuna.playeranimation.client.PlayerAnimations`：
 

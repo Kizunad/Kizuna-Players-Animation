@@ -12,6 +12,7 @@ from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+import bbmodel_store
 from animation_analysis import (AnimationSampler, SkeletonModel, Vec, add, attach_item_rotation, load_json, mat_point,
                                 rotation_matrix, sample_times, sub)
 
@@ -85,6 +86,8 @@ FULL_BODY_IDS = {
     "witch_imbibe", "witch_anoint_arms", "witch_anoint_legs", "witch_lob_seed", "witch_fling_seed",
     "witch_spray_trigger", "witch_brew", "status_stagger",
     "herb_knife_draw", "herb_knife_cut",
+    "villager_crushing_fist", "villager_golem_lift", "villager_shoulder_throw", "villager_dummy_drill",
+    "villager_inch_power", "villager_wrist_lock",
 }
 
 GRIP_IDS = {
@@ -111,6 +114,8 @@ GRIP_IDS = {
     "witch_imbibe", "witch_anoint_arms", "witch_anoint_legs", "witch_lob_seed", "witch_fling_seed",
     "witch_spray_trigger", "witch_brew",
     "herb_knife_draw", "herb_knife_cut",
+    "villager_crushing_fist", "villager_golem_lift", "villager_shoulder_throw", "villager_dummy_drill",
+    "villager_inch_power", "villager_wrist_lock",
 }
 
 # 跃步与 jump 同类：整段在空中，着地口径由原型自查的脚底高度代替（docs/animation-specs/technique_leap.md 第 9 节）。
@@ -127,10 +132,12 @@ LATERAL_GAIT_IDS = {"stance_walk_left", "stance_walk_right"}
 # 连门的两次垫步、弓步与收脚、万门一斩的前迈、起跳落地与收脚是单脚支撑或腾空期
 # （docs/animation-specs/door_breaker_cleave.md、door_breaker_ram.md、door_breaker_hook.md、door_breaker_sweep.md、door_breaker_close.md、
 # door_breaker_chain.md、door_breaker_finale.md 第 4 节）。行矢各式的射位换步、转身与跪起同样有单脚支撑期
-# （docs/animation-specs/PROGRESS-wayfarer.md C4、C9、C10）。
+# （docs/animation-specs/PROGRESS-wayfarer.md C4、C9、C10）。袖手拳背摔转身、回身时右脚离地垫步，各有一段只有左脚着地
+# （docs/animation-specs/villager_shoulder_throw.md 第 3 节）。
 UNBALANCED_WINDOW_PREFIXES = ("dodge_", "technique_dash_", "door_breaker_cleave", "door_breaker_ram", "door_breaker_hook",
                               "door_breaker_sweep", "door_breaker_close", "door_breaker_chain", "door_breaker_finale",
-                              "peddler_", "wayfarer_", "evoker_earth_legs", "evoker_water_return")
+                              "peddler_", "wayfarer_", "evoker_earth_legs", "evoker_water_return",
+                              "villager_shoulder_throw")
 # 爆发窗口（索引字段 burst_windows）开放给闪避、轻步与撞门的后脚蹬伸、弓梢的前脚蹬地后撤
 # （每段至多一段、≤ 0.08 s）。
 BURST_WINDOW_PREFIXES = ("dodge_", "technique_dash_", "door_breaker_ram", "wayfarer_bow_strike")
@@ -145,6 +152,7 @@ LOOK_LAYER_SUM_TOLERANCE_DEG = 1.0
 LOOK_LAYER_SYMMETRY_TOLERANCE_DEG = 0.05
 # 破门斩各式的打击时段（每段 ≤ 0.35 s，见 docs/animation-specs/door_breaker_knock.md）与攻击、挖掘共用放宽上限。
 # 千里腿除扫堂、蹲马步外各式的出腿段同理；连环三下各一段（impact_window 可写多段，PROGRESS-peddler.md 待决定第 6 条）。
+# 袖手拳只有崩拳的出拳超过一次性动作上限（docs/animation-specs/villager_crushing_fist.md 第 3 节）。
 IMPACT_WINDOW_IDS = {"attack_main", "attack_off", "mine_main", "mine_off",
                      "door_breaker_knock", "door_breaker_knock_off", "door_breaker_cleave", "door_breaker_cleave_off",
                      "door_breaker_ram", "door_breaker_ram_off", "door_breaker_hook", "door_breaker_hook_off",
@@ -152,7 +160,8 @@ IMPACT_WINDOW_IDS = {"attack_main", "attack_off", "mine_main", "mine_off",
                      "door_breaker_finale", "door_breaker_finale_off",
                      "peddler_snap_kick", "peddler_push_kick", "peddler_roundhouse", "peddler_triple_kick",
                      "peddler_mule_kick", "peddler_flying_kick", "peddler_axe_kick", "peddler_whirlwind",
-                     "wayfarer_bow_strike", "wayfarer_bow_strike_off"}
+                     "wayfarer_bow_strike", "wayfarer_bow_strike_off",
+                     "villager_crushing_fist"}
 # 索引 item_states 的通道：pull、pulling、charged、arrow 给弓弩谓词，open 给 item_state 数值属性（药刀刀刃）。
 # pull、open 线性取 [0, 1]，其余为 0 / 1 阶跃开关。
 ITEM_STATE_CHANNELS = {"pull", "pulling", "charged", "arrow", "open"}
@@ -1365,7 +1374,7 @@ def validate_aim_windows(animation_id: str, windows: Any, duration: float) -> No
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("animation", nargs="+", help="动画 ID")
-    parser.add_argument("--source", type=Path, default=Path("models/player_skeleton_classic.bbmodel"))
+    parser.add_argument("--source", type=Path, default=bbmodel_store.CLASSIC, help="分组目录，或单个 .bbmodel")
     parser.add_argument("--slim", type=Path, default=Path("models/player_skeleton_slim.bbmodel"))
     parser.add_argument("--json-dir", type=Path, default=Path("src/main/resources/assets/kizuna_players_animation/animations"))
     parser.add_argument("--index", type=Path,

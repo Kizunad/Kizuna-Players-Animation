@@ -361,3 +361,13 @@
 | herb_knife_cut → stand / walk / run / sneak / sneak_walk / stance_idle | 0.25 / 0.25 | 播完或松手 | 淡回当前底层；挂点随切药淡出转回原版握法 |
 | herb_knife_draw → herb_knife_cut | 0.20 / 0.25 | 开刃没播完就右键 | 不拦；切药接管，刀刃值在切药权重过 0.5 时跳到 1 |
 | herb_knife_draw → attack_main | 0.04 / 0.14 | 开刃中左键 | 挥砍（20）盖住开刃，开刃在下面继续走，刀刃照开刃轨道 |
+
+## 袖手拳（2026-11-16 四段、11-17 中卷两段资源接入）
+
+规格与进度见 [PROGRESS-villager](PROGRESS-villager.md)。六段都用下面的四列行（`AnimationTransitionContractTest` 解析，加 12 条边：六段进出各 6 条）。
+六段都是 `mask: full`、优先级 24、`hand: main`（左主手整段镜像）、`fpv: false`，和破门斩、行药诀一样任何时候都整段全身生效。
+
+| 来源 → 目标 | 淡入 / 淡出 | 触发 | 约束 |
+| --- | ---: | --- | --- |
+| stance_idle → villager_crushing_fist / villager_golem_lift / villager_shoulder_throw / villager_dummy_drill / villager_inch_power / villager_wrist_lock | 0.10 / 0.25 | 宿主在袖手拳各式起手时播放 | 3.0 / 5.0 / 6.0 / 32.0 / 4.0 / 5.0 s 一次性；首帧、末帧等于 `stance_idle` 首帧；背摔转身半圈再转回，不动 `root` |
+| villager_crushing_fist / villager_golem_lift / villager_shoulder_throw / villager_dummy_drill / villager_inch_power / villager_wrist_lock → stance_idle | 0.25 / 0.25 | 播完或被下一式顶掉 | 淡回架势底层；打断时两脚在淡出里滑回架势位 |

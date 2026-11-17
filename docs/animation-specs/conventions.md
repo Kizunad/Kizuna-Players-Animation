@@ -1,8 +1,12 @@
 # 动作设计稿的共用约定
 
 所有 `docs/animation-specs/<id>.md` 的关键帧数值都是 **Blockbench 动画面板值**（度 / 像素），也就是录入
-`models/player_skeleton_classic.bbmodel` 的值；导出 JSON 时由 `scripts/export_bbmodel_animation.py` 统一把
+classic 模型的值；导出 JSON 时由 `scripts/export_bbmodel_animation.py` 统一把
 旋转 X/Y、位移 X 反号，设计稿不写导出值。
+
+classic 模型从 2026-11-17 起按模组分成几个文件，在 `models/player_skeleton_classic/` 下，每段动画按名字进它那一组
+（分法见 [资产契约](../asset-contract.md#classic-模型按组分成几个文件)）。各份设计稿状态栏里写的
+`player_skeleton_classic.bbmodel` 是当时的单个文件，现在指这一组分组文件。
 
 ## 坐标
 

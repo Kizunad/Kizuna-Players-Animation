@@ -2,7 +2,9 @@
 """按 Blockbench Bedrock 规则导出并校验 .bbmodel 动画。
 
 该脚本只负责资源转换，不生成关键帧。关键帧的唯一来源是 .bbmodel 的
-animations 数组；导出的 JSON 只是运行时打包格式。
+animations 数组；导出的 JSON 只是运行时打包格式。classic 的动画按组分在
+models/player_skeleton_classic/ 下的几个 .bbmodel 里（见 bbmodel_store.py），
+--source 给这个目录就读全部分组，给单个 .bbmodel 就只读那一个。
 """
 
 from __future__ import annotations
@@ -12,6 +14,8 @@ import json
 import math
 from pathlib import Path
 from typing import Any
+
+import bbmodel_store
 
 
 ROTATION_SIGN = (-1.0, -1.0, 1.0)
@@ -136,7 +140,7 @@ def export_animation(source: dict[str, Any], animation: dict[str, Any]) -> dict[
 
 
 def load_animations(path: Path) -> dict[str, dict[str, Any]]:
-    document = json.loads(path.read_text(encoding="utf-8"))
+    document = bbmodel_store.load_model(path)
     animations = document.get("animations")
     if not isinstance(animations, list):
         raise ValueError(f"{path} 缺少 Blockbench animations 数组")
@@ -196,6 +200,9 @@ def check(source_path: Path, packaged_directory: Path) -> int:
     source = load_animations(source_path)
     packaged = load_packaged_animations(packaged_directory)
     errors: list[str] = []
+    if source_path.is_dir():
+        # 分组文件自己的毛病（不是本仓写法、单个文件太大）和导出漂移一起报。
+        errors.extend(bbmodel_store.check(source_path))
     for name, animation in source.items():
         if name not in packaged:
             errors.append(f".bbmodel 动画没有打包产物: {name}")
@@ -218,7 +225,8 @@ def check(source_path: Path, packaged_directory: Path) -> int:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--source", type=Path, default=Path("models/player_skeleton_classic.bbmodel"))
+    parser.add_argument("--source", type=Path, default=bbmodel_store.CLASSIC,
+                        help="分组目录，或单个 .bbmodel")
     parser.add_argument("--output", type=Path, default=Path("src/main/resources/assets/kizuna_players_animation/animations"))
     parser.add_argument("--animation", action="append", help="只导出指定的完整动画键，可重复")
     parser.add_argument("--check", action="store_true", help="检查所有打包 JSON 与 .bbmodel 一致")

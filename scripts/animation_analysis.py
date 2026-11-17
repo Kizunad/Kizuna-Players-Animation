@@ -14,6 +14,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+import bbmodel_store
+
 
 Vec = tuple[float, float, float]
 # 索引 item_rotation 转的挂点：main 模板按右主手，off 模板按左副手（运行时左撇子整段镜像，工具不镜像）。
@@ -277,6 +279,9 @@ class SkeletonModel:
 
 
 def load_json(path: Path) -> dict[str, Any]:
+    # classic 模型按组分成几个 .bbmodel：给的是分组目录就读回成一整份。
+    if path.is_dir():
+        return bbmodel_store.load_model(path)
     return json.loads(path.read_text(encoding="utf-8"))
 
 

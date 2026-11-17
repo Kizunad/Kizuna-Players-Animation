@@ -24,6 +24,7 @@ from PIL import Image, ImageDraw
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+import bbmodel_store
 from animation_analysis import (AnimationSampler, SkeletonModel, attach_item_rotation, load_json,
                                 source_animation_document)
 
@@ -878,7 +879,7 @@ def render_model(source: dict[str, Any], model_path: Path, document: dict[str, A
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("animation", nargs="+", help="动画 ID")
-    parser.add_argument("--source", type=Path, default=Path("models/player_skeleton_classic.bbmodel"))
+    parser.add_argument("--source", type=Path, default=bbmodel_store.CLASSIC, help="分组目录，或单个 .bbmodel")
     parser.add_argument("--slim", type=Path, default=Path("models/player_skeleton_slim.bbmodel"))
     parser.add_argument("--output", type=Path, default=Path("build/anim-review"))
     parser.add_argument("--fps", type=int, default=12)

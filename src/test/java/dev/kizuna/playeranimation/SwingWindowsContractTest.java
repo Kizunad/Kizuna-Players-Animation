@@ -38,6 +38,8 @@ class SwingWindowsContractTest {
     private static final List<String> KICKS = List.of("snap_kick", "push_kick", "roundhouse", "triple_kick",
             "mule_kick", "flying_kick", "axe_kick", "whirlwind");
 
+    private static final List<String> FIST_MOVES = List.of("crushing_fist", "golem_lift", "shoulder_throw");
+
     private record Measured(double start, double end, String part, String weight) { }
 
     @Test
@@ -78,6 +80,10 @@ class SwingWindowsContractTest {
         clips.put("wayfarer_bow_strike_off", List.of("off"));
         for (String kick : KICKS) {
             clips.put("peddler_" + kick, List.of("r_foot", "l_foot"));
+        }
+        // 袖手拳是空手的：量两只手。
+        for (String move : FIST_MOVES) {
+            clips.put("villager_" + move, List.of("r_hand", "l_hand"));
         }
         return clips;
     }

@@ -16,6 +16,8 @@ import uuid
 from pathlib import Path
 from typing import Any
 
+import bbmodel_store
+
 
 PREFIX = "animation.kizuna_players_animation.player."
 NAMESPACE = uuid.UUID("55a8c5f1-6d96-4ee8-a9bf-25d5764a3906")
@@ -616,10 +618,10 @@ def all_bones() -> list[str]:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--source", type=Path, default=Path("models/player_skeleton_classic.bbmodel"))
+    parser.add_argument("--source", type=Path, default=bbmodel_store.CLASSIC, help="分组目录")
     parser.add_argument("--spec-dir", type=Path, default=Path("docs/animation-specs"))
     args = parser.parse_args()
-    document = json.loads(args.source.read_text(encoding="utf-8"))
+    document = bbmodel_store.load_model(args.source)
     bone_uuid_by_name = bone_uuids(document.get("outliner", []))
     existing = {animation["name"] for animation in document.get("animations", [])}
     authored: dict[str, dict[str, Any]] = {}
@@ -640,7 +642,7 @@ def main() -> int:
     document["animations"] = [animation for animation in document.get("animations", [])
                                if animation.get("name") not in authored_names]
     document["animations"].extend(authored.values())
-    args.source.write_text(json.dumps(document, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    bbmodel_store.save_model(args.source, document)
     print(f"写入 {len(authored)} 段动画到 {args.source}（同名目标已替换）")
     return 0
 
