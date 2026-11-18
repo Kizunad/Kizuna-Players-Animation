@@ -34,6 +34,68 @@ class AnimationSetContractTest {
             "src/main/resources/assets/kizuna_players_animation/player_anim_index.json");
     private static final String KEY_PREFIX = "animation.kizuna_players_animation.player.";
     private static final float POSE_EPSILON = 0.0001f;
+    private static final double BREATH_PERIOD = 1.60;
+    private static final double MID_BREATH = 0.75;
+    private static final double SETTLED_GUARD = 0.20;
+    private static final double MID_HIT = 0.10;
+    private static final double AFTER_HIT = 0.32;
+
+    @Test
+    void guardBreathRepeatsAndLateObserversSeeTheSamePose() throws Exception {
+        var guard = resource("guard_arms");
+        var request = new AnimationPlayer.PlaybackRequest(0, AnimationPlayer.Handedness.RIGHT, "guard", null);
+        var continuous = new AnimationPlayer();
+        continuous.play(guard, 0, request);
+        var late = new AnimationPlayer();
+        double now = MID_BREATH + 2 * BREATH_PERIOD;
+        late.synchronize(guard, now, request, now);
+        var chest = BoneId.CHEST.ordinal();
+        var breath = visible(continuous, MID_BREATH);
+        assertNotEquals(visible(continuous, SETTLED_GUARD)[chest], breath[chest]);
+        var repeated = visible(continuous, now);
+        assertEquals(breath[chest].rotation().x(), repeated[chest].rotation().x(), POSE_EPSILON);
+        assertArrayEquals(repeated, visible(late, now));
+        var legacy = resource("block_two_hand");
+        var old = new AnimationPlayer();
+        old.play(legacy, 0, request);
+        float end = legacy.clip().duration();
+        assertEquals(end, old.active(now).getFirst().time(), POSE_EPSILON);
+        assertArrayEquals(visible(old, end), visible(old, now));
+    }
+
+    @Test
+    void guardReactionKeepsBreathingAndWalking() throws Exception {
+        var guard = resource("guard_arms");
+        var hit = resource("guard_arms_hit");
+        var walk = resource("stance_walk_forward");
+        var request = new AnimationPlayer.PlaybackRequest(0, AnimationPlayer.Handedness.LEFT, null, null);
+        var player = new AnimationPlayer();
+        player.play(walk, 0, request);
+        var legs = new AnimationPlayer();
+        legs.play(walk, 0, request);
+        player.play(guard, 0, request);
+        var reference = new AnimationPlayer();
+        reference.play(walk, 0, request);
+        reference.play(guard, 0, request);
+        var contact = new AnimationPlayer.PlaybackRequest(MID_BREATH, request.handedness(), null, null);
+        player.play(hit, MID_BREATH, contact);
+        double recoil = MID_BREATH + MID_HIT;
+        var impact = visible(player, recoil);
+        var stride = visible(legs, recoil);
+        for (BoneId bone : BoneId.values()) {
+            if (AnimationEntry.Mask.LOWER.includes(bone)) {
+                assertEquals(stride[bone.ordinal()], impact[bone.ordinal()], bone.name());
+            }
+        }
+        int chest = BoneId.CHEST.ordinal();
+        assertNotEquals(visible(reference, recoil)[chest], impact[chest]);
+        double recovered = MID_BREATH + AFTER_HIT;
+        assertArrayEquals(visible(reference, recovered), visible(player, recovered));
+    }
+
+    private static Pose[] visible(AnimationPlayer player, double seconds) {
+        return player.sample(Rig.zeroPose(), seconds, false /* firstPerson */);
+    }
     private static final double[] HERB_KNIFE_CUT_MOMENTS = {0.20, 0.55, 0.75};
     private static final Set<BoneId> TORSO = Set.of(BoneId.PELVIS, BoneId.WAIST, BoneId.CHEST, BoneId.HEAD);
     private static final double SWING_LEAD_SECONDS = 0.1;
@@ -150,6 +212,7 @@ class AnimationSetContractTest {
                 "dodge_left", "dodge_right", "technique_dash_forward", "technique_dash_back",
                 "technique_dash_left", "technique_dash_right", "block_one_hand", "block_one_hand_hit",
                 "block_two_hand", "block_two_hand_hit", "technique_breath", "technique_charge",
+                "guard_arms", "guard_arms_lower", "guard_arms_hit",
                 "door_breaker_knock", "door_breaker_knock_off", "door_breaker_cleave", "door_breaker_cleave_off",
                 "door_breaker_ram", "door_breaker_ram_off", "door_breaker_hook", "door_breaker_hook_off",
                 "door_breaker_sweep", "door_breaker_sweep_off", "door_breaker_close", "door_breaker_close_off",

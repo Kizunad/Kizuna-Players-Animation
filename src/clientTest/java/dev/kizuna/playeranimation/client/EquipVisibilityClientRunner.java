@@ -13,12 +13,16 @@ import org.junit.platform.launcher.listeners.SummaryGeneratingListener;
 
 public final class EquipVisibilityClientRunner implements ClientModInitializer {
     private boolean finished;
+    private final GuardReviewRecording recording = GuardReviewRecording.requested();
 
     @Override
     public void onInitializeClient() {
         // 进入真实集成世界后在客户端主线程执行测试，结束后正常关闭客户端和服务器。
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             if (finished || client.level == null || client.player == null) {
+                return;
+            }
+            if (recording != null && !recording.tick(client)) {
                 return;
             }
             finished = true;

@@ -93,6 +93,9 @@ public enum PlayerAnimationAction {
     BLOCK_ONE_HAND_HIT("block_one_hand_hit", 6),
     BLOCK_TWO_HAND("block_two_hand"),
     BLOCK_TWO_HAND_HIT("block_two_hand_hit", 6),
+    GUARD_ARMS("guard_arms"),
+    GUARD_ARMS_LOWER("guard_arms_lower", 6),
+    GUARD_ARMS_HIT("guard_arms_hit", 5),
     TECHNIQUE_BREATH("technique_breath", 40),
     TECHNIQUE_CHARGE("technique_charge", 40),
     /**

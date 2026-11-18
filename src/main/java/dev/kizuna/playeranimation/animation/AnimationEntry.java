@@ -12,7 +12,19 @@ public record AnimationEntry(String id, String file, Mask mask, int priority, fl
                              AnimationClip clip, List<Window> impactWindows,
                              Float loopRegionStart, Float loopRegionEnd, boolean lookLayer,
                              ItemStates itemStates, ItemRotation itemRotation, List<AimWindow> aimWindows,
-                             List<SwingWindow> swings) {
+                             List<SwingWindow> swings, RegionClock regionClock) {
+    public enum RegionClock { SCRUB_ONLY, FREE_AND_SCRUB }
+
+    public AnimationEntry(String id, String file, Mask mask, int priority, float blendIn,
+                          float blendOut, Hand hand, boolean firstPerson, boolean firstPersonTorso,
+                          AnimationClip clip, List<Window> impactWindows,
+                          Float loopRegionStart, Float loopRegionEnd, boolean lookLayer,
+                          ItemStates itemStates, ItemRotation itemRotation, List<AimWindow> aimWindows,
+                          List<SwingWindow> swings) {
+        this(id, file, mask, priority, blendIn, blendOut, hand, firstPerson, firstPersonTorso, clip,
+                impactWindows, loopRegionStart, loopRegionEnd, lookLayer, itemStates, itemRotation,
+                aimWindows, swings, RegionClock.SCRUB_ONLY);
+    }
     public AnimationEntry(String id, String file, Mask mask, int priority, float blendIn,
                           float blendOut, Hand hand, boolean firstPerson, AnimationClip clip) {
         this(id, file, mask, priority, blendIn, blendOut, hand, firstPerson, true, clip,
@@ -94,7 +106,20 @@ public record AnimationEntry(String id, String file, Mask mask, int priority, fl
         return new AnimationEntry(id, file, mask, priority,
                 JsonInput.nonnegative(raw, "blend_in"), JsonInput.nonnegative(raw, "blend_out"),
                 hand, JsonInput.bool(raw, "fpv"), readFirstPersonTorso(raw), clip, impact,
-                loopStart, loopEnd, readLookLayer(raw), itemStates, itemRotation, aimWindows, swings);
+                loopStart, loopEnd, readLookLayer(raw), itemStates, itemRotation, aimWindows, swings,
+                readRegionClock(raw, clip, loopStart));
+    }
+
+    private static RegionClock readRegionClock(JsonObject raw, AnimationClip clip, Float start) {
+        // 自由播放只有持续保持剪辑能在起手之后无限回绕。
+        boolean enabled = raw.has("free_loop_region") && JsonInput.bool(raw, "free_loop_region");
+        if (!enabled) {
+            return RegionClock.SCRUB_ONLY;
+        }
+        if (start == null || clip.loop() != AnimationClip.Loop.HOLD) {
+            throw new IllegalArgumentException("free_loop_region 需要保持剪辑和 loop_region");
+        }
+        return RegionClock.FREE_AND_SCRUB;
     }
 
     private static boolean readFirstPersonTorso(JsonObject raw) {

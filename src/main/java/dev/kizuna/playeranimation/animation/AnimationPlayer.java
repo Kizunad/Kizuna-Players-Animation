@@ -384,6 +384,7 @@ public final class AnimationPlayer {
 
     private static boolean stanceOverlay(String id) {
         return id.startsWith("block_one_hand") || id.startsWith("block_two_hand")
+                || id.equals("guard_arms") || id.equals("guard_arms_hit") || id.equals("guard_arms_lower")
                 || id.equals("technique_breath") || id.equals("technique_charge") || id.equals("status_stagger");
     }
 
@@ -586,8 +587,12 @@ public final class AnimationPlayer {
             }
             double elapsed = Math.max(0, stoppedOr(now) - start) * rate;
             // 非循环动画在淡出阶段保持末帧，循环动画停止后冻结停止时的局部时间。
-            if (loop() == AnimationClip.Loop.REPEAT) {
+            AnimationClip.Loop mode = loop();
+            if (mode == AnimationClip.Loop.REPEAT) {
                 return (float) (elapsed % entry.clip().duration());
+            }
+            if (entry.regionClock() == AnimationEntry.RegionClock.FREE_AND_SCRUB && mode == AnimationClip.Loop.HOLD) {
+                return (float) regionTime(elapsed);
             }
             return (float) Math.min(elapsed, entry.clip().duration());
         }
@@ -602,12 +607,7 @@ public final class AnimationPlayer {
             if (rawTime < 0 && mining(entry.id())) {
                 miningTime = rawTime + MINING_LOOP_SECONDS;
             }
-            double regionTime = miningTime;
-            if (entry.loopRegionStart() != null && miningTime >= entry.loopRegionEnd()) {
-                double start = entry.loopRegionStart();
-                double length = entry.loopRegionEnd() - start;
-                regionTime = start + ((miningTime - start) % length + length) % length;
-            }
+            double regionTime = regionTime(miningTime);
             if (loop() == AnimationClip.Loop.REPEAT) {
                 // 循环资源的回绕目标可能落在 [0,1] 之外，按剪辑长度取模回到同一周期。
                 double duration = entry.clip().duration();
@@ -654,10 +654,15 @@ public final class AnimationPlayer {
 
         double scrubEventTime() {
             double time = scrubTarget * entry.clip().duration();
+            return regionTime(time);
+        }
+
+        private double regionTime(double time) {
+            // 首次进入区间前保留起手，之后按剪辑秒采样同一段呼吸。
             if (entry.loopRegionStart() != null && time >= entry.loopRegionEnd()) {
                 double start = entry.loopRegionStart();
                 double length = entry.loopRegionEnd() - start;
-                time = start + ((time - start) % length + length) % length;
+                return start + ((time - start) % length + length) % length;
             }
             return time;
         }

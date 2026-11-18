@@ -21,7 +21,7 @@ classic 的动画不放在一个 `.bbmodel` 里，按模组分在 `models/player
 | 文件 | 放哪些动画（按动画 id 的前缀定） |
 |---|---|
 | `base.bbmodel` | 下面都对不上的：行走、跑、吐纳、原版动作、校准 |
-| `combat.bbmodel` | `stance_`、`dodge_`、`block_one_hand`、`block_two_hand`、`technique_`、`status_` |
+| `combat.bbmodel` | `stance_`、`dodge_`、`block_one_hand`、`block_two_hand`、`guard_arms`、`technique_`、`status_` |
 | `door_breaker.bbmodel` | `door_breaker_` |
 | `peddler.bbmodel` | `peddler_` |
 | `wayfarer.bbmodel` | `wayfarer_` |
@@ -112,6 +112,7 @@ classic 的动画不放在一个 `.bbmodel` 里，按模组分在 `models/player
 | `fpv_torso` | 可选布尔，缺省 `true`。写 `false` 时，只在全身第一人称里不取本段的胯、腰、胸、头轨道（旋转和位移都不取），这四根骨用下层姿势；两臂、手指、持物挂点（含 `item_rotation`）和腿照剪辑。第三人称、其他玩家和独立 `fpv` 手臂入口不读它；门禁和 GIF 预览也不读。当前只有 `herb_knife_cut` |
 | `impact_window` | 可选，`[开始秒, 结束秒]`，或多段 `[[开始秒, 结束秒], ...]`（多击的式每击一段，各段按时间先后、互不重叠），剪辑时间。只供门禁声明打击时段（角速度差分的末帧落在任一段内即按打击上限），运行时不读取；当前白名单为 `attack_main/off`、`mine_main/off`、`door_breaker_knock(_off)`、`door_breaker_cleave(_off)`、`door_breaker_ram(_off)`、`door_breaker_hook(_off)`、`door_breaker_close(_off)`、`door_breaker_chain(_off)`、`door_breaker_finale(_off)` 与千里腿八式 `peddler_snap_kick`、`peddler_push_kick`、`peddler_roundhouse`、`peddler_triple_kick`、`peddler_mule_kick`、`peddler_flying_kick`、`peddler_axe_kick`、`peddler_whirlwind`（蹲马步不打击）、`wayfarer_bow_strike(_off)`、袖手拳崩拳 `villager_crushing_fist` |
 | `loop_region` | 可选，`[开始秒, 结束秒]`，剪辑时间。scrub 进度到达结束点后在该区间回绕；仅用于保持类的可重复动作（例如 `spyglass`、`brush`） |
+| `free_loop_region` | 可选布尔，缺省为假。声明为真时要求保持剪辑和有效的 `loop_region`。自由播放经过区间终点后按同一区间取姿，倍率、晚追踪和停止冻结均取原播放起点计算。现有进度取样不受此字段影响。 |
 | `layer` | 可选，只接受 `look`：加性视线层。渲染器每帧按原版视线角度取样并把旋转加到已混合姿态上，不经过播放、优先级与同步；当前为 `head_follow`、`head_follow_pitch` |
 | `phases` | 可选，阶段数组或名称到 `[开始秒, 结束秒]` 的映射；数组元素可写成对象 `{"id", "start", "end", "chain"}`，`chain` 可选，是近端到远端至少 3 根已有骨骼（例如踢腿 `["pelvis", "l_thigh", "l_shin", "l_foot"]`），覆盖该阶段按动作 id 推断的主链。仅供门禁在每个声明阶段内按主动作方向检查峰值顺序，时间必须落在剪辑范围内；运行时不读取 |
 | `unbalanced_windows` | 可选，`[[开始秒, 结束秒], ...]`。只供门禁声明失衡时段（窗口内不查重心投影），运行时不读取；只允许 `dodge_*`、`technique_dash_*`、`door_breaker_cleave(_off)`、`door_breaker_ram(_off)`、`door_breaker_hook(_off)`、`door_breaker_sweep(_off)`、`door_breaker_close(_off)`、`door_breaker_chain(_off)`、`door_breaker_finale(_off)`、`peddler_*`、`wayfarer_*`、`evoker_earth_legs`、`evoker_water_return`、袖手拳背摔 `villager_shoulder_throw` |
@@ -159,6 +160,8 @@ PA 提供 `assets/minecraft/items/bow.json` 的模型分支，资源包若覆盖
 
 `AnimationPlayer` 的遮罩规则：原版上层（攻击、挖掘、使用等）在任何架势底层（含静止 `stance_idle`）、闪避、轻步、跃步和格挡上都只取 `upper`；
 格挡、受击、调息、蓄力、僵直 `status_stagger` 在静止 `stance_idle` 上整段生效，在移动架势底层、进出过渡、闪避、轻步、跃步或原版移动底层上只取 `upper`。
+
+双前臂[抱架](animation-specs/guard_arms.md)从架势抬手 0.20 s，其后按 `loop_region: [0.20, 1.80]` 自由循环呼吸，宿主显式停止。[受击](animation-specs/guard_arms_hit.md)在其上播一次（5 tick），[放下](animation-specs/guard_arms_lower.md)在停止两层后播一次（6 tick）。三段同属架势覆盖动作，均为 `full`、`hand: main`、`fpv: false`，左主手整段镜像。保持优先级 15，受击与放下 16，无时间线事件。
 
 层序为原版姿态 → 循环姿态 → 一次性／保持动作。只有动画实际包含、且在 mask 内的骨参与接管，缺失的通道继承下层。`upper` 包含腰、胸、头、双臂；`lower` 包含胯、双腿；单臂包含上臂至手指；单手手指只含该手拇指与两组手指。只有 `full` 可以改变 root。
 
