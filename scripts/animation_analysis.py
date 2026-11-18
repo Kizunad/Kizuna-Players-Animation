@@ -10,7 +10,9 @@ from __future__ import annotations
 import base64
 import json
 import math
+from bisect import bisect_right
 from dataclasses import dataclass
+from operator import itemgetter
 from pathlib import Path
 from typing import Any
 
@@ -18,6 +20,8 @@ import bbmodel_store
 
 
 Vec = tuple[float, float, float]
+Frame = tuple[float, Vec, str, Vec]
+FRAME_TIME = itemgetter(0)
 # 索引 item_rotation 转的挂点：main 模板按右主手，off 模板按左副手（运行时左撇子整段镜像，工具不镜像）。
 ITEM_SOCKETS = {"main": "r_item", "off": "l_item"}
 
@@ -141,6 +145,7 @@ class AnimationSampler:
         self.loop = self.animation.get("loop", False) is True
         self.hold = self.animation.get("loop") == "hold_on_last_frame"
         self.tracks = self.animation.get("bones", {})
+        self._frame_cache: dict[tuple[str, str], list[Frame]] = {}
         # 索引 item_rotation 由 attach_item_rotation 注入：持物手挂点的 Blockbench 欧拉角轨道。
         self.item_rotation = [(float(time), tuple(float(value) for value in angles))
                               for time, angles in self.animation.get("item_rotation", [])]
@@ -148,31 +153,41 @@ class AnimationSampler:
 
     def _item_rotation(self, time: float) -> Vec:
         """与运行时 ItemRotation 一致：相邻键 smoothstep，首键前取首值、末键后保持；再按骨骼旋转同样恢复 X/Y 反号。"""
-        previous = self.item_rotation[0]
-        value = previous[1]
-        if time > previous[0]:
-            value = self.item_rotation[-1][1]
-            for key in self.item_rotation[1:]:
-                if time < key[0]:
-                    amount = (time - previous[0]) / (key[0] - previous[0])
-                    value = lerp(previous[1], key[1], amount * amount * (3 - 2 * amount))
-                    break
-                previous = key
+        first = self.item_rotation[0]
+        value = first[1]
+        if time > first[0]:
+            index = bisect_right(self.item_rotation, time, key=FRAME_TIME)
+            if index == len(self.item_rotation):
+                value = self.item_rotation[-1][1]
+            else:
+                previous, key = self.item_rotation[index - 1], self.item_rotation[index]
+                amount = (time - previous[0]) / (key[0] - previous[0])
+                value = lerp(previous[1], key[1], amount * amount * (3 - 2 * amount))
         return (-value[0], -value[1], value[2])
 
-    def _frames(self, bone: str, channel: str) -> list[tuple[float, Vec, str, Vec]]:
+    def _frames(self, bone: str, channel: str) -> list[Frame]:
         """(时间, post, 插值, pre)；单值帧 pre 等于 post。"""
+        key = (bone, channel)
+        cached = self._frame_cache.get(key)
+        if cached is not None:
+            return cached
+
         raw = self.tracks.get(bone, {}).get(channel)
         if raw is None:
-            return [(0.0, (0.0, 0.0, 0.0), "linear", (0.0, 0.0, 0.0))]
-        if isinstance(raw, list):
+            frames = [(0.0, (0.0, 0.0, 0.0), "linear", (0.0, 0.0, 0.0))]
+        elif isinstance(raw, list):
             value = raw_frame_value(raw, channel)
-            return [(0.0, value, "linear", value)]
-        frames = []
-        for time, value in raw.items():
-            mode = value.get("lerp_mode", "linear") if isinstance(value, dict) else "linear"
-            frames.append((float(time), raw_frame_value(value, channel), mode, vec_from_json(value, channel, "pre")))
-        return sorted(frames)
+            frames = [(0.0, value, "linear", value)]
+        else:
+            frames = []
+            for time, value in raw.items():
+                mode = value.get("lerp_mode", "linear") if isinstance(value, dict) else "linear"
+                post = raw_frame_value(value, channel)
+                pre = vec_from_json(value, channel, "pre")
+                frames.append((float(time), post, mode, pre))
+            frames.sort()
+        self._frame_cache[key] = frames
+        return frames
 
     def value(self, bone: str, channel: str, time: float, wrap: bool = True) -> Vec:
         if channel == "rotation" and bone == self.item_socket:
@@ -184,29 +199,29 @@ class AnimationSampler:
             time = time % self.duration
         if time <= frames[0][0]:
             return frames[0][1]
-        if time >= frames[-1][0]:
+        # 取严格晚于采样时刻的首帧：正好命中跳变帧时从它的 post 起算，左侧仍趋近 pre。
+        index = bisect_right(frames, time, key=FRAME_TIME)
+        if index == len(frames):
             return frames[-1][1]
-        for index in range(1, len(frames)):
-            right = frames[index]
-            # 与运行时 Channel 一致：到达帧时取 post，帧左侧的区间终点取 pre。
-            if time < right[0]:
-                left = frames[index - 1]
-                amount = (time - left[0]) / (right[0] - left[0])
-                if right[2] == "catmullrom":
-                    # 跳变帧（pre ≠ post）一侧的切线端点用它自己的 post / pre，不跨过跳变取邻帧。
-                    if left[3] != left[1]:
-                        p0 = left[1]
-                    else:
-                        p0 = frames[index - 2][1] if index >= 2 else (frames[-1][1] if self.loop else left[1])
-                    if right[3] != right[1]:
-                        p3 = right[3]
-                    else:
-                        p3 = frames[index + 1][3] if index + 1 < len(frames) else (frames[0][3] if self.loop else right[3])
-                    return catmull(p0, left[1], right[3], p3, amount)
-                if right[2] == "step":
-                    return left[1]
-                return lerp(left[1], right[3], amount)
-        return frames[-1][1]
+        left, right = frames[index - 1], frames[index]
+        amount = (time - left[0]) / (right[0] - left[0])
+        if right[2] == "catmullrom":
+            # 跳变帧（pre ≠ post）一侧的切线端点用它自己的 post / pre，不跨过跳变取邻帧。
+            p0, p3 = left[1], right[3]
+            if left[3] == left[1]:
+                if index >= 2:
+                    p0 = frames[index - 2][1]
+                elif self.loop:
+                    p0 = frames[-1][1]
+            if right[3] == right[1]:
+                if index + 1 < len(frames):
+                    p3 = frames[index + 1][3]
+                elif self.loop:
+                    p3 = frames[0][3]
+            return catmull(p0, left[1], right[3], p3, amount)
+        if right[2] == "step":
+            return left[1]
+        return lerp(left[1], right[3], amount)
 
     def local_pose(self, time: float, wrap: bool = True) -> dict[str, dict[str, Vec]]:
         return {bone: {channel: self.value(bone, channel, time, wrap)
