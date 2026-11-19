@@ -1215,9 +1215,9 @@
       "blend_out": 0.08,
       "hand": "main",
       "fpv": false,
-      "loop_region": [0.2, 1.8],
+      "loop_region": [0.4, 2.0],
       "free_loop_region": true,
-      "phases": [[0, 0.2]]
+      "phases": [[0, 0.4]]
     },
     {
       "id": "guard_arms_lower",
@@ -1251,9 +1251,9 @@
       "blend_out": 0.08,
       "hand": "main",
       "fpv": false,
-      "loop_region": [0.2, 1.8],
+      "loop_region": [0.4, 2.0],
       "free_loop_region": true,
-      "phases": [[0, 0.2]]
+      "phases": [[0, 0.4]]
     },
     {
       "id": "guard_weapon_lower",

@@ -41,7 +41,7 @@ class AnimationSetContractTest {
     private static final float POSE_EPSILON = 0.0001f;
     private static final double BREATH_PERIOD = 1.60;
     private static final double MID_BREATH = 0.75;
-    private static final double SETTLED_GUARD = 0.20;
+    private static final double SETTLED_GUARD = 0.40;
     private static final double MID_HIT = 0.10;
     private static final double AFTER_HIT = 0.32;
 
@@ -71,7 +71,10 @@ class AnimationSetContractTest {
     @ParameterizedTest
     @ValueSource(strings = {"guard_arms", "guard_weapon"})
     void guardBreathRepeatsAndLateObserversSeeTheSamePose(String id) throws Exception {
+        // 两种守姿的自由循环必须覆盖抬手之后的完整呼吸。
         var guard = resource(id);
+        assertEquals(SETTLED_GUARD, guard.loopRegionStart(), POSE_EPSILON);
+        assertEquals(guard.clip().duration(), guard.loopRegionEnd(), POSE_EPSILON);
         var request = new AnimationPlayer.PlaybackRequest(0, AnimationPlayer.Handedness.RIGHT, "guard", null);
         var continuous = new AnimationPlayer();
         continuous.play(guard, 0, request);

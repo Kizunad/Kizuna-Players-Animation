@@ -161,7 +161,7 @@ PA 提供 `assets/minecraft/items/bow.json` 的模型分支，资源包若覆盖
 `AnimationPlayer` 的遮罩规则：原版上层（攻击、挖掘、使用等）在任何架势底层（含静止 `stance_idle`）、闪避、轻步、跃步和格挡上都只取 `upper`；
 格挡、受击、调息、蓄力、僵直 `status_stagger` 在静止 `stance_idle` 上整段生效，在移动架势底层、进出过渡、闪避、轻步、跃步或原版移动底层上只取 `upper`。
 
-双前臂[抱架](animation-specs/guard_arms.md)从架势抬手 0.20 s，其后按 `loop_region: [0.20, 1.80]` 自由循环呼吸，宿主显式停止。[受击](animation-specs/guard_arms_hit.md)在其上播一次（5 tick），[放下](animation-specs/guard_arms_lower.md)在停止两层后播一次（6 tick）。三段同属架势覆盖动作，均为 `full`、`hand: main`、`fpv: false`，左主手整段镜像。保持优先级 15，受击与放下 16，无时间线事件。
+双前臂[抱架](animation-specs/guard_arms.md)从架势抬手 0.40 s，其后按 `loop_region: [0.40, 2.00]` 自由循环呼吸，宿主显式停止。[受击](animation-specs/guard_arms_hit.md)在其上播一次（5 tick），[放下](animation-specs/guard_arms_lower.md)在停止两层后播一次（6 tick）。三段同属架势覆盖动作，均为 `full`、`hand: main`、`fpv: false`，左主手整段镜像。保持优先级 15，受击与放下 16，无时间线事件。
 
 持兵器的[横架](animation-specs/guard_weapon.md)、[受击](animation-specs/guard_weapon_hit.md)与[放下](animation-specs/guard_weapon_lower.md)沿用上述时钟、层级与移动遮罩。剑和斧共用肩、肘、腕的骨骼轨道，主手持物随挂点转到胸前，副手从下方承托。索引使用物品自身的显示变换，无额外 `item_rotation`。
 
