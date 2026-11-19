@@ -12,6 +12,8 @@ import dev.kizuna.playeranimation.model.Pose;
 import dev.kizuna.playeranimation.model.Rig;
 import dev.kizuna.playeranimation.model.Skeleton;
 import dev.kizuna.playeranimation.model.Vec3;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -21,6 +23,8 @@ import java.util.Map;
 import java.util.Set;
 import org.joml.Matrix4f;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
@@ -33,6 +37,7 @@ class AnimationSetContractTest {
     private static final Path INDEX = Path.of(
             "src/main/resources/assets/kizuna_players_animation/player_anim_index.json");
     private static final String KEY_PREFIX = "animation.kizuna_players_animation.player.";
+    private static final BigDecimal TICKS_PER_SECOND = BigDecimal.valueOf(20);
     private static final float POSE_EPSILON = 0.0001f;
     private static final double BREATH_PERIOD = 1.60;
     private static final double MID_BREATH = 0.75;
@@ -41,8 +46,32 @@ class AnimationSetContractTest {
     private static final double AFTER_HIT = 0.32;
 
     @Test
-    void guardBreathRepeatsAndLateObserversSeeTheSamePose() throws Exception {
-        var guard = resource("guard_arms");
+    void naturalDurationTicksCoverTheClipThroughItsLastFrame() throws Exception {
+        // 受击和放下必须自行播完，即使误删了时长登记，也要用剪辑核对这四段。
+        var guardReactions = Set.of(PlayerAnimationAction.GUARD_ARMS_HIT, PlayerAnimationAction.GUARD_ARMS_LOWER,
+                PlayerAnimationAction.GUARD_WEAPON_HIT, PlayerAnimationAction.GUARD_WEAPON_LOWER);
+        JsonObject index = JsonParser.parseString(Files.readString(INDEX)).getAsJsonObject();
+        for (var element : index.getAsJsonArray("animations")) {
+            JsonObject entry = element.getAsJsonObject();
+            String id = entry.get("id").getAsString();
+            PlayerAnimationAction action = PlayerAnimationAction.find(id);
+            if (action == null || (!action.naturallyEnds() && !guardReactions.contains(action))) {
+                continue;
+            }
+            Path file = INDEX.getParent().resolve(entry.get("file").getAsString());
+            JsonObject document = JsonParser.parseString(Files.readString(file)).getAsJsonObject();
+            JsonObject clip = document.getAsJsonObject("animations").getAsJsonObject(KEY_PREFIX + id);
+            // 直接用资源里的十进制秒数，只有末帧落在两个 tick 之间时才向上取整。
+            BigDecimal seconds = clip.get("animation_length").getAsBigDecimal();
+            int expectedTicks = seconds.multiply(TICKS_PER_SECOND).setScale(0, RoundingMode.CEILING).intValueExact();
+            assertEquals(expectedTicks, action.naturalDurationTicks(), id);
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"guard_arms", "guard_weapon"})
+    void guardBreathRepeatsAndLateObserversSeeTheSamePose(String id) throws Exception {
+        var guard = resource(id);
         var request = new AnimationPlayer.PlaybackRequest(0, AnimationPlayer.Handedness.RIGHT, "guard", null);
         var continuous = new AnimationPlayer();
         continuous.play(guard, 0, request);
@@ -55,18 +84,25 @@ class AnimationSetContractTest {
         var repeated = visible(continuous, now);
         assertEquals(breath[chest].rotation().x(), repeated[chest].rotation().x(), POSE_EPSILON);
         assertArrayEquals(repeated, visible(late, now));
+    }
+
+    @Test
+    void legacyBlockFreezesAtTheEnd() throws Exception {
         var legacy = resource("block_two_hand");
         var old = new AnimationPlayer();
+        var request = new AnimationPlayer.PlaybackRequest(0, AnimationPlayer.Handedness.RIGHT, "guard", null);
+        double now = MID_BREATH + 2 * BREATH_PERIOD;
         old.play(legacy, 0, request);
         float end = legacy.clip().duration();
         assertEquals(end, old.active(now).getFirst().time(), POSE_EPSILON);
         assertArrayEquals(visible(old, end), visible(old, now));
     }
 
-    @Test
-    void guardReactionKeepsBreathingAndWalking() throws Exception {
-        var guard = resource("guard_arms");
-        var hit = resource("guard_arms_hit");
+    @ParameterizedTest
+    @ValueSource(strings = {"guard_arms", "guard_weapon"})
+    void guardReactionKeepsBreathingAndWalking(String id) throws Exception {
+        var guard = resource(id);
+        var hit = resource(id + "_hit");
         var walk = resource("stance_walk_forward");
         var request = new AnimationPlayer.PlaybackRequest(0, AnimationPlayer.Handedness.LEFT, null, null);
         var player = new AnimationPlayer();
@@ -213,6 +249,7 @@ class AnimationSetContractTest {
                 "technique_dash_left", "technique_dash_right", "block_one_hand", "block_one_hand_hit",
                 "block_two_hand", "block_two_hand_hit", "technique_breath", "technique_charge",
                 "guard_arms", "guard_arms_lower", "guard_arms_hit",
+                "guard_weapon", "guard_weapon_lower", "guard_weapon_hit",
                 "door_breaker_knock", "door_breaker_knock_off", "door_breaker_cleave", "door_breaker_cleave_off",
                 "door_breaker_ram", "door_breaker_ram_off", "door_breaker_hook", "door_breaker_hook_off",
                 "door_breaker_sweep", "door_breaker_sweep_off", "door_breaker_close", "door_breaker_close_off",

@@ -12,14 +12,22 @@ import net.minecraft.client.Screenshot;
 import net.minecraft.client.player.RemotePlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 
 /** 从真实世界帧缓冲读取连续镜头，一帧对应一个游戏 tick。 */
 final class GuardReviewRecording {
-    private enum Shot { STANDING, WALKING, SWORD, FIRST_PERSON, FRONT, SIDE, EYES }
+    private enum Shot { STANDING, WALKING, SWORD, FIRST_PERSON, FRONT, SIDE, EYES, WIDE_SWORD, WIDE_AXE, SLIM_LEFT_AXE }
     private static final Shot[] ORIGINAL = {Shot.STANDING, Shot.WALKING, Shot.SWORD, Shot.FIRST_PERSON};
     private static final Shot[] UNARMED = {Shot.FRONT, Shot.SIDE, Shot.EYES};
+    private static final Shot[] WEAPONS = {Shot.WIDE_SWORD, Shot.WIDE_AXE, Shot.WALKING,
+            Shot.FIRST_PERSON, Shot.SLIM_LEFT_AXE};
+    private static final String WEAPON = "guard_weapon";
+    private static final String UNARMED_GUARD = "guard_arms";
+    // 26.2 按 UUID 选默认皮肤，这两个账号分别取粗臂 Steve 和细臂 Alex。
+    private static final UUID WIDE_ID = UUID.fromString("00000000-0000-0000-0000-00000000000f");
+    private static final UUID SLIM_ID = UUID.fromString("00000000-0000-0000-0000-000000000012");
     private static final int CLIP_TICKS = 88;
     private static final int WARMUP_TICKS = 80;
     private static final int RAISE = 8;
@@ -39,25 +47,31 @@ final class GuardReviewRecording {
     private static final int REVIEW_FOV = 44;
     private final Path directory;
     private final Shot[] shots;
+    private final String guard;
     private RemotePlayer subject;
     private int frame = -WARMUP_TICKS;
     private int saved;
 
-    private GuardReviewRecording(Path directory, Shot[] shots) {
+    private GuardReviewRecording(Path directory, Shot[] shots, String guard) {
         this.directory = directory;
         this.shots = shots;
+        this.guard = guard;
     }
 
     static GuardReviewRecording requested() {
+        String weapons = System.getenv("KPA_WEAPON_FRAMES");
+        if (weapons != null) {
+            return new GuardReviewRecording(Path.of(weapons), WEAPONS, WEAPON);
+        }
         String rework = System.getenv("KPA_UNARMED_FRAMES");
         if (rework != null) {
-            return new GuardReviewRecording(Path.of(rework), UNARMED);
+            return new GuardReviewRecording(Path.of(rework), UNARMED, UNARMED_GUARD);
         }
         String output = System.getenv("KPA_GUARD_FRAMES");
         if (output == null) {
             return null;
         }
-        return new GuardReviewRecording(Path.of(output), ORIGINAL);
+        return new GuardReviewRecording(Path.of(output), ORIGINAL, UNARMED_GUARD);
     }
 
     boolean tick(Minecraft client) {
@@ -114,13 +128,17 @@ final class GuardReviewRecording {
 
     private void setupShot(Minecraft client, Shot shot) {
         if (subject != null) {
+            PlayerAnimations.stopAll(subject.getUUID());
             client.level.removeEntity(subject.getId(), Entity.RemovalReason.DISCARDED);
             subject = null;
         }
         UUID id = client.player.getUUID();
         PlayerAnimations.stopAll(id);
         client.setCameraEntity(client.player);
-        if (shot == Shot.FRONT || shot == Shot.SIDE) {
+        if (shot == Shot.FRONT || shot == Shot.SIDE || shot == Shot.WIDE_SWORD
+                || shot == Shot.WIDE_AXE || shot == Shot.SLIM_LEFT_AXE) {
+            client.options.keyUp.setDown(false /* down */);
+            client.player.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
             filmSubject(client, shot);
             return;
         } else if (shot == Shot.EYES) {
@@ -139,7 +157,7 @@ final class GuardReviewRecording {
         boolean walking = shot == Shot.WALKING;
         client.options.keyUp.setDown(walking);
         ItemStack item = ItemStack.EMPTY;
-        if (shot == Shot.SWORD) {
+        if (shot == Shot.SWORD || guard.equals(WEAPON)) {
             item = new ItemStack(Items.IRON_SWORD);
         }
         client.player.setItemInHand(InteractionHand.MAIN_HAND, item);
@@ -149,32 +167,43 @@ final class GuardReviewRecording {
 
     private void filmSubject(Minecraft client, Shot shot) {
         // 用观察者视角拍另一名客户端玩家；头、躯干和脚的朝向一起固定。
-        subject = new RemotePlayer(client.level, new GameProfile(SUBJECT_ID, "Guard"));
+        UUID profile = switch (shot) {
+            case WIDE_SWORD, WIDE_AXE -> WIDE_ID;
+            case SLIM_LEFT_AXE -> SLIM_ID;
+            default -> SUBJECT_ID;
+        };
+        subject = new RemotePlayer(client.level, new GameProfile(profile, "Guard"));
         subject.setId(SUBJECT_ENTITY_ID);
         var target = client.player.position().add(0, 0, SUBJECT_DISTANCE);
-        float yaw = shot == Shot.FRONT ? FRONT_YAW : SIDE_YAW;
+        float yaw = shot == Shot.SIDE ? SIDE_YAW : FRONT_YAW;
         subject.snapTo(target, yaw, 0);
         subject.setYHeadRot(yaw);
         subject.setYBodyRot(yaw);
         subject.setOldPosAndRot();
         client.level.addEntity(subject);
-        PlayerAnimations.stopAll(SUBJECT_ID);
-        PlayerAnimations.play(SUBJECT_ID, "stance_idle");
+        if (guard.equals(WEAPON)) {
+            var arm = shot == Shot.SLIM_LEFT_AXE ? HumanoidArm.LEFT : HumanoidArm.RIGHT;
+            var item = shot == Shot.WIDE_SWORD ? Items.IRON_SWORD : Items.IRON_AXE;
+            subject.setMainArm(arm);
+            subject.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(item));
+        }
+        PlayerAnimations.stopAll(profile);
+        PlayerAnimations.play(profile, "stance_idle");
         client.player.setYRot(0);
         client.player.setXRot(SUBJECT_PITCH);
         client.options.setCameraType(CameraType.FIRST_PERSON);
         client.options.fov().set(REVIEW_FOV);
     }
 
-    private static void action(UUID id, int tick) {
+    private void action(UUID id, int tick) {
         // 按宿主次序播放：受击覆盖保持，收势同时停掉两者。
         switch (tick) {
-            case RAISE -> PlayerAnimations.play(id, "guard_arms");
-            case FIRST_HIT, SECOND_HIT -> PlayerAnimations.play(id, "guard_arms_hit");
+            case RAISE -> PlayerAnimations.play(id, guard);
+            case FIRST_HIT, SECOND_HIT -> PlayerAnimations.play(id, guard + "_hit");
             case LOWER -> {
-                PlayerAnimations.stop(id, "guard_arms_hit");
-                PlayerAnimations.stop(id, "guard_arms");
-                PlayerAnimations.play(id, "guard_arms_lower");
+                PlayerAnimations.stop(id, guard + "_hit");
+                PlayerAnimations.stop(id, guard);
+                PlayerAnimations.play(id, guard + "_lower");
             }
             default -> { }
         }

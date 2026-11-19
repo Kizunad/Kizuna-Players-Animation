@@ -1243,6 +1243,42 @@
       "reaction": "hit"
     },
     {
+      "id": "guard_weapon",
+      "file": "animations/guard_weapon.animation.json",
+      "mask": "full",
+      "priority": 15,
+      "blend_in": 0.05,
+      "blend_out": 0.08,
+      "hand": "main",
+      "fpv": false,
+      "loop_region": [0.2, 1.8],
+      "free_loop_region": true,
+      "phases": [[0, 0.2]]
+    },
+    {
+      "id": "guard_weapon_lower",
+      "file": "animations/guard_weapon_lower.animation.json",
+      "mask": "full",
+      "priority": 16,
+      "blend_in": 0.05,
+      "blend_out": 0.05,
+      "hand": "main",
+      "fpv": false,
+      "phases": [[0, 0.3]]
+    },
+    {
+      "id": "guard_weapon_hit",
+      "file": "animations/guard_weapon_hit.animation.json",
+      "mask": "full",
+      "priority": 16,
+      "blend_in": 0.03,
+      "blend_out": 0.05,
+      "hand": "main",
+      "fpv": false,
+      "phases": [[0, 0.10]],
+      "reaction": "hit"
+    },
+    {
       "id": "technique_breath",
       "file": "animations/technique_breath.animation.json",
       "mask": "full",

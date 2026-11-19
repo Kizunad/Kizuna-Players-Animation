@@ -28,7 +28,8 @@ GROUPS: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("wayfarer", ("wayfarer_",)),
     ("door_breaker", ("door_breaker_",)),
     ("peddler", ("peddler_",)),
-    ("combat", ("stance_", "dodge_", "block_one_hand", "block_two_hand", "guard_arms", "technique_", "status_")),
+    ("combat", ("stance_", "dodge_", "block_one_hand", "block_two_hand", "guard_arms", "guard_weapon",
+                "technique_", "status_")),
 )
 BASE = "base"
 ORDER = (BASE,) + tuple(name for name, _ in GROUPS)

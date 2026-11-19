@@ -21,7 +21,7 @@ classic 的动画不放在一个 `.bbmodel` 里，按模组分在 `models/player
 | 文件 | 放哪些动画（按动画 id 的前缀定） |
 |---|---|
 | `base.bbmodel` | 下面都对不上的：行走、跑、吐纳、原版动作、校准 |
-| `combat.bbmodel` | `stance_`、`dodge_`、`block_one_hand`、`block_two_hand`、`guard_arms`、`technique_`、`status_` |
+| `combat.bbmodel` | `stance_`、`dodge_`、`block_one_hand`、`block_two_hand`、`guard_arms`、`guard_weapon`、`technique_`、`status_` |
 | `door_breaker.bbmodel` | `door_breaker_` |
 | `peddler.bbmodel` | `peddler_` |
 | `wayfarer.bbmodel` | `wayfarer_` |
@@ -162,6 +162,8 @@ PA 提供 `assets/minecraft/items/bow.json` 的模型分支，资源包若覆盖
 格挡、受击、调息、蓄力、僵直 `status_stagger` 在静止 `stance_idle` 上整段生效，在移动架势底层、进出过渡、闪避、轻步、跃步或原版移动底层上只取 `upper`。
 
 双前臂[抱架](animation-specs/guard_arms.md)从架势抬手 0.20 s，其后按 `loop_region: [0.20, 1.80]` 自由循环呼吸，宿主显式停止。[受击](animation-specs/guard_arms_hit.md)在其上播一次（5 tick），[放下](animation-specs/guard_arms_lower.md)在停止两层后播一次（6 tick）。三段同属架势覆盖动作，均为 `full`、`hand: main`、`fpv: false`，左主手整段镜像。保持优先级 15，受击与放下 16，无时间线事件。
+
+持兵器的[横架](animation-specs/guard_weapon.md)、[受击](animation-specs/guard_weapon_hit.md)与[放下](animation-specs/guard_weapon_lower.md)沿用上述时钟、层级与移动遮罩。剑和斧共用肩、肘、腕的骨骼轨道，主手持物随挂点转到胸前，副手从下方承托。索引使用物品自身的显示变换，无额外 `item_rotation`。
 
 层序为原版姿态 → 循环姿态 → 一次性／保持动作。只有动画实际包含、且在 mask 内的骨参与接管，缺失的通道继承下层。`upper` 包含腰、胸、头、双臂；`lower` 包含胯、双腿；单臂包含上臂至手指；单手手指只含该手拇指与两组手指。只有 `full` 可以改变 root。
 

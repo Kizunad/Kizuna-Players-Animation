@@ -385,6 +385,7 @@ public final class AnimationPlayer {
     private static boolean stanceOverlay(String id) {
         return id.startsWith("block_one_hand") || id.startsWith("block_two_hand")
                 || id.equals("guard_arms") || id.equals("guard_arms_hit") || id.equals("guard_arms_lower")
+                || id.equals("guard_weapon") || id.equals("guard_weapon_hit") || id.equals("guard_weapon_lower")
                 || id.equals("technique_breath") || id.equals("technique_charge") || id.equals("status_stagger");
     }
 
