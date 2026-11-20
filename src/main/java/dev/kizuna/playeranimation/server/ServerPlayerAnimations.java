@@ -344,8 +344,8 @@ public final class ServerPlayerAnimations implements ModInitializer {
     private static void tick(MinecraftServer server) {
         expireFinite(server);
         VANILLA.tick(server);
-        // 即使玩家尚未播放动作，也要让缺少必需通道的连接明确失败。
-        for (ServerPlayer viewer : server.getPlayerList().getPlayers()) {
+        // 缺少通道时断线可能同步移除玩家，因此遍历当前玩家的快照。
+        for (ServerPlayer viewer : List.copyOf(server.getPlayerList().getPlayers())) {
             if (!viewer.connection.isAcceptingMessages()) {
                 continue;
             }
