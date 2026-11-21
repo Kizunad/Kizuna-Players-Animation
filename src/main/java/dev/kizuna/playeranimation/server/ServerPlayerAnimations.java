@@ -321,9 +321,14 @@ public final class ServerPlayerAnimations implements ModInitializer {
             if (!viewer.connection.isAcceptingMessages()) {
                 continue;
             }
-            if (!channelsReady(viewer)) {
-                // 协商时只保留最终活动快照；期间已停止的动作不会在接通后重新播放。
-                SYNC.add(new TrackingPair(target.getUUID(), viewer.getUUID()));
+            try {
+                if (!channelsReady(viewer)) {
+                    // 协商时只保留最终活动快照；期间已停止的动作不会在接通后重新播放。
+                    SYNC.add(new TrackingPair(target.getUUID(), viewer.getUUID()));
+                    continue;
+                }
+            } catch (IllegalStateException missingChannels) {
+                disconnectMissingChannels(viewer, missingChannels);
                 continue;
             }
             send(viewer, channel, message, requestId);
@@ -342,8 +347,6 @@ public final class ServerPlayerAnimations implements ModInitializer {
     }
 
     private static void tick(MinecraftServer server) {
-        expireFinite(server);
-        VANILLA.tick(server);
         // 缺少通道时断线可能同步移除玩家，因此遍历当前玩家的快照。
         for (ServerPlayer viewer : List.copyOf(server.getPlayerList().getPlayers())) {
             if (!viewer.connection.isAcceptingMessages()) {
@@ -352,10 +355,11 @@ public final class ServerPlayerAnimations implements ModInitializer {
             try {
                 channelsReady(viewer);
             } catch (IllegalStateException missingChannels) {
-                LOG.error("玩家 {} 动画接线失败", viewer.getUUID(), missingChannels);
-                viewer.connection.disconnect(Component.literal(missingChannels.getMessage()));
+                disconnectMissingChannels(viewer, missingChannels);
             }
         }
+        expireFinite(server);
+        VANILLA.tick(server);
         // 同一个 tick 内重复的追踪/通道事件只补发一次，并重新检查实体仍可见。
         for (TrackingPair pair : Set.copyOf(SYNC)) {
             ServerPlayer target = server.getPlayerList().getPlayer(pair.target);
@@ -365,7 +369,13 @@ public final class ServerPlayerAnimations implements ModInitializer {
                 SYNC.remove(pair);
                 continue;
             }
-            if (!channelsReady(viewer)) {
+            try {
+                if (!channelsReady(viewer)) {
+                    continue;
+                }
+            } catch (IllegalStateException missingChannels) {
+                disconnectMissingChannels(viewer, missingChannels);
+                SYNC.remove(pair);
                 continue;
             }
             for (PlayRequest saved : STATE.snapshot(pair.target)) {
@@ -391,8 +401,15 @@ public final class ServerPlayerAnimations implements ModInitializer {
         ServerPlayer target = server.getPlayerList().getPlayer(targetId);
         ServerPlayer viewer = server.getPlayerList().getPlayer(retry.viewer());
         if (target == null || viewer == null || !viewer.connection.isAcceptingMessages()
-                || (target != viewer && !PlayerLookup.tracking(target).contains(viewer))
-                || !channelsReady(viewer)) {
+                || (target != viewer && !PlayerLookup.tracking(target).contains(viewer))) {
+            return;
+        }
+        try {
+            if (!channelsReady(viewer)) {
+                return;
+            }
+        } catch (IllegalStateException missingChannels) {
+            disconnectMissingChannels(viewer, missingChannels);
             return;
         }
         if (target == viewer && STATE.audience(targetId, saved.getAnimationId()) == Audience.TRACKERS) {
@@ -450,6 +467,11 @@ public final class ServerPlayerAnimations implements ModInitializer {
         boolean complete = ServerPlayNetworking.canSend(viewer, AnimationPackets.PLAY)
                 && ServerPlayNetworking.canSend(viewer, AnimationPackets.STOP);
         return channels.ready(viewer.level().getServer().getTickCount(), complete);
+    }
+
+    private static void disconnectMissingChannels(ServerPlayer viewer, IllegalStateException missingChannels) {
+        LOG.error("玩家 {} 动画接线失败", viewer.getUUID(), missingChannels);
+        viewer.connection.disconnect(Component.literal(missingChannels.getMessage()));
     }
 
     private static void requireServerThread(ServerPlayer player) {

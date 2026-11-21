@@ -3,6 +3,7 @@ package dev.kizuna.playeranimation.server;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.mojang.authlib.GameProfile;
 import dev.kizuna.playeranimation.network.AnimationPackets;
+import dev.kizuna.playeranimation.network.RequiredAnimationChannels;
 import dev.kizuna.playeranimation.protocol.pb.PlayerAnimationProtocol.PlayRequest;
 import io.netty.channel.embedded.EmbeddedChannel;
 import java.util.List;
@@ -26,6 +27,7 @@ public final class PlayerLoopGameTest {
     private static final List<Identifier> ANIMATION_CHANNELS =
             List.of(AnimationPackets.PLAY.id(), AnimationPackets.STOP.id());
     private static final String MISSING_CHANNELS = "缺少必需的 Players-Animation play / stop / result 通道";
+    private static final int ASSERTION_GRACE_TICKS = 20;
 
     @GameTest(environment = "kpa_gametest:player_loop")
     public void disconnectDuringTickStillSyncsOtherPlayer(GameTestHelper context) {
@@ -53,6 +55,34 @@ public final class PlayerLoopGameTest {
         });
     }
 
+    @GameTest(maxTicks = RequiredAnimationChannels.NEGOTIATION_TICKS + ASSERTION_GRACE_TICKS,
+            environment = "kpa_gametest:player_loop")
+    public void broadcastToExpiredConnectionDoesNotCrashTick(GameTestHelper context) {
+        var level = context.getLevel();
+        var broadcaster = TestClient.join(level, "pa-broadcast");
+        var missing = TestClient.join(level, "pa-expired");
+        broadcaster.receive(new RegistrationPayload(RegistrationPayload.REGISTER, ANIMATION_CHANNELS));
+        ServerPlayerAnimations.play(broadcaster.player(), ACTION);
+
+        context.runAfterDelay(RequiredAnimationChannels.NEGOTIATION_TICKS, () -> {
+            try {
+                ServerPlayerAnimations.stop(broadcaster.player(), ACTION);
+                context.runAfterDelay(1, () -> {
+                    try {
+                        assertExpiredConnectionOutcome(context, broadcaster, missing);
+                        context.succeed();
+                    } finally {
+                        broadcaster.close();
+                        missing.close();
+                    }
+                });
+            } catch (RuntimeException failure) {
+                missing.close();
+                throw failure;
+            }
+        });
+    }
+
     private static void assertTickOutcome(GameTestHelper context, TestClient healthy, TestClient missing,
                                           String pending) {
         var players = context.getLevel().getServer().getPlayerList();
@@ -67,6 +97,20 @@ public final class PlayerLoopGameTest {
         context.assertTrue(hasReason, "断线包应说明缺少哪些必需动画通道");
         context.assertTrue(healthy.channel().outboundMessages().stream().anyMatch(packet -> isPlay(packet, pending)),
                 "健康连接应在同一 tick 收到原请求的补发");
+    }
+
+    private static void assertExpiredConnectionOutcome(GameTestHelper context, TestClient broadcaster,
+                                                        TestClient missing) {
+        var players = context.getLevel().getServer().getPlayerList();
+        context.assertTrue(players.getPlayer(missing.player().getUUID()) == null,
+                "握手到期且缺通道的连接应被踢出");
+        context.assertTrue(players.getPlayer(broadcaster.player().getUUID()) == broadcaster.player(),
+                "广播方连接应继续在线");
+        boolean hasReason = missing.channel().outboundMessages().stream()
+                .filter(ClientboundDisconnectPacket.class::isInstance)
+                .map(ClientboundDisconnectPacket.class::cast)
+                .anyMatch(packet -> packet.reason().getString().equals(MISSING_CHANNELS));
+        context.assertTrue(hasReason, "断线包应说明握手缺少必需动画通道");
     }
 
     private static boolean isPlay(Object packet, String requestId) {
