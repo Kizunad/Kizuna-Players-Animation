@@ -90,6 +90,8 @@ FULL_BODY_IDS = {
     "herb_knife_draw", "herb_knife_cut",
     "villager_crushing_fist", "villager_golem_lift", "villager_shoulder_throw", "villager_dummy_drill",
     "villager_inch_power", "villager_wrist_lock",
+    "piglin_sword_wind_around", "piglin_sword_wind_around_off", "piglin_sword_quiver", "piglin_sword_quiver_off",
+    "piglin_sword_spring_back", "piglin_sword_spring_back_off",
 }
 
 GRIP_IDS = {
@@ -120,6 +122,8 @@ GRIP_IDS = {
     "herb_knife_draw", "herb_knife_cut",
     "villager_crushing_fist", "villager_golem_lift", "villager_shoulder_throw", "villager_dummy_drill",
     "villager_inch_power", "villager_wrist_lock",
+    "piglin_sword_wind_around", "piglin_sword_wind_around_off", "piglin_sword_quiver", "piglin_sword_quiver_off",
+    "piglin_sword_spring_back", "piglin_sword_spring_back_off",
 }
 
 # 跃步与 jump 同类：整段在空中，着地口径由原型自查的脚底高度代替（docs/animation-specs/technique_leap.md 第 9 节）。
@@ -157,6 +161,8 @@ LOOK_LAYER_SYMMETRY_TOLERANCE_DEG = 0.05
 # 破门斩各式的打击时段（每段 ≤ 0.35 s，见 docs/animation-specs/door_breaker_knock.md）与攻击、挖掘共用放宽上限。
 # 千里腿除扫堂、蹲马步外各式的出腿段同理；连环三下各一段（impact_window 可写多段，PROGRESS-peddler.md 待决定第 6 条）。
 # 袖手拳只有崩拳的出拳超过一次性动作上限（docs/animation-specs/villager_crushing_fist.md 第 3 节）。
+# 流金剑的抖三点相隔 0.1 s、弹的回弹与反手横斩都超过一次性动作上限（docs/animation-specs/piglin_sword_quiver.md、
+# piglin_sword_spring_back.md 第 5 节）；绕不声明。
 IMPACT_WINDOW_IDS = {"attack_main", "attack_off", "mine_main", "mine_off",
                      "door_breaker_knock", "door_breaker_knock_off", "door_breaker_cleave", "door_breaker_cleave_off",
                      "door_breaker_ram", "door_breaker_ram_off", "door_breaker_hook", "door_breaker_hook_off",
@@ -165,7 +171,9 @@ IMPACT_WINDOW_IDS = {"attack_main", "attack_off", "mine_main", "mine_off",
                      "peddler_snap_kick", "peddler_push_kick", "peddler_roundhouse", "peddler_triple_kick",
                      "peddler_mule_kick", "peddler_flying_kick", "peddler_axe_kick", "peddler_whirlwind",
                      "wayfarer_bow_strike", "wayfarer_bow_strike_off",
-                     "villager_crushing_fist"}
+                     "villager_crushing_fist",
+                     "piglin_sword_quiver", "piglin_sword_quiver_off",
+                     "piglin_sword_spring_back", "piglin_sword_spring_back_off"}
 # 索引 item_states 的通道：pull、pulling、charged、arrow 给弓弩谓词，open 给 item_state 数值属性（药刀刀刃）。
 # pull、open 线性取 [0, 1]，其余为 0 / 1 阶跃开关。
 ITEM_STATE_CHANNELS = {"pull", "pulling", "charged", "arrow", "open"}

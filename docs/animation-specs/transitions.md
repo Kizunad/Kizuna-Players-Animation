@@ -371,3 +371,15 @@
 | --- | ---: | --- | --- |
 | stance_idle → villager_crushing_fist / villager_golem_lift / villager_shoulder_throw / villager_dummy_drill / villager_inch_power / villager_wrist_lock | 0.10 / 0.25 | 宿主在袖手拳各式起手时播放 | 3.0 / 5.0 / 6.0 / 32.0 / 4.0 / 5.0 s 一次性；首帧、末帧等于 `stance_idle` 首帧；背摔转身半圈再转回，不动 `root` |
 | villager_crushing_fist / villager_golem_lift / villager_shoulder_throw / villager_dummy_drill / villager_inch_power / villager_wrist_lock → stance_idle | 0.25 / 0.25 | 播完或被下一式顶掉 | 淡回架势底层；打断时两脚在淡出里滑回架势位 |
+
+## 流金剑（2026-11-24 PA 侧资源接入）
+
+规格见 [绕](piglin_sword_wind_around.md)、[抖](piglin_sword_quiver.md)、[弹](piglin_sword_spring_back.md)。六段都用下面的四列行（`AnimationTransitionContractTest` 解析，加 17 条边：六段进出各 6 条，绕、抖、普攻接弹 5 条）。
+六段都是 `mask: full`、优先级 24、`fpv: false`，主手版 `hand: main`、副手版 `hand: off`，索引写 `upper_while_moving: true`：静止架势上整段生效；走、跑、潜行、闪避、跃步底层上只取上身，腿听底层。
+
+| 来源 → 目标 | 淡入 / 淡出 | 触发 | 约束 |
+| --- | ---: | --- | --- |
+| stance_idle → piglin_sword_wind_around / piglin_sword_quiver / piglin_sword_spring_back / piglin_sword_wind_around_off / piglin_sword_quiver_off / piglin_sword_spring_back_off | 0.10 / 0.25 | 宿主收到流金剑目录表现的 `START`，按持剑手选主手版或 `_off` 版 | 1.00 / 0.85 / 0.60 s 一次性；首帧、末帧等于 `stance_idle` 首帧 |
+| piglin_sword_wind_around / piglin_sword_quiver / piglin_sword_spring_back / piglin_sword_wind_around_off / piglin_sword_quiver_off / piglin_sword_spring_back_off → stance_idle | 0.25 / 0.25 | 播完（`STOP` 和末帧同时到）或被打断 | 淡回架势底层；绕、抖带的 `item_rotation` 随淡出转回原版握法 |
+| piglin_sword_wind_around / piglin_sword_quiver / attack_main → piglin_sword_spring_back | 0.10 / 0.25 | 前式被盾、格挡或硬物挡下，600 ms 内施放弹 | 前式同一刻收到 `STOP` 淡出；弹从回弹起播，剑往身上回，和绕的回抽、抖的抬回方向一致 |
+| piglin_sword_wind_around_off / piglin_sword_quiver_off → piglin_sword_spring_back_off | 0.10 / 0.25 | 同上，剑在副手 | 同上 |

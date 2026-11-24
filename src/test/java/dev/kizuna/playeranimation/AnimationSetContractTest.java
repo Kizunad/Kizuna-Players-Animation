@@ -275,7 +275,9 @@ class AnimationSetContractTest {
                 "witch_spray_trigger", "witch_brew", "witch_brew_feed_off", "status_stagger",
                 "herb_knife_draw", "herb_knife_cut",
                 "villager_crushing_fist", "villager_golem_lift", "villager_shoulder_throw", "villager_dummy_drill",
-                "villager_inch_power", "villager_wrist_lock"), ids);
+                "villager_inch_power", "villager_wrist_lock",
+                "piglin_sword_wind_around", "piglin_sword_wind_around_off", "piglin_sword_quiver", "piglin_sword_quiver_off",
+                "piglin_sword_spring_back", "piglin_sword_spring_back_off"), ids);
         // 已交付标记必须与打包资源一致：调度只请求已交付动作，未打包的动作不得标为已交付。
         for (PlayerAnimationAction action : PlayerAnimationAction.values()) {
             assertEquals(ids.contains(action.id()), action.delivered(), action.id());

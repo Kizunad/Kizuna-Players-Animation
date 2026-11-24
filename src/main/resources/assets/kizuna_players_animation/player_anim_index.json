@@ -6494,6 +6494,446 @@
           2.1
         ]
       ]
+    },
+    {
+      "id": "piglin_sword_wind_around",
+      "file": "animations/piglin_sword_wind_around.animation.json",
+      "mask": "full",
+      "priority": 24,
+      "blend_in": 0.1,
+      "blend_out": 0.25,
+      "hand": "main",
+      "fpv": false,
+      "upper_while_moving": true,
+      "phases": [
+        {
+          "id": "thrust",
+          "start": 0.06,
+          "end": 0.4,
+          "chain": [
+            "pelvis",
+            "waist",
+            "chest",
+            "r_upper_arm",
+            "r_forearm",
+            "r_hand"
+          ]
+        }
+      ],
+      "item_rotation": [
+        [
+          0.0,
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        [
+          0.12,
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        [
+          0.33,
+          [
+            58,
+            0,
+            0
+          ]
+        ],
+        [
+          0.47,
+          [
+            58,
+            0,
+            0
+          ]
+        ],
+        [
+          0.64,
+          [
+            0,
+            0,
+            0
+          ]
+        ]
+      ],
+      "swings": [
+        {
+          "start": 0.12,
+          "end": 0.33,
+          "part": "main",
+          "weight": "heavy"
+        }
+      ]
+    },
+    {
+      "id": "piglin_sword_wind_around_off",
+      "file": "animations/piglin_sword_wind_around_off.animation.json",
+      "mask": "full",
+      "priority": 24,
+      "blend_in": 0.1,
+      "blend_out": 0.25,
+      "hand": "off",
+      "fpv": false,
+      "upper_while_moving": true,
+      "phases": [
+        {
+          "id": "thrust",
+          "start": 0.06,
+          "end": 0.4,
+          "chain": [
+            "pelvis",
+            "waist",
+            "chest",
+            "l_upper_arm",
+            "l_forearm",
+            "l_hand"
+          ]
+        }
+      ],
+      "item_rotation": [
+        [
+          0.0,
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        [
+          0.12,
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        [
+          0.33,
+          [
+            58,
+            0,
+            0
+          ]
+        ],
+        [
+          0.47,
+          [
+            58,
+            0,
+            0
+          ]
+        ],
+        [
+          0.64,
+          [
+            0,
+            0,
+            0
+          ]
+        ]
+      ],
+      "swings": [
+        {
+          "start": 0.12,
+          "end": 0.32,
+          "part": "off",
+          "weight": "heavy"
+        }
+      ]
+    },
+    {
+      "id": "piglin_sword_quiver",
+      "file": "animations/piglin_sword_quiver.animation.json",
+      "mask": "full",
+      "priority": 24,
+      "blend_in": 0.1,
+      "blend_out": 0.25,
+      "hand": "main",
+      "fpv": false,
+      "upper_while_moving": true,
+      "impact_window": [
+        0.24,
+        0.54
+      ],
+      "phases": [
+        {
+          "id": "head",
+          "start": 0.22,
+          "end": 0.32,
+          "chain": [
+            "pelvis",
+            "waist",
+            "chest",
+            "r_upper_arm",
+            "r_forearm",
+            "r_hand"
+          ]
+        },
+        {
+          "id": "body",
+          "start": 0.34,
+          "end": 0.42,
+          "chain": [
+            "pelvis",
+            "waist",
+            "chest",
+            "r_upper_arm",
+            "r_forearm",
+            "r_hand"
+          ]
+        },
+        {
+          "id": "leg",
+          "start": 0.44,
+          "end": 0.52,
+          "chain": [
+            "pelvis",
+            "waist",
+            "chest",
+            "r_upper_arm",
+            "r_forearm",
+            "r_hand"
+          ]
+        }
+      ],
+      "item_rotation": [
+        [
+          0.0,
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        [
+          0.04,
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        [
+          0.2,
+          [
+            58,
+            0,
+            0
+          ]
+        ],
+        [
+          0.6,
+          [
+            58,
+            0,
+            0
+          ]
+        ],
+        [
+          0.78,
+          [
+            0,
+            0,
+            0
+          ]
+        ]
+      ],
+      "swings": [
+        {
+          "start": 0.23,
+          "end": 0.5,
+          "part": "main",
+          "weight": "light"
+        }
+      ]
+    },
+    {
+      "id": "piglin_sword_quiver_off",
+      "file": "animations/piglin_sword_quiver_off.animation.json",
+      "mask": "full",
+      "priority": 24,
+      "blend_in": 0.1,
+      "blend_out": 0.25,
+      "hand": "off",
+      "fpv": false,
+      "upper_while_moving": true,
+      "impact_window": [
+        0.24,
+        0.54
+      ],
+      "phases": [
+        {
+          "id": "head",
+          "start": 0.22,
+          "end": 0.32,
+          "chain": [
+            "pelvis",
+            "waist",
+            "chest",
+            "l_upper_arm",
+            "l_forearm",
+            "l_hand"
+          ]
+        },
+        {
+          "id": "body",
+          "start": 0.34,
+          "end": 0.42,
+          "chain": [
+            "pelvis",
+            "waist",
+            "chest",
+            "l_upper_arm",
+            "l_forearm",
+            "l_hand"
+          ]
+        },
+        {
+          "id": "leg",
+          "start": 0.44,
+          "end": 0.52,
+          "chain": [
+            "pelvis",
+            "waist",
+            "chest",
+            "l_upper_arm",
+            "l_forearm",
+            "l_hand"
+          ]
+        }
+      ],
+      "item_rotation": [
+        [
+          0.0,
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        [
+          0.04,
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        [
+          0.2,
+          [
+            58,
+            0,
+            0
+          ]
+        ],
+        [
+          0.6,
+          [
+            58,
+            0,
+            0
+          ]
+        ],
+        [
+          0.78,
+          [
+            0,
+            0,
+            0
+          ]
+        ]
+      ],
+      "swings": [
+        {
+          "start": 0.23,
+          "end": 0.5,
+          "part": "off",
+          "weight": "light"
+        }
+      ]
+    },
+    {
+      "id": "piglin_sword_spring_back",
+      "file": "animations/piglin_sword_spring_back.animation.json",
+      "mask": "full",
+      "priority": 24,
+      "blend_in": 0.1,
+      "blend_out": 0.25,
+      "hand": "main",
+      "fpv": false,
+      "upper_while_moving": true,
+      "impact_window": [
+        0.0,
+        0.32
+      ],
+      "phases": [
+        {
+          "id": "cut",
+          "start": 0.12,
+          "end": 0.28,
+          "chain": [
+            "pelvis",
+            "waist",
+            "chest",
+            "r_upper_arm",
+            "r_forearm",
+            "r_hand"
+          ]
+        }
+      ],
+      "swings": [
+        {
+          "start": 0.15,
+          "end": 0.27,
+          "part": "main",
+          "weight": "heavy"
+        }
+      ]
+    },
+    {
+      "id": "piglin_sword_spring_back_off",
+      "file": "animations/piglin_sword_spring_back_off.animation.json",
+      "mask": "full",
+      "priority": 24,
+      "blend_in": 0.1,
+      "blend_out": 0.25,
+      "hand": "off",
+      "fpv": false,
+      "upper_while_moving": true,
+      "impact_window": [
+        0.0,
+        0.32
+      ],
+      "phases": [
+        {
+          "id": "cut",
+          "start": 0.12,
+          "end": 0.28,
+          "chain": [
+            "pelvis",
+            "waist",
+            "chest",
+            "l_upper_arm",
+            "l_forearm",
+            "l_hand"
+          ]
+        }
+      ],
+      "swings": [
+        {
+          "start": 0.13,
+          "end": 0.23,
+          "part": "off",
+          "weight": "heavy"
+        }
+      ]
     }
   ]
 }

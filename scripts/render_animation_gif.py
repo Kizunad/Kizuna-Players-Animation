@@ -212,6 +212,9 @@ PROPS = {
     "door_breaker_close": ({"kind": "axe", "bone": "r_item"},),
     "door_breaker_chain": ({"kind": "axe", "bone": "r_item"},),
     "door_breaker_finale": ({"kind": "axe", "bone": "r_item"},),
+    "piglin_sword_wind_around": ({"kind": "sword", "bone": "r_item"},),
+    "piglin_sword_quiver": ({"kind": "sword", "bone": "r_item"},),
+    "piglin_sword_spring_back": ({"kind": "sword", "bone": "r_item"},),
     # 下列道具的端点由原版物品模型的 thirdperson_righthand display 经游戏内挂点变换
     # （Rig.itemTransform：rotX(−90°)·rotY(180°)，再做 toVanilla 的 Y 反射）换算到 r_item 局部像素。
     "spyglass": ({"kind": "segments", "bone": "r_item", "parts": (

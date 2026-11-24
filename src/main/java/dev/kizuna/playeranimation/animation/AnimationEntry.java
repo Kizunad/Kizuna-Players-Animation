@@ -12,7 +12,7 @@ public record AnimationEntry(String id, String file, Mask mask, int priority, fl
                              AnimationClip clip, List<Window> impactWindows,
                              Float loopRegionStart, Float loopRegionEnd, boolean lookLayer,
                              ItemStates itemStates, ItemRotation itemRotation, List<AimWindow> aimWindows,
-                             List<SwingWindow> swings, RegionClock regionClock) {
+                             List<SwingWindow> swings, RegionClock regionClock, boolean upperWhileMoving) {
     public enum RegionClock { SCRUB_ONLY, FREE_AND_SCRUB }
 
     public AnimationEntry(String id, String file, Mask mask, int priority, float blendIn,
@@ -23,7 +23,7 @@ public record AnimationEntry(String id, String file, Mask mask, int priority, fl
                           List<SwingWindow> swings) {
         this(id, file, mask, priority, blendIn, blendOut, hand, firstPerson, firstPersonTorso, clip,
                 impactWindows, loopRegionStart, loopRegionEnd, lookLayer, itemStates, itemRotation,
-                aimWindows, swings, RegionClock.SCRUB_ONLY);
+                aimWindows, swings, RegionClock.SCRUB_ONLY, false /* upperWhileMoving */);
     }
     public AnimationEntry(String id, String file, Mask mask, int priority, float blendIn,
                           float blendOut, Hand hand, boolean firstPerson, AnimationClip clip) {
@@ -107,7 +107,19 @@ public record AnimationEntry(String id, String file, Mask mask, int priority, fl
                 JsonInput.nonnegative(raw, "blend_in"), JsonInput.nonnegative(raw, "blend_out"),
                 hand, JsonInput.bool(raw, "fpv"), readFirstPersonTorso(raw), clip, impact,
                 loopStart, loopEnd, readLookLayer(raw), itemStates, itemRotation, aimWindows, swings,
-                readRegionClock(raw, clip, loopStart));
+                readRegionClock(raw, clip, loopStart), readUpperWhileMoving(raw, mask));
+    }
+
+    private static boolean readUpperWhileMoving(JsonObject raw, Mask mask) {
+        // 缺省关：已有条目的取骨照旧。打开后按格挡的移动遮罩取骨，只有整段全身的条目有上身可退。
+        if (!raw.has("upper_while_moving")) {
+            return false;
+        }
+        boolean enabled = JsonInput.bool(raw, "upper_while_moving");
+        if (enabled && mask != Mask.FULL) {
+            throw new IllegalArgumentException("upper_while_moving 只能用于 mask 为 full 的动作");
+        }
+        return enabled;
     }
 
     private static RegionClock readRegionClock(JsonObject raw, AnimationClip clip, Float start) {
@@ -204,8 +216,10 @@ public record AnimationEntry(String id, String file, Mask mask, int priority, fl
                 "wayfarer_bow_strike", "wayfarer_bow_strike_off",
                 "peddler_snap_kick", "peddler_push_kick", "peddler_roundhouse", "peddler_triple_kick",
                 "peddler_mule_kick", "peddler_flying_kick", "peddler_axe_kick", "peddler_whirlwind",
-                "villager_crushing_fist").contains(id)) {
-            throw new IllegalArgumentException("impact_window 只能用于攻击、挖掘、破门斩、弓梢、千里腿或袖手拳崩拳动作");
+                "villager_crushing_fist",
+                "piglin_sword_quiver", "piglin_sword_quiver_off",
+                "piglin_sword_spring_back", "piglin_sword_spring_back_off").contains(id)) {
+            throw new IllegalArgumentException("impact_window 只能用于攻击、挖掘、破门斩、弓梢、千里腿、袖手拳崩拳或流金剑抖、弹动作");
         }
     }
 

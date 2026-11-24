@@ -296,6 +296,35 @@ Gradle `checkAnimationGates` 同时覆盖这 22 段。状态切换回归的有�
 - 关键帧由 MotionBricks 原型 60 fps 逐帧导出、未压缩；刀和药材不在骨架里，刀对药材、刀对脸由制作探针逐帧量（[herb_knife_cut](animation-specs/herb_knife_cut.md) 第 6 节）；
 - 2026-11-10 用户看过 classic、slim GIF：「开刃可以」、切药方案甲「ok」；游戏内刀刃开合、第一人称低头角度见 Brewing 第二轮报告的截图。
 
+#### 流金剑批次（2026-11-24，PA 侧接入；同日按用户「加一点身体的协调以及腿部的动作」返工，待再看 GIF）
+
+绕 `piglin_sword_wind_around(_off)`、抖 `piglin_sword_quiver(_off)`、弹 `piglin_sword_spring_back(_off)` 三式六段（见各页规格）。阈值不变，分析器只登记集合：
+- 六段加入 `FULL_BODY_IDS`、`GRIP_IDS`；抖、弹（含 `_off`）加入打击时段白名单（分析器 `IMPACT_WINDOW_IDS` 与运行时 `AnimationEntry` 同步），先例是破门斩、千里腿、袖手拳；
+- 声明 `impact_window`：抖 `[0.24, 0.54]`（一段盖住三点）、弹 `[0.0, 0.32]`（回弹起步最快，和普攻一样从 0 开始）；绕不声明。三式都不声明爆发、失衡、滑行窗口；
+- 绕、抖的刺出段写 `item_rotation`（绕持剑挂点转 58°），门禁当作挂点旋转一起查角速度、角加加速度；弹不写；
+- `phases` 都写成对象，`chain` 从胯算起（`pelvis → waist → chest → 持剑臂上臂 → 前臂 → 手`，副手版取左臂）：绕 `thrust` 0.06–0.40，抖 `head` 0.22–0.32、`body` 0.34–0.42、`leg` 0.44–0.52，弹 `cut` 0.12–0.28；
+- 腿：绕成弓步（后脚蹬、前膝弓出、后脚跟再抬），抖每点先沉后送、一点比一点低，弹靠胯带（后脚跟抬起、脚掌碾转）；两脚都原地不挪。副手版胯往另一边拧，盒子模型的小腿会更早低于地面，所以绕、抖副手版的胯转、前送、沉胯按比例缩小（见各页第 7 节）；
+- 已加入 Gradle `checkAnimationGates` 的 id 列表；
+- 实测（粗、细臂共轨，结果相同；冲击段内 / 段外，角速度°/s、角加加速度°/s³）：
+
+| 剪辑 | 段内 | 段外 |
+| --- | --- | --- |
+| 绕 | —（不声明） | 584、0.59×10⁶ |
+| 绕 `_off` | — | 618、0.47×10⁶ |
+| 抖 | 777、2.46×10⁶ | 540、0.59×10⁶ |
+| 抖 `_off` | 905、3.16×10⁶ | 540、0.61×10⁶ |
+| 弹 | 1287、2.86×10⁶ | 480、0.28×10⁶ |
+| 弹 `_off` | 1406、1.32×10⁶ | 665、0.71×10⁶ |
+
+- 地面（粗、细臂相同）：鞋底最低 绕 −0.228 / −0.224 px、抖 −0.197 / −0.237、弹 −0.229 / −0.146（主手 / 副手，限 −0.25）；支撑脚滑移最大 0.221 px（弹，后脚掌碾转），限 0.5；
+
+- 剑不在骨架里。剑对身体（头、躯干、两腿、空手上臂）的净距、剑身与前臂的夹角、腕角，由 MotionBricks 生成脚本按渲染器的剑几何逐帧量，见各页规格；
+  - 架势首帧剑离头盒就不到 1 px（classic 0.774、slim 0.435；副手版 2.688 / 2.311），判据是「≥ 1 px，或不比架势更近」；
+- 握持靠剪辑里的手指轨道：持剑手全程握拳，出剑时再收紧。`GRIP_IDS` 查这一点；删掉手指轨道时握持门禁变红（负对照见报告）；
+- `upper_while_moving` 是运行时字段，门禁不读，由契约测试查（缺省关、只有这六段开、已有动画的取骨一帧不变）；
+- 关键帧由 MotionBricks 原型 60 fps 逐帧导出、未压缩；
+- 验收句：绕读得出「拧身绕剑 → 一刺」，抖三点依次点头、躯干、腿，弹读得出「被弹回 → 翻腕 → 反手横斩向前」；三式首末帧回到架势，剑不穿头、不穿身。
+
 #### 防伪造门禁（2026-10-22）
 
 为避免把同一条曲线乘不同系数伪装成全身联动，分析器还会对有效骨骼的主旋转/位移通道做零均值单位方差归一化：
@@ -352,7 +381,7 @@ Gradle `checkAnimationGates` 同时覆盖这 22 段。状态切换回归的有�
 
 - 声明位置：`player_anim_index.json` 条目的可选字段 `impact_window: [开始秒, 结束秒]`（剪辑时间）。
   运行时不读取这个字段；它与动作资源一起评审、一起修改，门禁从索引读取。
-- 只有白名单动作可以声明，目前为 `attack_main` / `attack_off` / `mine_main` / `mine_off` / `door_breaker_knock` / `door_breaker_knock_off` / `door_breaker_cleave` / `door_breaker_cleave_off` / `door_breaker_ram` / `door_breaker_ram_off` / `door_breaker_hook` / `door_breaker_hook_off` / `door_breaker_close` / `door_breaker_close_off` / `door_breaker_chain` / `door_breaker_chain_off` / `door_breaker_finale` / `door_breaker_finale_off`。原版伤害在点击当刻结算，6 tick 挥手里
+- 只有白名单动作可以声明，目前为 `attack_main` / `attack_off` / `mine_main` / `mine_off` / `door_breaker_knock` / `door_breaker_knock_off` / `door_breaker_cleave` / `door_breaker_cleave_off` / `door_breaker_ram` / `door_breaker_ram_off` / `door_breaker_hook` / `door_breaker_hook_off` / `door_breaker_close` / `door_breaker_close_off` / `door_breaker_chain` / `door_breaker_chain_off` / `door_breaker_finale` / `door_breaker_finale_off`；之后各批次加入的（千里腿八式、弓梢、崩拳、流金剑抖和弹）见资产契约「索引条目」`impact_window` 行。原版伤害在点击当刻结算，6 tick 挥手里
   预备和劈砍都必须放在前 0.20 s，只能整段标为打击时段；声明值为 `[0.0, 0.2]`。其他动作需要声明时，
   先在其设计稿里写明理由，由审阅方确认后再加入白名单，门禁对白名单外的声明直接失败。
 - 窗口内角速度上限 `1,800°/s`、角加加速度上限 `7,000,000°/s³`（审阅方确认，沿用循环步态已校准的上限），

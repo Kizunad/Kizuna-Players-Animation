@@ -116,7 +116,9 @@ tasks.register('checkAnimationGates', Exec) {
             'witch_spray_trigger', 'witch_brew', 'witch_brew_feed_off', 'status_stagger',
             'herb_knife_draw', 'herb_knife_cut',
             'villager_crushing_fist', 'villager_golem_lift', 'villager_shoulder_throw', 'villager_dummy_drill',
-            'villager_inch_power', 'villager_wrist_lock'
+            'villager_inch_power', 'villager_wrist_lock',
+            'piglin_sword_wind_around', 'piglin_sword_wind_around_off', 'piglin_sword_quiver', 'piglin_sword_quiver_off',
+            'piglin_sword_spring_back', 'piglin_sword_spring_back_off'
 }
 
 tasks.register('checkAnimationAntiForgery', Exec) {

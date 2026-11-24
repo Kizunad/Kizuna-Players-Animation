@@ -349,8 +349,10 @@ public final class AnimationPlayer {
     }
 
     private AnimationEntry.Mask effectiveMask(Playback playback, double now, boolean crouching) {
-        if (playback.entry.mask() == AnimationEntry.Mask.FULL && stanceOverlay(playback.entry.id())) {
+        if (playback.entry.mask() == AnimationEntry.Mask.FULL
+                && (stanceOverlay(playback.entry.id()) || playback.entry.upperWhileMoving())) {
             // 格挡、受击、调息、蓄力的腿锁在架势踝位：静止架势上整段生效，移动底层、闪避、轻步和跃步上只取上身。
+            // 索引写了 upper_while_moving 的条目（流金剑三式）同样处理：施放不减速，走动中出剑腿听底层。
             boolean moving = crouching || playing.stream().anyMatch(lower -> !lower.finished(now) && lower.weight(now) > 0
                     && (lowerBase(lower.entry.id()) || movingStance(lower.entry.id())));
             return moving ? AnimationEntry.Mask.UPPER : AnimationEntry.Mask.FULL;

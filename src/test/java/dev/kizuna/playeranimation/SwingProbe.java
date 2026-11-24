@@ -36,15 +36,20 @@ final class SwingProbe {
     }
 
     static AnimationEntry entry(String id) throws Exception {
+        JsonObject raw = raw(id);
+        JsonObject document = JsonParser.parseString(Files.readString(
+                INDEX.getParent().resolve(raw.get("file").getAsString()))).getAsJsonObject();
+        AnimationClip clip = AnimationClip.parse(document, KEY_PREFIX + id, error -> { throw new AssertionError(error); });
+        return AnimationEntry.parse(raw, clip);
+    }
+
+    /** 索引里这个动作的原始条目，含运行时不读的门禁字段（如 phases）。 */
+    static JsonObject raw(String id) throws Exception {
         JsonObject index = JsonParser.parseString(Files.readString(INDEX)).getAsJsonObject();
         for (var element : index.getAsJsonArray("animations")) {
             JsonObject raw = element.getAsJsonObject();
             if (id.equals(raw.get("id").getAsString())) {
-                JsonObject document = JsonParser.parseString(Files.readString(
-                        INDEX.getParent().resolve(raw.get("file").getAsString()))).getAsJsonObject();
-                AnimationClip clip = AnimationClip.parse(document, KEY_PREFIX + id,
-                        error -> { throw new AssertionError(error); });
-                return AnimationEntry.parse(raw, clip);
+                return raw;
             }
         }
         throw new AssertionError("缺少动作: " + id);

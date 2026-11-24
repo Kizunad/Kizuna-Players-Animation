@@ -21,6 +21,7 @@ CLASSIC = Path("models/player_skeleton_classic")
 PREFIX = "animation.kizuna_players_animation.player."
 # 从上往下第一个对上前缀的算；都对不上的进 BASE。加新模组的动画就在这里加一行。
 GROUPS: tuple[tuple[str, tuple[str, ...]], ...] = (
+    ("piglin_sword", ("piglin_sword_",)),
     ("villager", ("villager_",)),
     ("witch", ("witch_",)),
     ("herb_knife", ("herb_knife_",)),

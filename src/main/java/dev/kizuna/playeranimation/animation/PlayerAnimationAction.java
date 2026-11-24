@@ -257,7 +257,18 @@ public enum PlayerAnimationAction {
     VILLAGER_DUMMY_DRILL("villager_dummy_drill", 640),
     /** 袖手拳中卷：寸劲（拳贴着对方，全身一抖，hit 1.45）、缠腕（刁腕 grab 0.90，两拧 hit 1.40、2.10，松手 release 2.50）。 */
     VILLAGER_INCH_POWER("villager_inch_power", 80),
-    VILLAGER_WRIST_LOCK("villager_wrist_lock", 100);
+    VILLAGER_WRIST_LOCK("villager_wrist_lock", 100),
+    /**
+     * 流金剑上卷（docs/animation-specs/piglin_sword_*.md）：绕（拧身绕剑一刺，hit 0.35）、抖（三点头、躯干、腿，hit 0.30、0.40、0.50）、
+     * 弹（只接被挡：剑被弹回、翻腕、反手横斩向前，hit 0.25）。剑在主手播主手版，在副手播 _off 版；静止架势上整段全身，
+     * 走动、潜行、闪避底层上只取上身。宿主收到流金剑目录表现的 START 时播放。
+     */
+    PIGLIN_SWORD_WIND_AROUND("piglin_sword_wind_around", 20),
+    PIGLIN_SWORD_WIND_AROUND_OFF("piglin_sword_wind_around_off", 20),
+    PIGLIN_SWORD_QUIVER("piglin_sword_quiver", 17),
+    PIGLIN_SWORD_QUIVER_OFF("piglin_sword_quiver_off", 17),
+    PIGLIN_SWORD_SPRING_BACK("piglin_sword_spring_back", 12),
+    PIGLIN_SWORD_SPRING_BACK_OFF("piglin_sword_spring_back_off", 12);
 
     private final String id;
     private final int naturalDurationTicks;
