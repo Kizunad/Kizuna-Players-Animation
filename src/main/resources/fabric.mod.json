@@ -3,7 +3,13 @@
   "id": "kizuna_players_animation",
   "version": "${version}",
   "name": "Kizuna Players Animation",
-  "description": "Minecraft 玩家多关节模型与动画运行时",
+  "contact": {
+    "homepage": "https://github.com/Kizunad/Kizuna-Players-Animation",
+    "sources": "https://github.com/Kizunad/Kizuna-Players-Animation",
+    "issues": "https://github.com/Kizunad/Kizuna-Players-Animation/issues"
+  },
+  "icon": "assets/kizuna_players_animation/icon.png",
+  "description": "Animates player movements with a jointed character model.\n用多关节模型表现玩家的身体动作。",
   "authors": ["Kizunad"],
   "license": "MIT",
   "environment": "*",
