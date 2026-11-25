@@ -6934,6 +6934,166 @@
           "weight": "heavy"
         }
       ]
+    },
+    {
+      "id": "piglin_sword_coil",
+      "file": "animations/piglin_sword_coil.animation.json",
+      "mask": "full",
+      "priority": 24,
+      "blend_in": 0.1,
+      "blend_out": 0.25,
+      "fpv": false,
+      "upper_while_moving": true,
+      "hand": "main",
+      "phases": [
+        {
+          "id": "draw",
+          "start": 2.8,
+          "end": 3.05,
+          "chain": [
+            "pelvis",
+            "waist",
+            "chest",
+            "r_upper_arm",
+            "r_forearm",
+            "r_hand"
+          ]
+        }
+      ],
+      "swings": [
+        {
+          "start": 2.88,
+          "end": 3.05,
+          "part": "main",
+          "weight": "heavy"
+        }
+      ]
+    },
+    {
+      "id": "piglin_sword_coil_off",
+      "file": "animations/piglin_sword_coil_off.animation.json",
+      "mask": "full",
+      "priority": 24,
+      "blend_in": 0.1,
+      "blend_out": 0.25,
+      "fpv": false,
+      "upper_while_moving": true,
+      "hand": "off",
+      "phases": [
+        {
+          "id": "draw",
+          "start": 2.8,
+          "end": 3.05,
+          "chain": [
+            "pelvis",
+            "waist",
+            "chest",
+            "l_upper_arm",
+            "l_forearm",
+            "l_hand"
+          ]
+        }
+      ],
+      "swings": [
+        {
+          "start": 2.88,
+          "end": 3.05,
+          "part": "off",
+          "weight": "heavy"
+        }
+      ]
+    },
+    {
+      "id": "piglin_sword_molten",
+      "file": "animations/piglin_sword_molten.animation.json",
+      "mask": "full",
+      "priority": 24,
+      "blend_in": 0.1,
+      "blend_out": 0.25,
+      "fpv": false,
+      "upper_while_moving": true,
+      "hand": "main",
+      "phases": []
+    },
+    {
+      "id": "piglin_sword_molten_off",
+      "file": "animations/piglin_sword_molten_off.animation.json",
+      "mask": "full",
+      "priority": 24,
+      "blend_in": 0.1,
+      "blend_out": 0.25,
+      "fpv": false,
+      "upper_while_moving": true,
+      "hand": "off",
+      "phases": []
+    },
+    {
+      "id": "piglin_sword_gold_splash",
+      "file": "animations/piglin_sword_gold_splash.animation.json",
+      "mask": "full",
+      "priority": 24,
+      "blend_in": 0.1,
+      "blend_out": 0.25,
+      "fpv": false,
+      "upper_while_moving": true,
+      "hand": "main",
+      "phases": [
+        {
+          "id": "splash",
+          "start": 0.45,
+          "end": 0.6,
+          "chain": [
+            "pelvis",
+            "waist",
+            "chest",
+            "r_upper_arm",
+            "r_forearm",
+            "r_hand"
+          ]
+        }
+      ],
+      "swings": [
+        {
+          "start": 0.45,
+          "end": 0.6,
+          "part": "main",
+          "weight": "heavy"
+        }
+      ]
+    },
+    {
+      "id": "piglin_sword_gold_splash_off",
+      "file": "animations/piglin_sword_gold_splash_off.animation.json",
+      "mask": "full",
+      "priority": 24,
+      "blend_in": 0.1,
+      "blend_out": 0.25,
+      "fpv": false,
+      "upper_while_moving": true,
+      "hand": "off",
+      "phases": [
+        {
+          "id": "splash",
+          "start": 0.45,
+          "end": 0.6,
+          "chain": [
+            "pelvis",
+            "waist",
+            "chest",
+            "l_upper_arm",
+            "l_forearm",
+            "l_hand"
+          ]
+        }
+      ],
+      "swings": [
+        {
+          "start": 0.45,
+          "end": 0.6,
+          "part": "off",
+          "weight": "heavy"
+        }
+      ]
     }
   ]
 }

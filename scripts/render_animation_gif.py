@@ -31,6 +31,9 @@ from animation_analysis import (AnimationSampler, SkeletonModel, attach_item_rot
 
 PANEL_WIDTH = 320
 MIN_PANEL_HEIGHT = 360
+# 下卷道具在侧视图前伸超过 25 px，立剑也高于头顶；三视角在整段使用同一固定画框。
+PANEL_SIZES = {"piglin_sword_coil": (608, 420), "piglin_sword_molten": (512, 420),
+               "piglin_sword_gold_splash": (608, 420)}
 GROUND_MARGIN = 40
 SCALE = 9.0
 # 模型的正面朝 -Z；yaw=180 才会把 Steve 的脸朝向观察者。35° 是从正面
@@ -50,6 +53,9 @@ SLOW_FACTOR = 0.25
 
 # 接触表的关键时刻（含首尾，通常 10 个；闪避 / 轻步 12 个），取自设计稿的阶段边界；未列出的动作均匀取样。
 KEY_TIMES = {
+    "piglin_sword_coil": (0, .15, .24, .32, .40, .50, 1.22, 1.9, 2.4, 2.8, 3.0, 3.12, 3.35),
+    "piglin_sword_molten": (0, .12, .22, .38, .49, .64, .8, .92, 1.03, 1.15),
+    "piglin_sword_gold_splash": (0, .20, .40, .45, .50, .55, .60, .65, .75, .85, .95),
     "attack_main": (0.0, 0.06, 0.10, 0.14, 0.175, 0.21, 0.25, 0.30, 0.40, 0.50),
     "jump": (0.0, 0.06, 0.12, 0.20, 0.30, 0.45, 0.56, 0.60, 0.72, 0.90),
     "equip_chestplate": (0.0, 0.14, 0.32, 0.46, 0.60, 0.76, 0.92, 1.08, 1.25, 1.50),
@@ -215,6 +221,9 @@ PROPS = {
     "piglin_sword_wind_around": ({"kind": "sword", "bone": "r_item"},),
     "piglin_sword_quiver": ({"kind": "sword", "bone": "r_item"},),
     "piglin_sword_spring_back": ({"kind": "sword", "bone": "r_item"},),
+    "piglin_sword_coil": ({"kind": "sword", "bone": "r_item"},),
+    "piglin_sword_molten": ({"kind": "sword", "bone": "r_item"},),
+    "piglin_sword_gold_splash": ({"kind": "sword", "bone": "r_item", "until": .60},),
     # 下列道具的端点由原版物品模型的 thirdperson_righthand display 经游戏内挂点变换
     # （Rig.itemTransform：rotX(−90°)·rotY(180°)，再做 toVanilla 的 Y 反射）换算到 r_item 局部像素。
     "spyglass": ({"kind": "segments", "bone": "r_item", "parts": (
@@ -755,12 +764,14 @@ def panel_height(model: SkeletonModel, sampler: AnimationSampler, animation_id: 
                 for x in (float(element["from"][0]), float(element["to"][0])):
                     for z in (float(element["from"][2]), float(element["to"][2])):
                         top = max(top, world[bone].point((x, y, z))[1] + lift(time))
-    return max(MIN_PANEL_HEIGHT, int(math.ceil(GROUND_MARGIN + (top + 4) * SCALE)))
+    _, min_height = PANEL_SIZES.get(main_hand_id(animation_id) or animation_id, (PANEL_WIDTH, MIN_PANEL_HEIGHT))
+    return max(min_height, int(math.ceil(GROUND_MARGIN + (top + 4) * SCALE)))
 
 
 def render_frame(model: SkeletonModel, sampler: AnimationSampler, texture: Image.Image | None, animation_id: str,
                  time: float, height: int, label: str) -> Image.Image:
-    frame = Image.new("RGBA", (PANEL_WIDTH * len(VIEWS), height), BACKGROUND)
+    width, _ = PANEL_SIZES.get(main_hand_id(animation_id) or animation_id, (PANEL_WIDTH, MIN_PANEL_HEIGHT))
+    frame = Image.new("RGBA", (width * len(VIEWS), height), BACKGROUND)
     world, _ = sampler.forward_kinematics(time, wrap=False)
     lift = ROOT_PREVIEW.get(animation_id, lambda value: 0.0)(time)
     props = active_props(model, animation_id, time, world)
@@ -768,18 +779,18 @@ def render_frame(model: SkeletonModel, sampler: AnimationSampler, texture: Image
     center_of_mass = tuple(sum(point[i] for point in pivots) / len(pivots) for i in range(3))
     center_of_mass = (center_of_mass[0], center_of_mass[1] + lift, center_of_mass[2])
     for index, (name, yaw) in enumerate(VIEWS):
-        panel = frame.crop((index * PANEL_WIDTH, 0, (index + 1) * PANEL_WIDTH, height))
+        panel = frame.crop((index * width, 0, (index + 1) * width, height))
         # 地面固定在画布底部上方 GROUND_MARGIN；跳跃预览只抬人物、不抬地面，
         # 抬脚、穿地和滑步都按真实高度显示，不逐帧自动平移。
-        panel_center = (PANEL_WIDTH / 2, height - GROUND_MARGIN)
+        panel_center = (width / 2, height - GROUND_MARGIN)
         draw = ImageDraw.Draw(panel)
         ground_y = panel_center[1]
-        draw.line((20, ground_y, PANEL_WIDTH - 20, ground_y), fill=GROUND, width=2)
+        draw.line((20, ground_y, width - 20, ground_y), fill=GROUND, width=2)
         element_faces(model, world, yaw, panel_center, SCALE, panel, texture, props, lift)
         marker = projection(center_of_mass, yaw, panel_center, SCALE)
         draw.ellipse((marker[0] - 3, marker[1] - 3, marker[0] + 3, marker[1] + 3), fill=CENTER)
         draw.text((10, 12), f"{name}  {label}", fill=OUTLINE)
-        frame.paste(panel, (index * PANEL_WIDTH, 0))
+        frame.paste(panel, (index * width, 0))
     return frame.convert("P", palette=Image.Palette.ADAPTIVE, colors=256)
 
 

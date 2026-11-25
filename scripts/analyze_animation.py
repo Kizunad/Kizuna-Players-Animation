@@ -92,6 +92,8 @@ FULL_BODY_IDS = {
     "villager_inch_power", "villager_wrist_lock",
     "piglin_sword_wind_around", "piglin_sword_wind_around_off", "piglin_sword_quiver", "piglin_sword_quiver_off",
     "piglin_sword_spring_back", "piglin_sword_spring_back_off",
+    "piglin_sword_coil", "piglin_sword_coil_off", "piglin_sword_molten", "piglin_sword_molten_off",
+    "piglin_sword_gold_splash", "piglin_sword_gold_splash_off",
 }
 
 GRIP_IDS = {
@@ -124,6 +126,8 @@ GRIP_IDS = {
     "villager_inch_power", "villager_wrist_lock",
     "piglin_sword_wind_around", "piglin_sword_wind_around_off", "piglin_sword_quiver", "piglin_sword_quiver_off",
     "piglin_sword_spring_back", "piglin_sword_spring_back_off",
+    "piglin_sword_coil", "piglin_sword_coil_off", "piglin_sword_molten", "piglin_sword_molten_off",
+    "piglin_sword_gold_splash", "piglin_sword_gold_splash_off",
 }
 
 # 跃步与 jump 同类：整段在空中，着地口径由原型自查的脚底高度代替（docs/animation-specs/technique_leap.md 第 9 节）。
@@ -1142,11 +1146,35 @@ def anti_forgery_multi_axis_gates(sampler: AnimationSampler, times: list[float],
     }
 
 
+def splash_grip_gates(sampler: AnimationSampler, times: list[float], side: str) -> dict[str, Any]:
+    """按目录放手点检查每一片指骨；末帧回架时手指已重新收拢。"""
+    release = 0.60
+    open_times = [t for t in times if 0.74 <= t <= 0.77]
+    sign = 1 if side == "r" else -1
+    failures = []
+    measures = {}
+    if _timeline_time(sampler, "release") != release:
+        failures.append("放手标记必须在第 12 tick")
+    for part, minimum in (("thumb", 30), ("fingers_a", 55), ("fingers_b", 55)):
+        bone = f"{side}_{part}"
+        grip = min(sign * sampler.value(bone, "rotation", t, wrap=False)[2] for t in times if t < release)
+        spread = max((abs(sampler.value(bone, "rotation", t, wrap=False)[2]) for t in open_times), default=math.inf)
+        measures[bone] = {"minimum_grip_deg": grip, "open_max_curl_deg": spread}
+        if grip < minimum:
+            failures.append(f"{bone} 放手前握持不足 {minimum}°")
+        if spread > 12:
+            failures.append(f"{bone} 空手跟随时屈曲超过 12°")
+    return {"pass": not failures, "applicable": True, "release_s": release,
+            "fingers": measures, "failures": failures}
+
+
 def grip_gates(sampler: AnimationSampler, times: list[float], active: set[str]) -> dict[str, Any]:
     animation_id = sampler.key.rsplit(".", 1)[-1]
     if animation_id not in GRIP_IDS:
         return {"pass": True, "applicable": False, "reason": "非持物动作"}
     sides = ("l",) if animation_id.endswith("_off") else ("r",)
+    if animation_id in {"piglin_sword_gold_splash", "piglin_sword_gold_splash_off"}:
+        return splash_grip_gates(sampler, times, sides[0])
     measurements = {}
     failures = []
     for side in sides:

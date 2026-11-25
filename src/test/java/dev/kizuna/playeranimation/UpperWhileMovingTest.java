@@ -33,7 +33,9 @@ class UpperWhileMovingTest {
     private static final Set<String> SWORD_IDS = Set.of(
             "piglin_sword_wind_around", "piglin_sword_wind_around_off",
             "piglin_sword_quiver", "piglin_sword_quiver_off",
-            "piglin_sword_spring_back", "piglin_sword_spring_back_off");
+            "piglin_sword_spring_back", "piglin_sword_spring_back_off",
+            "piglin_sword_coil", "piglin_sword_coil_off", "piglin_sword_molten", "piglin_sword_molten_off",
+            "piglin_sword_gold_splash", "piglin_sword_gold_splash_off");
 
     private static AnimationClip clip(int thigh, int forearm) {
         JsonObject document = JsonParser.parseString("{\"format_version\":\"1.8.0\",\"animations\":{\"" + KEY

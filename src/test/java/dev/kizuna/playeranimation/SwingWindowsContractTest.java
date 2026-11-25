@@ -23,7 +23,7 @@ import org.junit.jupiter.api.Test;
  * 索引里的 swings 必须和从剪辑里量出来的一致：哪个部位、从几秒到几秒、轻还是重。
  * 量法：部位速度不低于 4 格每秒的连续一段算一次挥动（隔不到 0.08 秒的并成一段），最快处到 6 格每秒、
  * 持续 0.05 秒以上才记；最快处到 12 格每秒算重。
- * 流金剑三式只在索引 phases 声明的发力段里量，淡入期间也不量（docs/asset-contract.md「索引条目」swings）。
+ * 流金剑按索引 phases 取发力段，剔除淡入。量法见资产契约的 swings 字段。
  * 每次运行都把量出来的结果写到 build/swing-windows.json，改了动作以后照它更新索引。
  */
 class SwingWindowsContractTest {
@@ -43,7 +43,8 @@ class SwingWindowsContractTest {
             "mule_kick", "flying_kick", "axe_kick", "whirlwind");
 
     private static final List<String> FIST_MOVES = List.of("crushing_fist", "golem_lift", "shoulder_throw");
-    private static final List<String> SWORD_MOVES = List.of("wind_around", "quiver", "spring_back");
+    private static final List<String> SWORD_MOVES =
+            List.of("wind_around", "quiver", "spring_back", "coil", "molten", "gold_splash");
     private static final String SWORD_PREFIX = "piglin_sword_";
 
     private record Measured(double start, double end, String part, String weight) { }
@@ -69,6 +70,23 @@ class SwingWindowsContractTest {
                 assertEquals(want.weight(), got.weight().name().toLowerCase(Locale.ROOT), where);
                 assertTrue(Math.abs(want.start() - got.start()) <= TOLERANCE
                         && Math.abs(want.end() - got.end()) <= TOLERANCE, where);
+            }
+        }
+    }
+
+    @Test
+    void moltenHasNoSwingFromStance() throws Exception {
+        // 施法没有发力段，测整条曲线才能发现抬剑、收剑的假挥击。
+        var hands = Map.of("piglin_sword_molten", "main", "piglin_sword_molten_off", "off");
+        var rigs = List.of(DeliveredRigTest.skeleton(false /* slim */), DeliveredRigTest.skeleton(true /* slim */));
+        for (Skeleton skeleton : rigs) {
+            for (var hand : hands.entrySet()) {
+                AnimationEntry entry = SwingProbe.entry(hand.getKey());
+                double[] speeds = SwingProbe.speedsFromStance(entry, skeleton, hand.getValue());
+                for (var window : SwingProbe.windows(speeds, EXTENT_SPEED)) {
+                    assertTrue(window.peak() < QUALIFY_SPEED || window.end() - window.start() < MIN_SECONDS,
+                            () -> entry.id() + " 从架势起播出现挥击 " + window);
+                }
             }
         }
     }
@@ -130,7 +148,7 @@ class SwingWindowsContractTest {
     }
 
     /**
-     * 流金剑三式的端剑、弹回和收势（含 item_rotation 转回原版握法）剑尖也快，但破风声要落在刺、点、斩上：
+     * 流金剑只在发力段量挥击，避免立剑、收势及物品握法复位触发破风声。
      * 发力段之外的速度记为零。量的时候从零姿势淡入，游戏里从架势起手没有那一下，淡入期间也记为零。
      */
     private static void keepStrikePhases(double[] speeds, List<double[]> phases, float blendIn) {

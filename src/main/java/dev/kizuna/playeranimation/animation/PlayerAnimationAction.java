@@ -268,7 +268,15 @@ public enum PlayerAnimationAction {
     PIGLIN_SWORD_QUIVER("piglin_sword_quiver", 17),
     PIGLIN_SWORD_QUIVER_OFF("piglin_sword_quiver_off", 17),
     PIGLIN_SWORD_SPRING_BACK("piglin_sword_spring_back", 12),
-    PIGLIN_SWORD_SPRING_BACK_OFF("piglin_sword_spring_back_off", 12);
+    PIGLIN_SWORD_SPRING_BACK_OFF("piglin_sword_spring_back_off", 12),
+    /** 缠一次播完持段，第 60 tick 抽剑。流金在第 16 tick 垂尖。 */
+    PIGLIN_SWORD_COIL("piglin_sword_coil", 67),
+    PIGLIN_SWORD_COIL_OFF("piglin_sword_coil_off", 67),
+    PIGLIN_SWORD_MOLTEN("piglin_sword_molten", 23),
+    PIGLIN_SWORD_MOLTEN_OFF("piglin_sword_molten_off", 23),
+    /** 泼金在第 12 tick 放手，第 19 tick 收势。 */
+    PIGLIN_SWORD_GOLD_SPLASH("piglin_sword_gold_splash", 19),
+    PIGLIN_SWORD_GOLD_SPLASH_OFF("piglin_sword_gold_splash_off", 19);
 
     private final String id;
     private final int naturalDurationTicks;

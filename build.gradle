@@ -118,7 +118,9 @@ tasks.register('checkAnimationGates', Exec) {
             'villager_crushing_fist', 'villager_golem_lift', 'villager_shoulder_throw', 'villager_dummy_drill',
             'villager_inch_power', 'villager_wrist_lock',
             'piglin_sword_wind_around', 'piglin_sword_wind_around_off', 'piglin_sword_quiver', 'piglin_sword_quiver_off',
-            'piglin_sword_spring_back', 'piglin_sword_spring_back_off'
+            'piglin_sword_spring_back', 'piglin_sword_spring_back_off',
+            'piglin_sword_coil', 'piglin_sword_coil_off', 'piglin_sword_molten', 'piglin_sword_molten_off',
+            'piglin_sword_gold_splash', 'piglin_sword_gold_splash_off'
 }
 
 tasks.register('checkAnimationAntiForgery', Exec) {

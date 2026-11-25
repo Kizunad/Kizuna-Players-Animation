@@ -56,9 +56,7 @@ final class SwingProbe {
     }
 
     /** 这个部位在剪辑第 time 秒的位置（实体自己的坐标，单位格）。part 是 main、off、r_hand、l_hand、r_foot、l_foot。 */
-    static Vector3f point(AnimationEntry entry, Skeleton skeleton, String part, double time) {
-        AnimationPlayer player = new AnimationPlayer();
-        player.play(entry, 0, new AnimationPlayer.PlaybackRequest(0, AnimationPlayer.Handedness.RIGHT, null, null));
+    private static Vector3f point(AnimationPlayer player, Skeleton skeleton, String part, double time) {
         Matrix4f[] matrices = Rig.matrices(skeleton, player.sample(Rig.zeroPose(), time, false /* firstPerson */));
         Vector3f tip = new Vector3f(WEAPON_TIP);
         return switch (part) {
@@ -80,11 +78,27 @@ final class SwingProbe {
 
     /** 每个取样步的速度（格每秒）。 */
     static double[] speeds(AnimationEntry entry, Skeleton skeleton, String part) {
+        AnimationPlayer player = new AnimationPlayer();
+        player.play(entry, 0, new AnimationPlayer.PlaybackRequest(0, AnimationPlayer.Handedness.RIGHT, null, null));
         int steps = (int) Math.floor(entry.clip().duration() / STEP);
+        return sampledSpeeds(player, skeleton, part, steps);
+    }
+
+    static double[] speedsFromStance(AnimationEntry entry, Skeleton skeleton, String part) throws Exception {
+        // 从已建立的战斗架势起播，让原始曲线包含实际的淡入与归架。
+        AnimationEntry stance = entry("stance_idle");
+        AnimationPlayer player = new AnimationPlayer();
+        player.play(stance, -stance.clip().duration(), false /* leftHanded */);
+        player.play(entry, 0, false /* leftHanded */);
+        int steps = (int) Math.round(entry.clip().duration() / STEP);
+        return sampledSpeeds(player, skeleton, part, steps);
+    }
+
+    private static double[] sampledSpeeds(AnimationPlayer player, Skeleton skeleton, String part, int steps) {
         double[] speeds = new double[steps];
-        Vector3f previous = point(entry, skeleton, part, 0);
+        Vector3f previous = point(player, skeleton, part, 0);
         for (int step = 0; step < steps; step++) {
-            Vector3f next = point(entry, skeleton, part, (step + 1) * STEP);
+            Vector3f next = point(player, skeleton, part, (step + 1) * STEP);
             speeds[step] = next.distance(previous) / STEP;
             previous = next;
         }

@@ -383,3 +383,12 @@
 | piglin_sword_wind_around / piglin_sword_quiver / piglin_sword_spring_back / piglin_sword_wind_around_off / piglin_sword_quiver_off / piglin_sword_spring_back_off → stance_idle | 0.25 / 0.25 | 播完（`STOP` 和末帧同时到）或被打断 | 淡回架势底层；绕、抖带的 `item_rotation` 随淡出转回原版握法 |
 | piglin_sword_wind_around / piglin_sword_quiver / attack_main → piglin_sword_spring_back | 0.10 / 0.25 | 前式被盾、格挡或硬物挡下，600 ms 内施放弹 | 前式同一刻收到 `STOP` 淡出；弹从回弹起播，剑往身上回，和绕的回抽、抖的抬回方向一致 |
 | piglin_sword_wind_around_off / piglin_sword_quiver_off → piglin_sword_spring_back_off | 0.10 / 0.25 | 同上，剑在副手 | 同上 |
+
+[缠](piglin_sword_coil.md)和[流金](piglin_sword_molten.md)按施放手选片，沿用走动时的上身遮罩。
+
+| 来源 → 目标 | 淡入 / 淡出 | 触发 | 约束 |
+| --- | ---: | --- | --- |
+| stance_idle → piglin_sword_coil / piglin_sword_coil_off / piglin_sword_molten / piglin_sword_molten_off | 0.10 / 0.25 | 施放开始 | 缠 3.35 s，流金 1.15 s，首末逐骨回架势 |
+| piglin_sword_coil / piglin_sword_coil_off / piglin_sword_molten / piglin_sword_molten_off → stance_idle | 0.25 / 0.25 | 收势完成或收到 STOP | 持段中断时从当前姿势淡回底层 |
+| stance_idle → piglin_sword_gold_splash / piglin_sword_gold_splash_off | 0.10 / 0.25 | 泼金施放 | 向后蓄势，第 12 tick 放手 |
+| piglin_sword_gold_splash / piglin_sword_gold_splash_off → stance_idle | 0.25 / 0.25 | 收势完成或收到 STOP | 第 19 tick 空手归架 |
