@@ -53,3 +53,29 @@ Kizuna Players Animation 是 Minecraft 玩家多关节模型与动画模组，�
 ## 参考来源
 
 本约定综合了相邻 `Kizuna-Backpack-Storage`、`Kizuna-Inventory-UI-Framework`、`Kizuna-Meridian-Mod-Framework` 中的全部 `AGENTS.md`，包括 Backpack 项目 `.dependencies/framework/AGENTS.md` 的重复框架约定。仅提取适用的通用规则，具体范围以本项目需求为准。
+
+## 速查
+
+### 自动生成
+
+- Fabric 模组 `kizuna_players_animation`，清单 `src/main/resources/fabric.mod.json`
+  - `client` → `dev.kizuna.playeranimation.client.PlayerAnimationClient`
+  - `kizuna_player_animation` → `dev.kizuna.playeranimation.api.PlayerAnimationHostImpl`
+  - `main` → `dev.kizuna.playeranimation.server.ServerPlayerAnimations`
+- 数据目录：`src/gametest/resources/data/kpa_gametest/`
+- 资源目录：`src/main/resources/assets/kizuna_players_animation/`、`src/main/resources/assets/minecraft/`
+- Protobuf 数据文件（含功法目录）：无
+- 随包 TOML：无
+- 测试源集：`src/clientTest/`、`src/gametest/`、`src/test/`
+- `kz` 装配 ID：`players-animation`（`--with` 使用工作树路径）
+- `kz test --part unit`：`test build -x checkAnimationGates`
+- `kz test --part gametest`
+  - `:runGametest`，运行目录 `build/gametest`
+- `kz client` 项目：`animation`
+
+### 常见坑
+
+- 2026-11-18 日常 `kz test` 的构建分包已排除 `checkAnimationGates`。手写构建参数时用 `kz gradle <树> -- test build -x checkAnimationGates`。来源 `GUARD-34-WINDUP-TASK.md`、`RELEASE-PREP-B-TASK.md`。
+- 2026-11-18 动作改动另跑受影响剪辑的门禁和导出一致性检查，粗臂、细臂都要验。整套动作门禁留到交付验证。来源 `GUARD-34-WINDUP-TASK.md`、`PA-GATE-SPEED-TASK.md`。
+- 2026-11-22 动作需要在登记的客户端项目中实拍，核实手别、关键帧和打断。用例日志要有通过记录。来源 `SWORD-36-TASK.md`、`codex-worker-rules.md`。
+- 2026-11-26 JUnit 若初始化原版日志，令工作目录落在 `build/test-runtime/`，交付前检查源码目录的日志。来源 `TEST-LOGS-OUT-TASK.md`。
