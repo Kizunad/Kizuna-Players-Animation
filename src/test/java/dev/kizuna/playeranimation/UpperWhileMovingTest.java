@@ -35,7 +35,13 @@ class UpperWhileMovingTest {
             "piglin_sword_quiver", "piglin_sword_quiver_off",
             "piglin_sword_spring_back", "piglin_sword_spring_back_off",
             "piglin_sword_coil", "piglin_sword_coil_off", "piglin_sword_molten", "piglin_sword_molten_off",
-            "piglin_sword_gold_splash", "piglin_sword_gold_splash_off");
+            "piglin_sword_gold_splash", "piglin_sword_gold_splash_off",
+            "yunxi_wind_thrust", "yunxi_wind_thrust_off",
+            "yunxi_moon_lift", "yunxi_moon_lift_off",
+            "yunxi_cloud_cleaver", "yunxi_cloud_cleaver_off",
+            "yunxi_flash_parry", "yunxi_flash_parry_off",
+            "yunxi_flash_parry_hit", "yunxi_flash_parry_hit_off",
+            "yunxi_flash_parry_lower", "yunxi_flash_parry_lower_off");
 
     private static AnimationClip clip(int thigh, int forearm) {
         JsonObject document = JsonParser.parseString("{\"format_version\":\"1.8.0\",\"animations\":{\"" + KEY

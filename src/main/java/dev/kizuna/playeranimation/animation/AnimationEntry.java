@@ -218,8 +218,10 @@ public record AnimationEntry(String id, String file, Mask mask, int priority, fl
                 "peddler_mule_kick", "peddler_flying_kick", "peddler_axe_kick", "peddler_whirlwind",
                 "villager_crushing_fist",
                 "piglin_sword_quiver", "piglin_sword_quiver_off",
-                "piglin_sword_spring_back", "piglin_sword_spring_back_off").contains(id)) {
-            throw new IllegalArgumentException("impact_window 只能用于攻击、挖掘、破门斩、弓梢、千里腿、袖手拳崩拳或流金剑抖、弹动作");
+                "piglin_sword_spring_back", "piglin_sword_spring_back_off",
+                "yunxi_wind_thrust", "yunxi_wind_thrust_off", "yunxi_moon_lift", "yunxi_moon_lift_off",
+                "yunxi_cloud_cleaver", "yunxi_cloud_cleaver_off").contains(id)) {
+            throw new IllegalArgumentException("此动作不支持 impact_window: " + id);
         }
     }
 

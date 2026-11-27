@@ -59,7 +59,11 @@ MULTI_AXIS_ROTATION_DEG = 3.0
 MIN_MULTI_AXIS_BONES = 3
 
 
+YUNXI_IDS = {"yunxi_" + move + hand for move in
+             ("wind_thrust", "moon_lift", "cloud_cleaver", "flash_parry", "flash_parry_hit", "flash_parry_lower")
+             for hand in ("", "_off")}
 FULL_BODY_IDS = {
+    *YUNXI_IDS,
     "jump",
     "equip_helmet", "equip_helmet_off", "equip_chestplate", "equip_chestplate_off",
     "equip_leggings", "equip_leggings_off", "equip_boots", "equip_boots_off",
@@ -97,6 +101,7 @@ FULL_BODY_IDS = {
 }
 
 GRIP_IDS = {
+    *YUNXI_IDS,
     "attack", "attack_main", "attack_off", "mine", "mine_main", "mine_off", "use_item",
     "use_item_main", "use_item_off", "place_block", "place_block_off", "spyglass", "spyglass_off",
     "toot_horn", "toot_horn_off", "crossbow_charge", "crossbow_charge_off", "crossbow_hold",
@@ -149,7 +154,7 @@ LATERAL_GAIT_IDS = {"stance_walk_left", "stance_walk_right"}
 UNBALANCED_WINDOW_PREFIXES = ("dodge_", "technique_dash_", "door_breaker_cleave", "door_breaker_ram", "door_breaker_hook",
                               "door_breaker_sweep", "door_breaker_close", "door_breaker_chain", "door_breaker_finale",
                               "peddler_", "wayfarer_", "evoker_earth_legs", "evoker_water_return",
-                              "villager_shoulder_throw")
+                              "villager_shoulder_throw", "yunxi_wind_thrust")
 # 爆发窗口（索引字段 burst_windows）开放给闪避、轻步与撞门的后脚蹬伸、弓梢的前脚蹬地后撤
 # （每段至多一段、≤ 0.08 s）。
 BURST_WINDOW_PREFIXES = ("dodge_", "technique_dash_", "door_breaker_ram", "wayfarer_bow_strike")
@@ -177,7 +182,9 @@ IMPACT_WINDOW_IDS = {"attack_main", "attack_off", "mine_main", "mine_off",
                      "wayfarer_bow_strike", "wayfarer_bow_strike_off",
                      "villager_crushing_fist",
                      "piglin_sword_quiver", "piglin_sword_quiver_off",
-                     "piglin_sword_spring_back", "piglin_sword_spring_back_off"}
+                     "piglin_sword_spring_back", "piglin_sword_spring_back_off",
+                     "yunxi_moon_lift", "yunxi_moon_lift_off", "yunxi_cloud_cleaver", "yunxi_cloud_cleaver_off",
+                     "yunxi_wind_thrust", "yunxi_wind_thrust_off"}
 # 索引 item_states 的通道：pull、pulling、charged、arrow 给弓弩谓词，open 给 item_state 数值属性（药刀刀刃）。
 # pull、open 线性取 [0, 1]，其余为 0 / 1 阶跃开关。
 ITEM_STATE_CHANNELS = {"pull", "pulling", "charged", "arrow", "open"}
@@ -1454,7 +1461,7 @@ def main() -> int:
                 raise SystemExit(f"hand_contact_windows 必须是 [[开始, 结束], ...] 且开始 < 结束: {animation_id}")
             index_extras.setdefault(animation_id, {})["hand_contact_windows"] = windows
         if "reaction" in raw:
-            if raw["reaction"] != "hit" or not animation_id.endswith("_hit"):
+            if raw["reaction"] != "hit" or not animation_id.removesuffix("_off").endswith("_hit"):
                 raise SystemExit(f"reaction 只能为 hit，且只用于 *_hit 动作: {animation_id}")
             index_extras.setdefault(animation_id, {})["reaction"] = "hit"
         if "impact_window" not in raw:

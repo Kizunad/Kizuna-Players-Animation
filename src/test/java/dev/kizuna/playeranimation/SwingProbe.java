@@ -56,7 +56,7 @@ final class SwingProbe {
     }
 
     /** 这个部位在剪辑第 time 秒的位置（实体自己的坐标，单位格）。part 是 main、off、r_hand、l_hand、r_foot、l_foot。 */
-    private static Vector3f point(AnimationPlayer player, Skeleton skeleton, String part, double time) {
+    static Vector3f point(AnimationPlayer player, Skeleton skeleton, String part, double time) {
         Matrix4f[] matrices = Rig.matrices(skeleton, player.sample(Rig.zeroPose(), time, false /* firstPerson */));
         Vector3f tip = new Vector3f(WEAPON_TIP);
         return switch (part) {

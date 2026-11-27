@@ -34,6 +34,9 @@ MIN_PANEL_HEIGHT = 360
 # 下卷道具在侧视图前伸超过 25 px，立剑也高于头顶；三视角在整段使用同一固定画框。
 PANEL_SIZES = {"piglin_sword_coil": (608, 420), "piglin_sword_molten": (512, 420),
                "piglin_sword_gold_splash": (608, 420)}
+PANEL_SIZES.update({name: (544, 416) for name in (
+    "yunxi_wind_thrust", "yunxi_moon_lift", "yunxi_cloud_cleaver",
+    "yunxi_flash_parry", "yunxi_flash_parry_hit", "yunxi_flash_parry_lower")})
 GROUND_MARGIN = 40
 SCALE = 9.0
 # 模型的正面朝 -Z；yaw=180 才会把 Steve 的脸朝向观察者。35° 是从正面
@@ -218,6 +221,12 @@ PROPS = {
     "door_breaker_close": ({"kind": "axe", "bone": "r_item"},),
     "door_breaker_chain": ({"kind": "axe", "bone": "r_item"},),
     "door_breaker_finale": ({"kind": "axe", "bone": "r_item"},),
+    "yunxi_wind_thrust": ({"kind": "sword", "bone": "r_item"},),
+    "yunxi_moon_lift": ({"kind": "sword", "bone": "r_item"},),
+    "yunxi_cloud_cleaver": ({"kind": "sword", "bone": "r_item"},),
+    "yunxi_flash_parry": ({"kind": "sword", "bone": "r_item"},),
+    "yunxi_flash_parry_hit": ({"kind": "sword", "bone": "r_item"},),
+    "yunxi_flash_parry_lower": ({"kind": "sword", "bone": "r_item"},),
     "piglin_sword_wind_around": ({"kind": "sword", "bone": "r_item"},),
     "piglin_sword_quiver": ({"kind": "sword", "bone": "r_item"},),
     "piglin_sword_spring_back": ({"kind": "sword", "bone": "r_item"},),

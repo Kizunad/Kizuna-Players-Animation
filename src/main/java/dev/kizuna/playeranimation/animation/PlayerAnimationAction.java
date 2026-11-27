@@ -276,7 +276,20 @@ public enum PlayerAnimationAction {
     PIGLIN_SWORD_MOLTEN_OFF("piglin_sword_molten_off", 23),
     /** 泼金在第 12 tick 放手，第 19 tick 收势。 */
     PIGLIN_SWORD_GOLD_SPLASH("piglin_sword_gold_splash", 19),
-    PIGLIN_SWORD_GOLD_SPLASH_OFF("piglin_sword_gold_splash_off", 19);
+    PIGLIN_SWORD_GOLD_SPLASH_OFF("piglin_sword_gold_splash_off", 19),
+    /** 云溪三击按剪辑末帧自然结束；横格等宿主停止，回震与退架各六刻。 */
+    YUNXI_WIND_THRUST("yunxi_wind_thrust", 11),
+    YUNXI_WIND_THRUST_OFF("yunxi_wind_thrust_off", 11),
+    YUNXI_MOON_LIFT("yunxi_moon_lift", 12),
+    YUNXI_MOON_LIFT_OFF("yunxi_moon_lift_off", 12),
+    YUNXI_CLOUD_CLEAVER("yunxi_cloud_cleaver", 18),
+    YUNXI_CLOUD_CLEAVER_OFF("yunxi_cloud_cleaver_off", 18),
+    YUNXI_FLASH_PARRY("yunxi_flash_parry"),
+    YUNXI_FLASH_PARRY_OFF("yunxi_flash_parry_off"),
+    YUNXI_FLASH_PARRY_HIT("yunxi_flash_parry_hit", 6),
+    YUNXI_FLASH_PARRY_HIT_OFF("yunxi_flash_parry_hit_off", 6),
+    YUNXI_FLASH_PARRY_LOWER("yunxi_flash_parry_lower", 6),
+    YUNXI_FLASH_PARRY_LOWER_OFF("yunxi_flash_parry_lower_off", 6);
 
     private final String id;
     private final int naturalDurationTicks;

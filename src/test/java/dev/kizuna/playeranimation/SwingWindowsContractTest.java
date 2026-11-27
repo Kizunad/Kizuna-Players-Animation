@@ -7,6 +7,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import dev.kizuna.playeranimation.animation.AnimationEntry;
+import dev.kizuna.playeranimation.animation.AnimationPlayer;
 import dev.kizuna.playeranimation.animation.SwingWindow;
 import dev.kizuna.playeranimation.model.Skeleton;
 import java.nio.file.Files;
@@ -46,6 +47,10 @@ class SwingWindowsContractTest {
     private static final List<String> SWORD_MOVES =
             List.of("wind_around", "quiver", "spring_back", "coil", "molten", "gold_splash");
     private static final String SWORD_PREFIX = "piglin_sword_";
+    private static final int SAMPLES_PER_TICK = 3;
+    private static final int GUARD_RECOVERY_TICKS = 6;
+    /** 成架、持守中、最后可守刻，以及跨过循环接缝后的离线取样。 */
+    private static final List<Integer> GUARD_EXIT_TICKS = List.of(8, 10, 13, 17);
 
     private record Measured(double start, double end, String part, String weight) { }
 
@@ -91,6 +96,50 @@ class SwingWindowsContractTest {
         }
     }
 
+    @Test
+    void yunxiGuardSequenceHasNoSwing() throws Exception {
+        var rigs = List.of(DeliveredRigTest.skeleton(false /* slim */), DeliveredRigTest.skeleton(true /* slim */));
+        for (Skeleton rig : rigs) {
+            for (String suffix : List.of("", "_off")) {
+                for (String exit : List.of("_hit", "_lower")) {
+                    for (int exitTick : GUARD_EXIT_TICKS) {
+                        assertGuardSpeeds(rig, suffix, exit, exitTick * SAMPLES_PER_TICK);
+                    }
+                }
+            }
+        }
+    }
+
+    private static void assertGuardSpeeds(Skeleton rig, String suffix, String exit, int exitFrame) throws Exception {
+        // 出口先叠在持守上，淡入满一刻后释放底层，避免交叉降权时露出站姿。
+        double exitTime = exitFrame * SwingProbe.STEP;
+        var guard = SwingProbe.entry("yunxi_flash_parry" + suffix);
+        var recovery = SwingProbe.entry("yunxi_flash_parry" + exit + suffix);
+        String part = suffix.isEmpty() ? "main" : "off";
+        var player = new AnimationPlayer();
+        player.play(SwingProbe.entry("stance_idle"), -1, false /* leftHanded */);
+        player.play(guard, 0, false /* leftHanded */);
+        var previous = SwingProbe.point(player, rig, part, 0);
+        int fadeFrames = (int) Math.ceil(recovery.blendOut() / SwingProbe.STEP);
+        double[] speeds = new double[exitFrame + GUARD_RECOVERY_TICKS * SAMPLES_PER_TICK + fadeFrames];
+        for (int frame = 1; frame <= speeds.length; frame++) {
+            double time = frame * SwingProbe.STEP;
+            if (frame == exitFrame) {
+                player.play(recovery, exitTime, false /* leftHanded */);
+            }
+            if (frame == exitFrame + SAMPLES_PER_TICK) {
+                player.stop(guard.id(), time);
+            }
+            var next = SwingProbe.point(player, rig, part, time);
+            speeds[frame - 1] = next.distance(previous) / SwingProbe.STEP;
+            previous = next;
+        }
+        for (var window : SwingProbe.windows(speeds, EXTENT_SPEED)) {
+            assertTrue(window.peak() < QUALIFY_SPEED || window.end() - window.start() < MIN_SECONDS,
+                    () -> recovery.id() + " 连续格剑出现挥击 " + window);
+        }
+    }
+
     private static Map<String, List<String>> clips() {
         // 要标挥击段的剪辑和各自要量的部位：兵器的式量兵器尖，腿法量两只脚，原版挥手兵器和空手各量一遍。
         Map<String, List<String>> clips = new LinkedHashMap<>();
@@ -113,6 +162,11 @@ class SwingWindowsContractTest {
             clips.put("piglin_sword_" + move, List.of("main"));
             clips.put("piglin_sword_" + move + "_off", List.of("off"));
         }
+        for (String move : List.of("wind_thrust", "moon_lift", "cloud_cleaver", "flash_parry",
+                "flash_parry_lower", "flash_parry_hit")) {
+            clips.put("yunxi_" + move, List.of("main"));
+            clips.put("yunxi_" + move + "_off", List.of("off"));
+        }
         return clips;
     }
 
@@ -121,7 +175,7 @@ class SwingWindowsContractTest {
         List<Measured> found = new ArrayList<>();
         for (String part : parts) {
             var speeds = SwingProbe.speeds(entry, skeleton, part);
-            if (id.startsWith(SWORD_PREFIX)) {
+            if (id.startsWith(SWORD_PREFIX) || id.startsWith("yunxi_")) {
                 keepStrikePhases(speeds, strikePhases(id), entry.blendIn());
             }
             for (SwingProbe.Window window : SwingProbe.windows(speeds, EXTENT_SPEED)) {

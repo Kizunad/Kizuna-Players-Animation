@@ -7094,6 +7094,422 @@
           "weight": "heavy"
         }
       ]
+    },
+    {
+      "id": "yunxi_flash_parry",
+      "file": "animations/yunxi_flash_parry.animation.json",
+      "mask": "full",
+      "priority": 15,
+      "blend_in": 0.05,
+      "blend_out": 0.08,
+      "fpv": false,
+      "upper_while_moving": true,
+      "hand": "main",
+      "phases": [],
+      "loop_region": [
+        0.4,
+        0.7
+      ],
+      "free_loop_region": true
+    },
+    {
+      "id": "yunxi_flash_parry_lower",
+      "file": "animations/yunxi_flash_parry_lower.animation.json",
+      "mask": "full",
+      "priority": 16,
+      "blend_in": 0.05,
+      "blend_out": 0.05,
+      "fpv": false,
+      "upper_while_moving": true,
+      "hand": "main",
+      "phases": []
+    },
+    {
+      "id": "yunxi_flash_parry_hit",
+      "file": "animations/yunxi_flash_parry_hit.animation.json",
+      "mask": "full",
+      "priority": 16,
+      "blend_in": 0.03,
+      "blend_out": 0.35,
+      "fpv": false,
+      "upper_while_moving": true,
+      "hand": "main",
+      "phases": [],
+      "reaction": "hit"
+    },
+    {
+      "id": "yunxi_cloud_cleaver",
+      "file": "animations/yunxi_cloud_cleaver.animation.json",
+      "mask": "full",
+      "priority": 24,
+      "blend_in": 0.1,
+      "blend_out": 0.25,
+      "fpv": false,
+      "upper_while_moving": true,
+      "hand": "main",
+      "phases": [
+        {
+          "id": "cut",
+          "start": 0.3,
+          "end": 0.45,
+          "chain": [
+            "pelvis",
+            "waist",
+            "chest",
+            "r_upper_arm",
+            "r_forearm",
+            "r_hand"
+          ]
+        }
+      ],
+      "impact_window": [
+        0.2,
+        0.49
+      ],
+      "swings": [
+        {
+          "start": 0.3,
+          "end": 0.45,
+          "part": "main",
+          "weight": "heavy"
+        }
+      ]
+    },
+    {
+      "id": "yunxi_wind_thrust",
+      "file": "animations/yunxi_wind_thrust.animation.json",
+      "mask": "full",
+      "priority": 24,
+      "blend_in": 0.1,
+      "blend_out": 0.25,
+      "fpv": false,
+      "upper_while_moving": true,
+      "hand": "main",
+      "phases": [
+        {
+          "id": "thrust",
+          "start": 0.1,
+          "end": 0.25,
+          "chain": [
+            "pelvis",
+            "waist",
+            "chest",
+            "r_upper_arm",
+            "r_forearm",
+            "r_hand"
+          ]
+        }
+      ],
+      "item_rotation": [
+        [
+          0,
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        [
+          0.12,
+          [
+            55,
+            0,
+            0
+          ]
+        ],
+        [
+          0.25,
+          [
+            62,
+            0,
+            0
+          ]
+        ],
+        [
+          0.32,
+          [
+            62,
+            0,
+            0
+          ]
+        ],
+        [
+          0.55,
+          [
+            0,
+            0,
+            0
+          ]
+        ]
+      ],
+      "unbalanced_windows": [
+        [
+          0.03,
+          0.16
+        ],
+        [
+          0.29,
+          0.55
+        ]
+      ],
+      "impact_window": [
+        0.1,
+        0.25
+      ],
+      "swings": [
+        {
+          "start": 0.12,
+          "end": 0.23,
+          "part": "main",
+          "weight": "light"
+        }
+      ]
+    },
+    {
+      "id": "yunxi_moon_lift",
+      "file": "animations/yunxi_moon_lift.animation.json",
+      "mask": "full",
+      "priority": 24,
+      "blend_in": 0.1,
+      "blend_out": 0.25,
+      "fpv": false,
+      "upper_while_moving": true,
+      "hand": "main",
+      "phases": [
+        {
+          "id": "lift",
+          "start": 0.075,
+          "end": 0.2,
+          "chain": [
+            "pelvis",
+            "waist",
+            "chest",
+            "r_upper_arm",
+            "r_forearm",
+            "r_hand"
+          ]
+        }
+      ],
+      "impact_window": [
+        0,
+        0.3
+      ],
+      "swings": [
+        {
+          "start": 0.12,
+          "end": 0.2,
+          "part": "main",
+          "weight": "heavy"
+        }
+      ]
+    },
+    {
+      "id": "yunxi_flash_parry_off",
+      "file": "animations/yunxi_flash_parry_off.animation.json",
+      "mask": "full",
+      "priority": 15,
+      "blend_in": 0.05,
+      "blend_out": 0.08,
+      "fpv": false,
+      "upper_while_moving": true,
+      "hand": "off",
+      "phases": [],
+      "loop_region": [
+        0.4,
+        0.7
+      ],
+      "free_loop_region": true
+    },
+    {
+      "id": "yunxi_flash_parry_lower_off",
+      "file": "animations/yunxi_flash_parry_lower_off.animation.json",
+      "mask": "full",
+      "priority": 16,
+      "blend_in": 0.05,
+      "blend_out": 0.05,
+      "fpv": false,
+      "upper_while_moving": true,
+      "hand": "off",
+      "phases": []
+    },
+    {
+      "id": "yunxi_flash_parry_hit_off",
+      "file": "animations/yunxi_flash_parry_hit_off.animation.json",
+      "mask": "full",
+      "priority": 16,
+      "blend_in": 0.03,
+      "blend_out": 0.35,
+      "fpv": false,
+      "upper_while_moving": true,
+      "hand": "off",
+      "phases": [],
+      "reaction": "hit"
+    },
+    {
+      "id": "yunxi_cloud_cleaver_off",
+      "file": "animations/yunxi_cloud_cleaver_off.animation.json",
+      "mask": "full",
+      "priority": 24,
+      "blend_in": 0.1,
+      "blend_out": 0.25,
+      "fpv": false,
+      "upper_while_moving": true,
+      "hand": "off",
+      "phases": [
+        {
+          "id": "cut",
+          "start": 0.3,
+          "end": 0.45,
+          "chain": [
+            "pelvis",
+            "waist",
+            "chest",
+            "l_upper_arm",
+            "l_forearm",
+            "l_hand"
+          ]
+        }
+      ],
+      "impact_window": [
+        0.2,
+        0.49
+      ],
+      "swings": [
+        {
+          "start": 0.3,
+          "end": 0.45,
+          "part": "off",
+          "weight": "heavy"
+        }
+      ]
+    },
+    {
+      "id": "yunxi_wind_thrust_off",
+      "file": "animations/yunxi_wind_thrust_off.animation.json",
+      "mask": "full",
+      "priority": 24,
+      "blend_in": 0.1,
+      "blend_out": 0.25,
+      "fpv": false,
+      "upper_while_moving": true,
+      "hand": "off",
+      "phases": [
+        {
+          "id": "thrust",
+          "start": 0.1,
+          "end": 0.25,
+          "chain": [
+            "pelvis",
+            "waist",
+            "chest",
+            "l_upper_arm",
+            "l_forearm",
+            "l_hand"
+          ]
+        }
+      ],
+      "item_rotation": [
+        [
+          0,
+          [
+            0,
+            0,
+            0
+          ]
+        ],
+        [
+          0.12,
+          [
+            55,
+            0,
+            0
+          ]
+        ],
+        [
+          0.25,
+          [
+            62,
+            0,
+            0
+          ]
+        ],
+        [
+          0.32,
+          [
+            62,
+            0,
+            0
+          ]
+        ],
+        [
+          0.55,
+          [
+            0,
+            0,
+            0
+          ]
+        ]
+      ],
+      "unbalanced_windows": [
+        [
+          0.03,
+          0.16
+        ],
+        [
+          0.29,
+          0.55
+        ]
+      ],
+      "impact_window": [
+        0.1,
+        0.25
+      ],
+      "swings": [
+        {
+          "start": 0.12,
+          "end": 0.23,
+          "part": "off",
+          "weight": "light"
+        }
+      ]
+    },
+    {
+      "id": "yunxi_moon_lift_off",
+      "file": "animations/yunxi_moon_lift_off.animation.json",
+      "mask": "full",
+      "priority": 24,
+      "blend_in": 0.1,
+      "blend_out": 0.25,
+      "fpv": false,
+      "upper_while_moving": true,
+      "hand": "off",
+      "phases": [
+        {
+          "id": "lift",
+          "start": 0.075,
+          "end": 0.2,
+          "chain": [
+            "pelvis",
+            "waist",
+            "chest",
+            "l_upper_arm",
+            "l_forearm",
+            "l_hand"
+          ]
+        }
+      ],
+      "impact_window": [
+        0,
+        0.3
+      ],
+      "swings": [
+        {
+          "start": 0.12,
+          "end": 0.2,
+          "part": "off",
+          "weight": "heavy"
+        }
+      ]
     }
   ]
 }
