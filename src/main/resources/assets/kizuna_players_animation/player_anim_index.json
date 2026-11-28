@@ -7510,6 +7510,1126 @@
           "weight": "heavy"
         }
       ]
+    },
+    {
+      "id": "campfire_hands_in_sleeves",
+      "file": "animations/campfire_hands_in_sleeves.animation.json",
+      "mask": "full",
+      "priority": 6,
+      "blend_in": 0.3,
+      "blend_out": 0.2,
+      "hand": "main",
+      "fpv": false,
+      "phases": [
+        {
+          "id": "body",
+          "start": 0.0,
+          "end": 0.8,
+          "chain": [
+            "pelvis",
+            "waist",
+            "chest"
+          ]
+        },
+        {
+          "id": "arm",
+          "start": 0.0,
+          "end": 0.8,
+          "chain": [
+            "r_upper_arm",
+            "r_forearm",
+            "r_hand"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "campfire_sit_down",
+      "file": "animations/campfire_sit_down.animation.json",
+      "mask": "full",
+      "priority": 6,
+      "blend_in": 0.2,
+      "blend_out": 0.2,
+      "hand": "main",
+      "fpv": false,
+      "phases": [
+        {
+          "id": "body",
+          "start": 0.0,
+          "end": 1.2,
+          "chain": [
+            "pelvis",
+            "waist",
+            "chest"
+          ]
+        },
+        {
+          "id": "arm",
+          "start": 0.8,
+          "end": 1.2,
+          "chain": [
+            "r_upper_arm",
+            "r_forearm",
+            "r_hand"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "campfire_sleeves_loop",
+      "file": "animations/campfire_sleeves_loop.animation.json",
+      "mask": "full",
+      "priority": 6,
+      "blend_in": 0.2,
+      "blend_out": 0.2,
+      "hand": "main",
+      "fpv": false
+    },
+    {
+      "id": "campfire_stand_up",
+      "file": "animations/campfire_stand_up.animation.json",
+      "mask": "full",
+      "priority": 6,
+      "blend_in": 0.12,
+      "blend_out": 0.25,
+      "hand": "main",
+      "fpv": false,
+      "phases": [
+        {
+          "id": "body",
+          "start": 0.3,
+          "end": 1.0,
+          "chain": [
+            "pelvis",
+            "waist",
+            "chest"
+          ]
+        },
+        {
+          "id": "arm",
+          "start": 0.74,
+          "end": 1.0,
+          "chain": [
+            "r_upper_arm",
+            "r_forearm",
+            "r_hand"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "campfire_stand_up_quick",
+      "file": "animations/campfire_stand_up_quick.animation.json",
+      "mask": "full",
+      "priority": 6,
+      "blend_in": 0.12,
+      "blend_out": 0.2,
+      "hand": "main",
+      "fpv": false,
+      "phases": [
+        {
+          "id": "body",
+          "start": 0.0,
+          "end": 0.75,
+          "chain": [
+            "pelvis",
+            "waist",
+            "chest"
+          ]
+        },
+        {
+          "id": "arm",
+          "start": 0.42,
+          "end": 0.75,
+          "chain": [
+            "r_upper_arm",
+            "r_forearm",
+            "r_hand"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "campfire_warm_loop",
+      "file": "animations/campfire_warm_loop.animation.json",
+      "mask": "full",
+      "priority": 6,
+      "blend_in": 0.2,
+      "blend_out": 0.12,
+      "hand": "main",
+      "fpv": false
+    },
+    {
+      "id": "idle_akimbo",
+      "file": "animations/idle_akimbo.animation.json",
+      "mask": "full",
+      "priority": 6,
+      "blend_in": 0.2,
+      "blend_out": 0.12,
+      "hand": "main",
+      "fpv": false,
+      "hand_contact_windows": [
+        [
+          0.0,
+          6.4
+        ],
+        [
+          8.1,
+          12.0
+        ]
+      ]
+    },
+    {
+      "id": "idle_akimbo_enter",
+      "file": "animations/idle_akimbo_enter.animation.json",
+      "mask": "full",
+      "priority": 6,
+      "blend_in": 0.15,
+      "blend_out": 0.12,
+      "hand": "main",
+      "fpv": false,
+      "phases": [
+        {
+          "id": "body",
+          "start": 0.16,
+          "end": 0.5,
+          "chain": [
+            "pelvis",
+            "waist",
+            "chest",
+            "head"
+          ]
+        },
+        {
+          "id": "arm",
+          "start": 0.12,
+          "end": 0.5,
+          "chain": [
+            "r_upper_arm",
+            "r_forearm",
+            "r_hand"
+          ]
+        }
+      ],
+      "hand_contact_windows": [
+        [
+          0.49,
+          0.5
+        ]
+      ]
+    },
+    {
+      "id": "idle_akimbo_exit",
+      "file": "animations/idle_akimbo_exit.animation.json",
+      "mask": "full",
+      "priority": 6,
+      "blend_in": 0.1,
+      "blend_out": 0.15,
+      "hand": "main",
+      "fpv": false,
+      "phases": [
+        {
+          "id": "body",
+          "start": 0.13,
+          "end": 0.45,
+          "chain": [
+            "pelvis",
+            "waist",
+            "chest",
+            "head"
+          ]
+        },
+        {
+          "id": "arm",
+          "start": 0.09,
+          "end": 0.45,
+          "chain": [
+            "r_upper_arm",
+            "r_forearm",
+            "r_hand"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "idle_arms_crossed",
+      "file": "animations/idle_arms_crossed.animation.json",
+      "mask": "full",
+      "priority": 6,
+      "blend_in": 0.2,
+      "blend_out": 0.12,
+      "hand": "main",
+      "fpv": false
+    },
+    {
+      "id": "idle_arms_crossed_enter",
+      "file": "animations/idle_arms_crossed_enter.animation.json",
+      "mask": "full",
+      "priority": 6,
+      "blend_in": 0.15,
+      "blend_out": 0.12,
+      "hand": "main",
+      "fpv": false,
+      "phases": [
+        {
+          "id": "body",
+          "start": 0.16,
+          "end": 0.5,
+          "chain": [
+            "pelvis",
+            "waist",
+            "chest",
+            "head"
+          ]
+        },
+        {
+          "id": "arm",
+          "start": 0.12,
+          "end": 0.5,
+          "chain": [
+            "r_upper_arm",
+            "r_forearm",
+            "r_hand"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "idle_arms_crossed_exit",
+      "file": "animations/idle_arms_crossed_exit.animation.json",
+      "mask": "full",
+      "priority": 6,
+      "blend_in": 0.1,
+      "blend_out": 0.15,
+      "hand": "main",
+      "fpv": false,
+      "phases": [
+        {
+          "id": "body",
+          "start": 0.13,
+          "end": 0.45,
+          "chain": [
+            "pelvis",
+            "waist",
+            "chest",
+            "head"
+          ]
+        },
+        {
+          "id": "arm",
+          "start": 0.09,
+          "end": 0.45,
+          "chain": [
+            "r_upper_arm",
+            "r_forearm",
+            "r_hand"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "idle_hands_behind",
+      "file": "animations/idle_hands_behind.animation.json",
+      "mask": "full",
+      "priority": 6,
+      "blend_in": 0.2,
+      "blend_out": 0.12,
+      "hand": "main",
+      "fpv": false,
+      "hand_contact_windows": [
+        [
+          0.0,
+          8.85
+        ],
+        [
+          9.65,
+          12.0
+        ]
+      ]
+    },
+    {
+      "id": "idle_hands_behind_enter",
+      "file": "animations/idle_hands_behind_enter.animation.json",
+      "mask": "full",
+      "priority": 6,
+      "blend_in": 0.15,
+      "blend_out": 0.12,
+      "hand": "main",
+      "fpv": false,
+      "phases": [
+        {
+          "id": "body",
+          "start": 0.16,
+          "end": 0.5,
+          "chain": [
+            "pelvis",
+            "waist",
+            "chest",
+            "head"
+          ]
+        },
+        {
+          "id": "arm",
+          "start": 0.12,
+          "end": 0.5,
+          "chain": [
+            "r_upper_arm",
+            "r_forearm",
+            "r_hand"
+          ]
+        }
+      ],
+      "hand_contact_windows": [
+        [
+          0.49,
+          0.5
+        ]
+      ]
+    },
+    {
+      "id": "idle_hands_behind_exit",
+      "file": "animations/idle_hands_behind_exit.animation.json",
+      "mask": "full",
+      "priority": 6,
+      "blend_in": 0.1,
+      "blend_out": 0.15,
+      "hand": "main",
+      "fpv": false,
+      "phases": [
+        {
+          "id": "body",
+          "start": 0.13,
+          "end": 0.45,
+          "chain": [
+            "pelvis",
+            "waist",
+            "chest",
+            "head"
+          ]
+        },
+        {
+          "id": "arm",
+          "start": 0.09,
+          "end": 0.45,
+          "chain": [
+            "r_upper_arm",
+            "r_forearm",
+            "r_hand"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "idle_lean_counter",
+      "file": "animations/idle_lean_counter.animation.json",
+      "mask": "full",
+      "priority": 6,
+      "blend_in": 0.2,
+      "blend_out": 0.12,
+      "hand": "main",
+      "fpv": false
+    },
+    {
+      "id": "idle_lean_counter_enter",
+      "file": "animations/idle_lean_counter_enter.animation.json",
+      "mask": "full",
+      "priority": 6,
+      "blend_in": 0.15,
+      "blend_out": 0.12,
+      "hand": "main",
+      "fpv": false,
+      "phases": [
+        {
+          "id": "body",
+          "start": 0.18,
+          "end": 0.6,
+          "chain": [
+            "pelvis",
+            "waist",
+            "chest",
+            "head"
+          ]
+        },
+        {
+          "id": "arm",
+          "start": 0.14,
+          "end": 0.6,
+          "chain": [
+            "r_upper_arm",
+            "r_forearm",
+            "r_hand"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "idle_lean_counter_exit",
+      "file": "animations/idle_lean_counter_exit.animation.json",
+      "mask": "full",
+      "priority": 6,
+      "blend_in": 0.1,
+      "blend_out": 0.15,
+      "hand": "main",
+      "fpv": false,
+      "phases": [
+        {
+          "id": "body",
+          "start": 0.13,
+          "end": 0.45,
+          "chain": [
+            "pelvis",
+            "waist",
+            "chest",
+            "head"
+          ]
+        },
+        {
+          "id": "arm",
+          "start": 0.09,
+          "end": 0.45,
+          "chain": [
+            "r_upper_arm",
+            "r_forearm",
+            "r_hand"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "idle_squat",
+      "file": "animations/idle_squat.animation.json",
+      "mask": "full",
+      "priority": 6,
+      "blend_in": 0.2,
+      "blend_out": 0.12,
+      "hand": "main",
+      "fpv": false
+    },
+    {
+      "id": "idle_squat_enter",
+      "file": "animations/idle_squat_enter.animation.json",
+      "mask": "full",
+      "priority": 6,
+      "blend_in": 0.15,
+      "blend_out": 0.12,
+      "hand": "main",
+      "fpv": false,
+      "phases": [
+        {
+          "id": "body",
+          "start": 0.14,
+          "end": 0.6,
+          "chain": [
+            "pelvis",
+            "waist",
+            "chest",
+            "head"
+          ]
+        },
+        {
+          "id": "arm",
+          "start": 0.18,
+          "end": 0.6,
+          "chain": [
+            "r_upper_arm",
+            "r_forearm",
+            "r_hand"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "idle_squat_exit",
+      "file": "animations/idle_squat_exit.animation.json",
+      "mask": "full",
+      "priority": 6,
+      "blend_in": 0.1,
+      "blend_out": 0.15,
+      "hand": "main",
+      "fpv": false,
+      "phases": [
+        {
+          "id": "body",
+          "start": 0.13,
+          "end": 0.55,
+          "chain": [
+            "pelvis",
+            "waist",
+            "chest",
+            "head"
+          ]
+        },
+        {
+          "id": "arm",
+          "start": 0.09,
+          "end": 0.55,
+          "chain": [
+            "r_upper_arm",
+            "r_forearm",
+            "r_hand"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "campfire_hands_in_sleeves_robed",
+      "file": "animations/campfire_hands_in_sleeves_robed.animation.json",
+      "mask": "full",
+      "priority": 6,
+      "blend_in": 0.3,
+      "blend_out": 0.2,
+      "hand": "main",
+      "fpv": false,
+      "phases": [
+        {
+          "id": "body",
+          "start": 0.0,
+          "end": 0.8,
+          "chain": [
+            "pelvis",
+            "waist",
+            "chest"
+          ]
+        },
+        {
+          "id": "arm",
+          "start": 0.0,
+          "end": 0.8,
+          "chain": [
+            "r_upper_arm",
+            "r_forearm",
+            "r_hand"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "campfire_sit_down_robed",
+      "file": "animations/campfire_sit_down_robed.animation.json",
+      "mask": "full",
+      "priority": 6,
+      "blend_in": 0.2,
+      "blend_out": 0.2,
+      "hand": "main",
+      "fpv": false,
+      "phases": [
+        {
+          "id": "body",
+          "start": 0.0,
+          "end": 1.2,
+          "chain": [
+            "pelvis",
+            "waist",
+            "chest"
+          ]
+        },
+        {
+          "id": "arm",
+          "start": 0.8,
+          "end": 1.2,
+          "chain": [
+            "r_upper_arm",
+            "r_forearm",
+            "r_hand"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "campfire_sleeves_loop_robed",
+      "file": "animations/campfire_sleeves_loop_robed.animation.json",
+      "mask": "full",
+      "priority": 6,
+      "blend_in": 0.2,
+      "blend_out": 0.2,
+      "hand": "main",
+      "fpv": false
+    },
+    {
+      "id": "campfire_stand_up_quick_robed",
+      "file": "animations/campfire_stand_up_quick_robed.animation.json",
+      "mask": "full",
+      "priority": 6,
+      "blend_in": 0.12,
+      "blend_out": 0.2,
+      "hand": "main",
+      "fpv": false,
+      "phases": [
+        {
+          "id": "body",
+          "start": 0.0,
+          "end": 0.75,
+          "chain": [
+            "pelvis",
+            "waist",
+            "chest"
+          ]
+        },
+        {
+          "id": "arm",
+          "start": 0.42,
+          "end": 0.75,
+          "chain": [
+            "r_upper_arm",
+            "r_forearm",
+            "r_hand"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "campfire_stand_up_robed",
+      "file": "animations/campfire_stand_up_robed.animation.json",
+      "mask": "full",
+      "priority": 6,
+      "blend_in": 0.12,
+      "blend_out": 0.25,
+      "hand": "main",
+      "fpv": false,
+      "phases": [
+        {
+          "id": "body",
+          "start": 0.3,
+          "end": 1.0,
+          "chain": [
+            "pelvis",
+            "waist",
+            "chest"
+          ]
+        },
+        {
+          "id": "arm",
+          "start": 0.74,
+          "end": 1.0,
+          "chain": [
+            "r_upper_arm",
+            "r_forearm",
+            "r_hand"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "campfire_warm_loop_robed",
+      "file": "animations/campfire_warm_loop_robed.animation.json",
+      "mask": "full",
+      "priority": 6,
+      "blend_in": 0.2,
+      "blend_out": 0.12,
+      "hand": "main",
+      "fpv": false
+    },
+    {
+      "id": "idle_akimbo_enter_robed",
+      "file": "animations/idle_akimbo_enter_robed.animation.json",
+      "mask": "full",
+      "priority": 6,
+      "blend_in": 0.15,
+      "blend_out": 0.12,
+      "hand": "main",
+      "fpv": false,
+      "phases": [
+        {
+          "id": "body",
+          "start": 0.16,
+          "end": 0.5,
+          "chain": [
+            "pelvis",
+            "waist",
+            "chest",
+            "head"
+          ]
+        },
+        {
+          "id": "arm",
+          "start": 0.12,
+          "end": 0.5,
+          "chain": [
+            "r_upper_arm",
+            "r_forearm",
+            "r_hand"
+          ]
+        }
+      ],
+      "hand_contact_windows": [
+        [
+          0.49,
+          0.5
+        ]
+      ]
+    },
+    {
+      "id": "idle_akimbo_exit_robed",
+      "file": "animations/idle_akimbo_exit_robed.animation.json",
+      "mask": "full",
+      "priority": 6,
+      "blend_in": 0.1,
+      "blend_out": 0.15,
+      "hand": "main",
+      "fpv": false,
+      "phases": [
+        {
+          "id": "body",
+          "start": 0.13,
+          "end": 0.45,
+          "chain": [
+            "pelvis",
+            "waist",
+            "chest",
+            "head"
+          ]
+        },
+        {
+          "id": "arm",
+          "start": 0.09,
+          "end": 0.45,
+          "chain": [
+            "r_upper_arm",
+            "r_forearm",
+            "r_hand"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "idle_akimbo_robed",
+      "file": "animations/idle_akimbo_robed.animation.json",
+      "mask": "full",
+      "priority": 6,
+      "blend_in": 0.2,
+      "blend_out": 0.12,
+      "hand": "main",
+      "fpv": false,
+      "hand_contact_windows": [
+        [
+          0.0,
+          6.4
+        ],
+        [
+          8.1,
+          12.0
+        ]
+      ]
+    },
+    {
+      "id": "idle_arms_crossed_enter_robed",
+      "file": "animations/idle_arms_crossed_enter_robed.animation.json",
+      "mask": "full",
+      "priority": 6,
+      "blend_in": 0.15,
+      "blend_out": 0.12,
+      "hand": "main",
+      "fpv": false,
+      "phases": [
+        {
+          "id": "body",
+          "start": 0.16,
+          "end": 0.5,
+          "chain": [
+            "pelvis",
+            "waist",
+            "chest",
+            "head"
+          ]
+        },
+        {
+          "id": "arm",
+          "start": 0.12,
+          "end": 0.5,
+          "chain": [
+            "r_upper_arm",
+            "r_forearm",
+            "r_hand"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "idle_arms_crossed_exit_robed",
+      "file": "animations/idle_arms_crossed_exit_robed.animation.json",
+      "mask": "full",
+      "priority": 6,
+      "blend_in": 0.1,
+      "blend_out": 0.15,
+      "hand": "main",
+      "fpv": false,
+      "phases": [
+        {
+          "id": "body",
+          "start": 0.13,
+          "end": 0.45,
+          "chain": [
+            "pelvis",
+            "waist",
+            "chest",
+            "head"
+          ]
+        },
+        {
+          "id": "arm",
+          "start": 0.09,
+          "end": 0.45,
+          "chain": [
+            "r_upper_arm",
+            "r_forearm",
+            "r_hand"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "idle_arms_crossed_robed",
+      "file": "animations/idle_arms_crossed_robed.animation.json",
+      "mask": "full",
+      "priority": 6,
+      "blend_in": 0.2,
+      "blend_out": 0.12,
+      "hand": "main",
+      "fpv": false
+    },
+    {
+      "id": "idle_hands_behind_enter_robed",
+      "file": "animations/idle_hands_behind_enter_robed.animation.json",
+      "mask": "full",
+      "priority": 6,
+      "blend_in": 0.15,
+      "blend_out": 0.12,
+      "hand": "main",
+      "fpv": false,
+      "phases": [
+        {
+          "id": "body",
+          "start": 0.16,
+          "end": 0.5,
+          "chain": [
+            "pelvis",
+            "waist",
+            "chest",
+            "head"
+          ]
+        },
+        {
+          "id": "arm",
+          "start": 0.12,
+          "end": 0.5,
+          "chain": [
+            "r_upper_arm",
+            "r_forearm",
+            "r_hand"
+          ]
+        }
+      ],
+      "hand_contact_windows": [
+        [
+          0.49,
+          0.5
+        ]
+      ]
+    },
+    {
+      "id": "idle_hands_behind_exit_robed",
+      "file": "animations/idle_hands_behind_exit_robed.animation.json",
+      "mask": "full",
+      "priority": 6,
+      "blend_in": 0.1,
+      "blend_out": 0.15,
+      "hand": "main",
+      "fpv": false,
+      "phases": [
+        {
+          "id": "body",
+          "start": 0.13,
+          "end": 0.45,
+          "chain": [
+            "pelvis",
+            "waist",
+            "chest",
+            "head"
+          ]
+        },
+        {
+          "id": "arm",
+          "start": 0.09,
+          "end": 0.45,
+          "chain": [
+            "r_upper_arm",
+            "r_forearm",
+            "r_hand"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "idle_hands_behind_robed",
+      "file": "animations/idle_hands_behind_robed.animation.json",
+      "mask": "full",
+      "priority": 6,
+      "blend_in": 0.2,
+      "blend_out": 0.12,
+      "hand": "main",
+      "fpv": false,
+      "hand_contact_windows": [
+        [
+          0.0,
+          8.85
+        ],
+        [
+          9.65,
+          12.0
+        ]
+      ]
+    },
+    {
+      "id": "idle_lean_counter_enter_robed",
+      "file": "animations/idle_lean_counter_enter_robed.animation.json",
+      "mask": "full",
+      "priority": 6,
+      "blend_in": 0.15,
+      "blend_out": 0.12,
+      "hand": "main",
+      "fpv": false,
+      "phases": [
+        {
+          "id": "body",
+          "start": 0.18,
+          "end": 0.6,
+          "chain": [
+            "pelvis",
+            "waist",
+            "chest",
+            "head"
+          ]
+        },
+        {
+          "id": "arm",
+          "start": 0.14,
+          "end": 0.6,
+          "chain": [
+            "r_upper_arm",
+            "r_forearm",
+            "r_hand"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "idle_lean_counter_exit_robed",
+      "file": "animations/idle_lean_counter_exit_robed.animation.json",
+      "mask": "full",
+      "priority": 6,
+      "blend_in": 0.1,
+      "blend_out": 0.15,
+      "hand": "main",
+      "fpv": false,
+      "phases": [
+        {
+          "id": "body",
+          "start": 0.13,
+          "end": 0.45,
+          "chain": [
+            "pelvis",
+            "waist",
+            "chest",
+            "head"
+          ]
+        },
+        {
+          "id": "arm",
+          "start": 0.09,
+          "end": 0.45,
+          "chain": [
+            "r_upper_arm",
+            "r_forearm",
+            "r_hand"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "idle_lean_counter_robed",
+      "file": "animations/idle_lean_counter_robed.animation.json",
+      "mask": "full",
+      "priority": 6,
+      "blend_in": 0.2,
+      "blend_out": 0.12,
+      "hand": "main",
+      "fpv": false
+    },
+    {
+      "id": "idle_squat_enter_robed",
+      "file": "animations/idle_squat_enter_robed.animation.json",
+      "mask": "full",
+      "priority": 6,
+      "blend_in": 0.15,
+      "blend_out": 0.12,
+      "hand": "main",
+      "fpv": false,
+      "phases": [
+        {
+          "id": "body",
+          "start": 0.14,
+          "end": 0.6,
+          "chain": [
+            "pelvis",
+            "waist",
+            "chest",
+            "head"
+          ]
+        },
+        {
+          "id": "arm",
+          "start": 0.18,
+          "end": 0.6,
+          "chain": [
+            "r_upper_arm",
+            "r_forearm",
+            "r_hand"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "idle_squat_exit_robed",
+      "file": "animations/idle_squat_exit_robed.animation.json",
+      "mask": "full",
+      "priority": 6,
+      "blend_in": 0.1,
+      "blend_out": 0.15,
+      "hand": "main",
+      "fpv": false,
+      "phases": [
+        {
+          "id": "body",
+          "start": 0.13,
+          "end": 0.55,
+          "chain": [
+            "pelvis",
+            "waist",
+            "chest",
+            "head"
+          ]
+        },
+        {
+          "id": "arm",
+          "start": 0.09,
+          "end": 0.55,
+          "chain": [
+            "r_upper_arm",
+            "r_forearm",
+            "r_hand"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "idle_squat_robed",
+      "file": "animations/idle_squat_robed.animation.json",
+      "mask": "full",
+      "priority": 6,
+      "blend_in": 0.2,
+      "blend_out": 0.12,
+      "hand": "main",
+      "fpv": false
     }
   ]
 }

@@ -285,7 +285,21 @@ class AnimationSetContractTest {
                 "yunxi_cloud_cleaver", "yunxi_cloud_cleaver_off",
                 "yunxi_flash_parry", "yunxi_flash_parry_off",
                 "yunxi_flash_parry_hit", "yunxi_flash_parry_hit_off",
-                "yunxi_flash_parry_lower", "yunxi_flash_parry_lower_off"), ids);
+                "yunxi_flash_parry_lower", "yunxi_flash_parry_lower_off",
+                "campfire_sit_down", "campfire_warm_loop", "campfire_hands_in_sleeves", "campfire_sleeves_loop",
+                "campfire_stand_up", "campfire_stand_up_quick",
+                "campfire_sit_down_robed", "campfire_warm_loop_robed", "campfire_hands_in_sleeves_robed",
+                "campfire_sleeves_loop_robed", "campfire_stand_up_robed", "campfire_stand_up_quick_robed",
+                "idle_akimbo_enter", "idle_akimbo", "idle_akimbo_exit",
+                "idle_akimbo_enter_robed", "idle_akimbo_robed", "idle_akimbo_exit_robed",
+                "idle_arms_crossed_enter", "idle_arms_crossed", "idle_arms_crossed_exit",
+                "idle_arms_crossed_enter_robed", "idle_arms_crossed_robed", "idle_arms_crossed_exit_robed",
+                "idle_squat_enter", "idle_squat", "idle_squat_exit",
+                "idle_squat_enter_robed", "idle_squat_robed", "idle_squat_exit_robed",
+                "idle_hands_behind_enter", "idle_hands_behind", "idle_hands_behind_exit",
+                "idle_hands_behind_enter_robed", "idle_hands_behind_robed", "idle_hands_behind_exit_robed",
+                "idle_lean_counter_enter", "idle_lean_counter", "idle_lean_counter_exit",
+                "idle_lean_counter_enter_robed", "idle_lean_counter_robed", "idle_lean_counter_exit_robed"), ids);
         // 已交付标记必须与打包资源一致：调度只请求已交付动作，未打包的动作不得标为已交付。
         for (PlayerAnimationAction action : PlayerAnimationAction.values()) {
             assertEquals(ids.contains(action.id()), action.delivered(), action.id());

@@ -23,6 +23,7 @@ PREFIX = "animation.kizuna_players_animation.player."
 GROUPS: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("yunxi", ("yunxi_",)),
     ("piglin_sword", ("piglin_sword_",)),
+    ("npc_poses", ("campfire_", "idle_")),
     ("villager", ("villager_",)),
     ("witch", ("witch_",)),
     ("herb_knife", ("herb_knife_",)),

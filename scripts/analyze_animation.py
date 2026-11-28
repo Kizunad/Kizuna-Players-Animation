@@ -138,7 +138,18 @@ GRIP_IDS = {
 # 跃步与 jump 同类：整段在空中，着地口径由原型自查的脚底高度代替（docs/animation-specs/technique_leap.md 第 9 节）。
 NON_STANDING_IDS = {"meditate", "jump", "technique_leap", "climb", "swim", "ride", "sleep", "elytra"}
 # 站立循环：静止潜行双脚全程锁定，循环动作也要检查脚底、滑动与重心。
-STANDING_LOOP_IDS = {"sneak", "stance_idle"}
+# 村民骨架版剪辑以这个后缀结尾，只在 --robed 给的几何上量（docs/animation-specs/PROGRESS-npc-poses.md 第 2 节）。
+ROBED_SUFFIX = "_robed"
+# 日常站姿与蹲坐的循环和架势站姿一样查站立地面：换脚、踱步也要不滑、重心在支撑面内。
+IDLE_LOOP_IDS = {f"idle_{pose}{suffix}"
+                 for pose in ("akimbo", "arms_crossed", "squat", "hands_behind", "lean_counter")
+                 for suffix in ("", ROBED_SUFFIX)}
+STANDING_LOOP_IDS = {"sneak", "stance_idle"} | IDLE_LOOP_IDS
+# 坐地与蹲：凡是最低点贴地的骨都算支撑（臀、袍子、大腿、小腿、撑地的手），重心投影落在这些接地点的
+# 包围盒加支撑余量内；坐着的帧不查脚滑，改查臀在着地期间不滑。
+GROUND_SUPPORT_PREFIXES = ("campfire_", "idle_squat")
+SEAT_BONES = ("pelvis", "r_thigh", "l_thigh")
+SUPPORT_MARGIN_PX = 2.0
 # 原地循环步态：支撑脚相对 root 匀速后移，使用 walk/run 的循环支撑检查。
 GAIT_IDS = {"walk", "run", "sneak_walk", "stance_walk_forward", "stance_walk_back", "stance_walk_left",
             "stance_walk_right", "stance_run"}
@@ -494,6 +505,10 @@ def ground_and_center_gates(sampler: AnimationSampler, times: list[float]) -> di
     centers = []
     soles: list[float] = []
     contacts: list[dict[str, Any]] = []
+    # 触地即支撑要用的逐帧数据：贴地的方块角点、臀部最低点和胯枢轴位置。
+    ground_points: list[list[Vec]] = []
+    seat_lows: list[float] = []
+    pelvis_positions: list[Vec] = []
     corners = lambda element: [
         (x, y, z)
         for x in (float(element["from"][0]), float(element["to"][0]))
@@ -508,12 +523,17 @@ def ground_and_center_gates(sampler: AnimationSampler, times: list[float]) -> di
         weighted_centers: list[tuple[Vec, float]] = []
         bone_volume: dict[str, float] = {}
         foot_points: dict[str, list[Vec]] = {"r": [], "l": []}
+        frame_ground: list[Vec] = []
+        seat_low = math.inf
         for element in sampler.model.elements:
             bone = sampler.model.element_bones.get(element.get("uuid"))
             if bone not in world or element.get("type") != "cube":
                 continue
             transformed = [world[bone].point(point) for point in corners(element)]
             points.extend(transformed)
+            frame_ground.extend(point for point in transformed if point[1] <= GROUND_TOLERANCE_PX)
+            if bone in SEAT_BONES:
+                seat_low = min(seat_low, min(point[1] for point in transformed))
             volume = math.prod(abs(float(element["to"][axis]) - float(element["from"][axis])) for axis in range(3))
             if volume > 0:
                 bone_volume[bone] = bone_volume.get(bone, 0.0) + volume
@@ -566,16 +586,23 @@ def ground_and_center_gates(sampler: AnimationSampler, times: list[float]) -> di
         sole = min(point[1] for point in points)
         soles.append(sole)
         contacts.append({side: min((point[1] for point in values), default=math.inf) for side, values in foot_points.items()})
+        ground_points.append(frame_ground)
+        seat_lows.append(seat_low)
+        pelvis_positions.append(world["pelvis"].point(sampler.model.origins["pelvis"]))
     slips = {bone: max(vec_range(values)[:2]) for bone, values in foot_positions.items()}
     animation_id = sampler.key.rsplit(".", 1)[-1]
     standing = (not sampler.loop and animation_id not in NON_STANDING_IDS) or animation_id in STANDING_LOOP_IDS
+    # 坐地与蹲的剪辑按触地即支撑查：循环段也查地面；臀着地的帧不算脚的支撑段。
+    ground_support = animation_id.startswith(GROUND_SUPPORT_PREFIXES)
+    standing = standing or ground_support
+    seated = [ground_support and low <= GROUND_TOLERANCE_PX for low in seat_lows]
     contact_frames = [index for index, value in enumerate(soles) if value >= -GROUND_TOLERANCE_PX]
     support_slip = {side: 0.0 for side in ("r", "l")}
     for side in support_slip:
         # 按每段连续着地分别统计：脚离地后落到别处是迈步，不是滑动。
         segments: list[list[int]] = []
         for index in contact_frames:
-            if contacts[index][side] > GROUND_TOLERANCE_PX:
+            if contacts[index][side] > GROUND_TOLERANCE_PX or seated[index]:
                 continue
             if segments and index == segments[-1][-1] + 1:
                 segments[-1].append(index)
@@ -590,13 +617,17 @@ def ground_and_center_gates(sampler: AnimationSampler, times: list[float]) -> di
         for index in contact_frames:
             if any(start <= times[index] <= end for start, end in unbalanced):
                 continue
-            support = [foot_positions[f"{side}_foot"][index] for side in ("r", "l")
-                       if contacts[index][side] <= GROUND_TOLERANCE_PX]
+            if ground_support:
+                support = ground_points[index]
+            else:
+                support = [foot_positions[f"{side}_foot"][index] for side in ("r", "l")
+                           if contacts[index][side] <= GROUND_TOLERANCE_PX]
             if support:
                 for axis in (0, 2):
                     values = [point[axis] for point in support]
                     if not (min(values) - 2 <= centers[index][axis] <= max(values) + 2):
                         center_pass = False
+    seat_slip = seat_slip_gate(seated, pelvis_positions) if ground_support else 0.0
     gait_support: dict[str, Any] = {
         "pass": True,
         "applicable": False,
@@ -674,14 +705,16 @@ def ground_and_center_gates(sampler: AnimationSampler, times: list[float]) -> di
         ground_reason = gait_support["reason"]
     elif standing:
         ground_pass = bool(contact_frames) and max(support_slip.values(), default=0) <= MAX_FOOT_SLIP_PX \
-            and min(soles) >= -GROUND_TOLERANCE_PX and center_pass
+            and min(soles) >= -GROUND_TOLERANCE_PX and center_pass and seat_slip <= MAX_FOOT_SLIP_PX
         ground_applicable = True
         ground_reason = "站立/一次性动作：检查脚底不穿地、支撑脚滑动和重心投影"
+        if ground_support:
+            ground_reason = "坐地与蹲：全身不穿地，触地的骨都算支撑面，重心投影在接地点包围盒内；脚和臀着地期间不滑"
     else:
         ground_pass = True
         ground_applicable = False
         ground_reason = "游泳、攀爬、骑乘、鞘翅、跳跃腾空、睡觉或打坐没有站立地面支撑"
-    return {
+    result = {
         "pass": ground_pass,
         "applicable": ground_applicable,
         "reason": ground_reason,
@@ -697,6 +730,24 @@ def ground_and_center_gates(sampler: AnimationSampler, times: list[float]) -> di
         "limits": {"ground_tolerance_px": GROUND_TOLERANCE_PX, "foot_slip_px": MAX_FOOT_SLIP_PX,
                     "support_margin_px": 2.0},
     }
+    if ground_support:
+        result["seated_frame_count"] = sum(seated)
+        result["seat_slip_px"] = seat_slip
+    return result
+
+
+def seat_slip_gate(seated: list[bool], pelvis_positions: list[Vec]) -> float:
+    """臀每段连续着地期间胯枢轴的水平漂移：站起再坐下算重新落座，不算滑。"""
+    worst = 0.0
+    run: list[Vec] = []
+    for flag, position in zip([*seated, False], [*pelvis_positions, (0.0, 0.0, 0.0)]):
+        if flag:
+            run.append(position)
+            continue
+        if run:
+            worst = max(worst, max(vec_range(run)[0], vec_range(run)[2]))
+        run = []
+    return worst
 
 
 def cycle_gates(sampler: AnimationSampler) -> dict[str, Any]:
@@ -1423,6 +1474,8 @@ def main() -> int:
     parser.add_argument("animation", nargs="+", help="动画 ID")
     parser.add_argument("--source", type=Path, default=bbmodel_store.CLASSIC, help="分组目录，或单个 .bbmodel")
     parser.add_argument("--slim", type=Path, default=Path("models/player_skeleton_slim.bbmodel"))
+    parser.add_argument("--robed", type=Path,
+                        help=f"村民骨架几何 .bbmodel；以 {ROBED_SUFFIX} 结尾的动画只在它上面量，不再量粗臂、细臂")
     parser.add_argument("--json-dir", type=Path, default=Path("src/main/resources/assets/kizuna_players_animation/animations"))
     parser.add_argument("--index", type=Path,
                         default=Path("src/main/resources/assets/kizuna_players_animation/player_anim_index.json"))
@@ -1477,10 +1530,21 @@ def main() -> int:
         if any(start >= end for start, end in windows) or any(left[1] > right[0] for left, right in zip(windows, windows[1:])):
             raise SystemExit(f"impact_window 各段必须开始早于结束、按时间先后且互不重叠: {animation_id}")
         impact_windows[animation_id] = windows
+    robed_ids = [animation_id for animation_id in args.animation if animation_id.endswith(ROBED_SUFFIX)]
+    if robed_ids and args.robed is None:
+        raise SystemExit(f"{', '.join(robed_ids)} 是村民骨架版，需要 --robed 指定几何")
+    geometries = [("classic", args.source), ("slim", args.slim)]
+    if robed_ids:
+        geometries.append(("robed", args.robed))
     reports = []
-    for label, model_path in (("classic", args.source), ("slim", args.slim)):
+    for label, model_path in geometries:
+        # 村民骨架版只量村民几何，玩家版只量粗臂、细臂。
+        selected = [animation_id for animation_id in args.animation
+                    if animation_id.endswith(ROBED_SUFFIX) == (label == "robed")]
+        if not selected:
+            continue
         model = SkeletonModel(load_json(model_path))
-        for animation_id in args.animation:
+        for animation_id in selected:
             path = args.json_dir / f"{animation_id}.animation.json"
             document = load_json(path)
             raw_entry = entries.get(animation_id, {})

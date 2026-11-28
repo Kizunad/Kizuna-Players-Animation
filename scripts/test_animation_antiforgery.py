@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 """回归：上一轮按同一条曲线缩放的动作设计必须被防伪造门禁拒绝；爆发窗口只放宽窗口内的角速度上限；
-相触窗口拒绝分开与穿入；手指覆盖层拒绝张开的手指；索引 item_rotation 转动挂点并进角速度门禁。"""
+相触窗口拒绝分开与穿入；手指覆盖层拒绝张开的手指；索引 item_rotation 转动挂点并进角速度门禁；
+坐地「触地即支撑」拒绝沉地和臀滑，日常站姿循环按站立口径查滑脚，村民几何量得出玩家版抱臂穿进袍子。"""
 
 from __future__ import annotations
 
+import json
+import math
 import re
 import sys
 from pathlib import Path
@@ -115,6 +118,19 @@ def item_rotation_sampler(model: SkeletonModel, degrees: float, seconds: float) 
     return AnimationSampler(model, {"format_version": "1.8.0", "animations": {key: animation}}, key)
 
 
+def shifted_pelvis(document: dict, offset) -> dict:
+    """导出文档的副本：胯的位置关键帧逐个加 offset(时刻) → (dx, dy, dz)。"""
+    copy = json.loads(json.dumps(document))
+    channel = next(iter(copy["animations"].values()))["bones"]["pelvis"]["position"]
+    for time, value in channel.items():
+        channel[time] = [a + b for a, b in zip(value, offset(float(time)))]
+    return copy
+
+
+def gates_of(model: SkeletonModel, document: dict) -> dict:
+    return report(AnimationSampler(model, document, next(iter(document["animations"]))))
+
+
 def main() -> int:
     root = Path(__file__).resolve().parents[1]
     document, key = fake_from_spec(root / "docs/animation-specs/attack_main.md")
@@ -159,6 +175,29 @@ def main() -> int:
     moved = [a - b for a, b in zip(world["r_item"].point(ahead), world["r_hand"].point(ahead))]
     pivot_drift = max(abs(a - b) for a, b in zip(world["r_item"].point(origin), world["r_hand"].point(origin)))
     assert abs(moved[1]) > 2 and pivot_drift < 1e-9, (moved, pivot_drift)
+    # 坐地「触地即支撑」（campfire_*、idle_squat*）：原样的烤火循环放行；整个人往地下沉 1 px、臀在地上前后滑 1.5 px 拒绝。
+    animations = root / "src/main/resources/assets/kizuna_players_animation/animations"
+    warm = load_json(animations / "campfire_warm_loop.animation.json")
+    seated = gates_of(model, warm)["ground_and_center"]
+    assert seated["pass"] and seated["seated_frame_count"] > 0, seated
+    sunk = gates_of(model, shifted_pelvis(warm, lambda time: (0.0, -1.0, 0.0)))["ground_and_center"]
+    assert not sunk["pass"] and sunk["min_sole_y_px"] < -0.25, sunk
+    slid = gates_of(model, shifted_pelvis(warm, lambda time: (0.0, 0.0, 1.5 * math.sin(math.pi * time / 12) ** 2)))
+    slide = slid["ground_and_center"]
+    assert not slide["pass"] and slide["seat_slip_px"] > 0.5, slide
+    # 日常站姿循环进了 STANDING_LOOP_IDS：原样的叉腰循环放行，两脚跟着胯左右滑 1.2 px 拒绝。
+    akimbo = load_json(animations / "idle_akimbo.animation.json")
+    assert gates_of(model, akimbo)["ground_and_center"]["pass"], "原样的叉腰循环应放行"
+    swayed = gates_of(model, shifted_pelvis(akimbo, lambda time: (1.2 * math.sin(math.pi * time / 12) ** 2, 0.0, 0.0)))
+    sway = swayed["ground_and_center"]
+    assert sway["standing_checks"] == "applied" and not sway["pass"], sway
+    assert max(sway["support_foot_slip_px"].values()) > 0.5, sway
+    # 村民几何：玩家版抱臂放到村民骨架上前臂穿进躯干（拒绝），村民版放行。
+    robed = SkeletonModel(load_json(root / "models/robed_skeleton.bbmodel"))
+    crossed = load_json(animations / "idle_arms_crossed.animation.json")
+    crossed_robed = load_json(animations / "idle_arms_crossed_robed.animation.json")
+    assert not gates_of(robed, crossed)["arm_intersection"]["pass"], "玩家版抱臂在村民几何上应穿进躯干"
+    assert gates_of(robed, crossed_robed)["arm_intersection"]["pass"], "村民版抱臂在村民几何上应放行"
     print("旧伪造 attack_main 夹具被相关性、主链错峰、多轴门禁全部拒绝")
     print(f"correlation ratio={correlation['ratio']:.3f}, pairs={correlation['correlated_pair_count']}")
     print(f"peak order={peak_order['peak_times_s']}")
@@ -166,6 +205,10 @@ def main() -> int:
     print("爆发窗口只放宽窗口内的蹬伸峰值")
     print("相触窗口拒绝分开与穿入；手指覆盖层拒绝张开的手指")
     print("item_rotation 绕挂点转手持物，转得过快被角速度门禁拒绝")
+    print(f"触地即支撑：沉地 1 px 拒绝（最低点 {sunk['min_sole_y_px']:.2f} px），"
+          f"臀滑 1.5 px 拒绝（{slide['seat_slip_px']:.2f} px）")
+    print(f"日常站姿循环按站立口径查：两脚跟着滑 1.2 px 拒绝（{max(sway['support_foot_slip_px'].values()):.2f} px）")
+    print("村民几何：玩家版抱臂穿进袍子被拒绝，村民版放行")
     return 0
 
 
