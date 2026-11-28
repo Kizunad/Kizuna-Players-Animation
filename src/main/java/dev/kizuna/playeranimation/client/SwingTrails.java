@@ -78,11 +78,11 @@ public final class SwingTrails {
     /** 同一式每次的音高在这个幅度里浮动，听着不重复。 */
     private static final float PITCH_JITTER = 0.08f;
     private static final int COLOR = 255;
-    private static final int COLOR_RED = 235;
-    private static final int COLOR_GREEN = 245;
+    private static final int DEFAULT_TRAIL_COLOR = 0xEBF5FF;
     private static final double FORGET_SECONDS = 5;
     private static final int FORGET_ABOVE = 64;
     private static final Map<Integer, State> STATES = new HashMap<>();
+    private static int trailColor = DEFAULT_TRAIL_COLOR;
 
     private SwingTrails() {
         // 只有静态入口；状态按实体编号记，断线和换世界时清掉。
@@ -90,6 +90,12 @@ public final class SwingTrails {
 
     public static void clear() {
         STATES.clear();
+        trailColor = DEFAULT_TRAIL_COLOR;
+    }
+
+    public static void setTrailColor(int rgb) {
+        // 颜色来自已校验的式型提示；0 保留默认的云光白。
+        trailColor = rgb == 0 ? DEFAULT_TRAIL_COLOR : rgb & 0xFFFFFF;
     }
 
     /** 取帧时调用：记下这一帧正在挥的部位，起挥的放一声，返回这一帧要画的带子。 */
@@ -352,8 +358,11 @@ public final class SwingTrails {
     }
 
     private static void vertex(VertexConsumer buffer, PoseStack.Pose pose, Vector3f position, float alpha) {
+        int red = trailColor >> 16 & COLOR;
+        int green = trailColor >> 8 & COLOR;
+        int blue = trailColor & COLOR;
         buffer.addVertex(pose, position.x, position.y, position.z)
-                .setColor(COLOR_RED, COLOR_GREEN, COLOR, Math.round(alpha * COLOR));
+                .setColor(red, green, blue, Math.round(alpha * COLOR));
     }
 
     private static void whoosh(LivingEntity entity, boolean weapon, boolean heavy) {
